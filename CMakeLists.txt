@@ -12,6 +12,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 add_executable(tiny-clojure main.cpp
+        tinyclj/compiler/CompilerContext.cpp
         tinyclj/types/Object.cpp
         tinyclj/types/TCDouble.cpp
         tinyclj/types/TCInteger.cpp
