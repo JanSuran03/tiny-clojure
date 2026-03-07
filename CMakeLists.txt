@@ -22,6 +22,7 @@ add_executable(tiny-clojure main.cpp
         tinyclj/compiler/ast/IntegerExpr.cpp
         tinyclj/compiler/ast/LetExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
+        tinyclj/runtime/rt.cpp
         tinyclj/types/Object.cpp
         tinyclj/types/TCDouble.cpp
         tinyclj/types/TCInteger.cpp
