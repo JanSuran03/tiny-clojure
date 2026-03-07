@@ -13,6 +13,15 @@ add_definitions(${LLVM_DEFINITIONS})
 
 add_executable(tiny-clojure main.cpp
         tinyclj/compiler/CompilerContext.cpp
+        tinyclj/compiler/ast/BodyExpr.cpp
+        tinyclj/compiler/ast/ConstantExpr.cpp
+        tinyclj/compiler/ast/DefExpr.cpp
+        tinyclj/compiler/ast/DoubleExpr.cpp
+        tinyclj/compiler/ast/FunctionExpr.cpp
+        tinyclj/compiler/ast/IfExpr.cpp
+        tinyclj/compiler/ast/IntegerExpr.cpp
+        tinyclj/compiler/ast/LetExpr.cpp
+        tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/types/Object.cpp
         tinyclj/types/TCDouble.cpp
         tinyclj/types/TCInteger.cpp
