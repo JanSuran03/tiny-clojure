@@ -1,5 +1,5 @@
 #include "CharExpr.h"
-#include "../../types/TCChar.h"
+#include "types/TCChar.h"
 
 llvm::Value *CharExpr::emitConstantValue(CompilerContext &ctx) const {
     // call a linked function "tc_char_new" with m_Value

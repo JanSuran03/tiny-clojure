@@ -1,12 +1,13 @@
 #include "QuotedExpr.h"
-#include "../../types/TCList.h"
+#include "types/TCList.h"
 
 void QuotedExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
     throw std::runtime_error("Cannot emit IR for quoted expression just yet");
 }
 
 Object *QuotedExpr::eval() const {
-    return m_QuotedValue;
+    // todo: this hurts, rewrite this!!!
+    return const_cast<Object *>(m_QuotedValue);
 }
 
 QuotedExpr::QuotedExpr(const Object *quotedValue) : m_QuotedValue(quotedValue) {}

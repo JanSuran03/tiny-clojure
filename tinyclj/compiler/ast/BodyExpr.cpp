@@ -1,6 +1,6 @@
 #include "BodyExpr.h"
 #include "parser.h"
-#include "../../types/TCList.h"
+#include "types/TCList.h"
 
 BodyExpr::BodyExpr(std::vector<AExpr> exprs)
         : m_Exprs(std::move(exprs)) {}

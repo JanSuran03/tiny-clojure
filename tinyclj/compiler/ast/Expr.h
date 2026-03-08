@@ -2,9 +2,9 @@
 
 #include <memory>
 
-#include "../CompilerContext.h"
-#include "../ExpressionMode.h"
-#include "../../types/Object.h"
+#include "compiler/CompilerContext.h"
+#include "compiler/ExpressionMode.h"
+#include "types/Object.h"
 
 struct Expr {
     virtual ~Expr() = default;

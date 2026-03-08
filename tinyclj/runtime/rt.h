@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../types/Object.h"
+#include "types/Object.h"
 
 extern "C" {
 Object *tinyclj_rt_add(const Object *arglist);

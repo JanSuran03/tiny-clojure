@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Expr.h"
-#include "../../types/Object.h"
 
 class DefExpr : public Expr {
     std::string m_Name;

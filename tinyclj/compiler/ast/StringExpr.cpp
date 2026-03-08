@@ -1,5 +1,5 @@
 #include "StringExpr.h"
-#include "../../types/TCString.h"
+#include "types/TCString.h"
 
 llvm::Value *StringExpr::emitConstantValue(CompilerContext &ctx) const {
     // Create a global string and reference it here

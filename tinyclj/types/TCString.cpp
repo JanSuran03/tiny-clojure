@@ -1,5 +1,6 @@
-#include "TCString.h"
 #include <cstring>
+
+#include "TCString.h"
 
 extern "C" {
 Object *tc_string_new(const char *value) {

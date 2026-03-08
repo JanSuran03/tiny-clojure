@@ -1,5 +1,6 @@
-#include "TCList.h"
 #include <stdexcept>
+
+#include "TCList.h"
 
 extern "C" {
 const Object *empty_list() {

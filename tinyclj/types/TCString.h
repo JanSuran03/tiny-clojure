@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Object.h"
-#include "../tcdef.h"
 
 struct TCString {
     char *m_Value;

@@ -1,7 +1,7 @@
 #include "IfExpr.h"
 #include "parser.h"
-#include "../../types/TCBoolean.h"
-#include "../../types/TCList.h"
+#include "types/TCBoolean.h"
+#include "types/TCList.h"
 
 IfExpr::IfExpr(AExpr condExpr, AExpr thenExpr, AExpr elseExpr)
         : m_CondExpr(std::move(condExpr)),

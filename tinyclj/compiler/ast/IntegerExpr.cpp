@@ -1,5 +1,5 @@
 #include "IntegerExpr.h"
-#include "../../types/TCInteger.h"
+#include "types/TCInteger.h"
 
 llvm::Value *IntegerExpr::emitConstantValue(CompilerContext &ctx) const {
     // call a linked function "tc_integer_new" with m_Value

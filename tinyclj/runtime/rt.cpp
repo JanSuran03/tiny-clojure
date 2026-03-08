@@ -1,9 +1,9 @@
 #include <iostream>
 
 #include "rt.h"
-#include "../types/TCDouble.h"
-#include "../types/TCInteger.h"
-#include "../types/TCList.h"
+#include "types/TCDouble.h"
+#include "types/TCInteger.h"
+#include "types/TCList.h"
 
 extern "C" {
 Object *tinyclj_rt_add(const Object *arglist) {

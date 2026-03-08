@@ -11,13 +11,13 @@
 #include "StringExpr.h"
 #include "VarExpr.h"
 #include "parser.h"
-#include "../../types/TCBoolean.h"
-#include "../../types/TCChar.h"
-#include "../../types/TCDouble.h"
-#include "../../types/TCInteger.h"
-#include "../../types/TCList.h"
-#include "../../types/TCString.h"
-#include "../../types/TCSymbol.h"
+#include "types/TCBoolean.h"
+#include "types/TCChar.h"
+#include "types/TCDouble.h"
+#include "types/TCInteger.h"
+#include "types/TCList.h"
+#include "types/TCString.h"
+#include "types/TCSymbol.h"
 
 using AnalyzerFn = AExpr (*)(CompilerContext &ctx, const Object *form);
 

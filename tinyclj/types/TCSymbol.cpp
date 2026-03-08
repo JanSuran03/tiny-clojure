@@ -1,5 +1,6 @@
-#include "TCSymbol.h"
 #include <cstring>
+
+#include "TCSymbol.h"
 
 extern "C" {
 Object *tc_symbol_new(const char *value) {

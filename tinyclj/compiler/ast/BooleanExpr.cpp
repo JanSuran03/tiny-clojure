@@ -1,5 +1,5 @@
 #include "BooleanExpr.h"
-#include "../../types/TCBoolean.h"
+#include "types/TCBoolean.h"
 
 llvm::Value *BooleanExpr::emitConstantValue(CompilerContext &ctx) const {
     // call a linked function "tc_boolean_new" with m_Value

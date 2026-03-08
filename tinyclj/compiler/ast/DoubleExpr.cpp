@@ -1,5 +1,5 @@
 #include "DoubleExpr.h"
-#include "../../types/TCDouble.h"
+#include "types/TCDouble.h"
 
 llvm::Value *DoubleExpr::emitConstantValue(CompilerContext &ctx) const {
     // call a linked function "tc_double_new" with m_Value

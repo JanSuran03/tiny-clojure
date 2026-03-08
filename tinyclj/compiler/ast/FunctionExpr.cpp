@@ -1,5 +1,4 @@
 #include "FunctionExpr.h"
-//#include "../../runtime/Object.h"
 
 FunctionExpr::FunctionExpr(std::string name, std::vector<std::string> args, AExpr body)
         : m_Name(std::move(name)),

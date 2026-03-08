@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ConstantExpr.h"
-#include "../../tcdef.h"
+#include "tcdef.h"
 
 class IntegerExpr : public ConstantExpr {
     tc_int_t m_Value;

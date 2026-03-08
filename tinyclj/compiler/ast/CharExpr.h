@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ConstantExpr.h"
-#include "../../tcdef.h"
 
 class CharExpr : public ConstantExpr {
     char m_Value;
