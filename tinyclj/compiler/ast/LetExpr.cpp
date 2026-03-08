@@ -1,9 +1,76 @@
 #include "LetExpr.h"
+#include "parser.h"
+#include "types/TCList.h"
+#include "types/TCInteger.h"
+#include "types/TCSymbol.h"
 
 void LetExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
-    throw std::runtime_error("LetExpr::emitIR not implemented");
+    std::unordered_map<std::string, llvm::AllocaInst *> shadowed_allocas;
+    for (const auto &[name, value]: m_Bindings) {
+        // allocate space for a 64-bit pointer as every runtime object is a pointer to the Object struct
+        llvm::AllocaInst *alloca = ctx.m_IRBuilder.CreateAlloca(
+                llvm::Type::getInt64PtrTy(ctx.m_LLVMContext),
+                nullptr,
+                name);
+        value->emitIR(ExpressionMode::EXPRESSION, alloca, ctx);
+        // if the variable is shadowing another variable, save the old alloca to restore it later
+        if (auto old_alloca = ctx.m_VariableMap.find(name); old_alloca != ctx.m_VariableMap.end()) {
+            shadowed_allocas[name] = old_alloca->second;
+        }
+        ctx.m_VariableMap[name] = alloca;
+    }
+    m_Body->emitIR(mode, dst, ctx);
+    // restore shadowed variables in the context
+    for (const auto &[name, alloca]: shadowed_allocas) {
+        ctx.m_VariableMap[name] = alloca;
+    }
 }
 
 LetExpr::LetExpr(std::vector<std::tuple<std::string, AExpr>> bindings, AExpr body)
         : m_Bindings(std::move(bindings)),
           m_Body(std::move(body)) {}
+
+AExpr LetExpr::parse(CompilerContext &ctx, const Object *form) {
+    form = tc_list_next(form); // consume 'let
+    const Object *bindings = tc_list_first(form);
+    form = tc_list_next(form);
+    if (bindings == nullptr || tinyclj_object_get_type(bindings) != ObjectType::LIST) {
+        throw std::runtime_error("let requires a list of bindings");
+    }
+
+    tc_int_t bindings_len = static_cast<TCInteger *>(tc_list_length(bindings)->m_Data)->m_Value;
+    if (bindings_len & 1) {
+        throw std::runtime_error("let requires an even number of binding forms");
+    }
+
+    // New scope variables that will be used for further resolution of symbols in let expression body
+    // (or later in the bindings vector in the same let expression). These need to be removed from the
+    // available context after parsing this let expression.
+    std::vector<std::string> new_scope_vars;
+
+    std::vector<std::tuple<std::string, AExpr>> parsed_bindings;
+    for (bindings = tc_list_seq(bindings); bindings;) {
+        const Object *binding_sym = tc_list_first(bindings);
+        std::string binding_name = tc_symbol_valueX(binding_sym);
+        bindings = tc_list_next(bindings);
+        const Object *binding_val = tc_list_first(bindings);
+        bindings = tc_list_next(bindings);
+        if (tinyclj_object_get_type(binding_sym) != ObjectType::SYMBOL) {
+            throw std::runtime_error("let binding name must be a symbol");
+        }
+        // if the variable is shadowed, don't do anything
+        if (!ctx.m_AvailableSymbols.contains(binding_name)) {
+            ctx.m_AvailableSymbols.insert(binding_name);
+            new_scope_vars.push_back(binding_name);
+        }
+
+        parsed_bindings.emplace_back(tc_symbol_valueX(binding_sym), Parser::analyze(ctx, binding_val));
+    }
+    AExpr body = Parser::analyze(ctx, tc_list_cons(tc_symbol_new("do"), form));
+
+    for (const std::string &var: new_scope_vars) {
+        ctx.m_AvailableSymbols.erase(var);
+    }
+
+    return std::make_unique<LetExpr>(std::move(parsed_bindings), std::move(body));
+}

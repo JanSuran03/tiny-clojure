@@ -1,6 +1,7 @@
 #include <stdexcept>
 
 #include "TCList.h"
+#include "TCInteger.h"
 
 extern "C" {
 const Object *empty_list() {
@@ -17,7 +18,7 @@ const Object *empty_list() {
     return &emptylist_obj;
 }
 
-const Object *tc_list_cons(const Object *head,const Object *tail) {
+const Object *tc_list_cons(const Object *head, const Object *tail) {
     if (tail == nullptr) {
         TCList *list = new TCList{
                 .m_Head = head,
@@ -82,5 +83,20 @@ const Object *tc_list_seq(const Object *list) {
         return nullptr;
     }
     return list;
+}
+
+const Object *tc_list_length(const Object *list) {
+    if (list == nullptr) {
+        return nullptr;
+    }
+    if (list->m_Type != ObjectType::LIST) {
+        throw std::runtime_error("Cannot get length of non-list type");
+    }
+    TCList *list_data = static_cast<TCList *>(list->m_Data);
+    return new Object{
+            .m_Data = new TCInteger{.m_Value = list_data->m_Length},
+            .m_Type = ObjectType::INTEGER,
+            .m_Call = nullptr
+    };
 }
 }

@@ -5,7 +5,7 @@
 class NilExpr : public Expr {
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
-    Object * eval() const override;
+    Object *eval() const override;
 
 public:
     NilExpr() = default;

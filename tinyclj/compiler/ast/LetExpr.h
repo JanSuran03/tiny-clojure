@@ -3,9 +3,9 @@
 #include <vector>
 #include <tuple>
 
-#include "Expr.h"
+#include "UnevaluatableExpr.h"
 
-class LetExpr : public Expr {
+class LetExpr : public UnevaluatableExpr {
     std::vector<std::tuple<std::string, AExpr>> m_Bindings;
     AExpr m_Body;
 public:
@@ -13,6 +13,5 @@ public:
 
     LetExpr(std::vector<std::tuple<std::string, AExpr>> bindings, AExpr body);
 
-    // todo: implement static analysis
-    // static AExpr parse(...);
+    static AExpr parse(CompilerContext &ctx, const Object *form);
 };

@@ -6,6 +6,7 @@
 #include "DoubleExpr.h"
 #include "IfExpr.h"
 #include "IntegerExpr.h"
+#include "LetExpr.h"
 #include "NilExpr.h"
 #include "QuotedExpr.h"
 #include "StringExpr.h"
@@ -22,9 +23,10 @@
 using AnalyzerFn = AExpr (*)(CompilerContext &ctx, const Object *form);
 
 std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
-        {"if", IfExpr::parse},
-        {"do", IfExpr::parse},
+        {"if",    IfExpr::parse},
+        {"do",    IfExpr::parse},
         {"quote", QuotedExpr::parse},
+        {"let*",  LetExpr::parse},
 };
 
 AExpr Parser::analyze(CompilerContext &ctx, const Object *form) {
@@ -40,7 +42,7 @@ AExpr Parser::analyze(CompilerContext &ctx, const Object *form) {
             return std::make_unique<DoubleExpr>(tc_double_valueX(form));
         case ObjectType::LIST: {
             if (tc_list_seq(form) == nullptr) {
-                return std::make_unique<NilExpr>();
+                throw std::runtime_error("Empty lists are not supported yet");
             }
             const Object *head = tc_list_first(form);
             if (auto ana_it = m_SpecialAnalyzers.find(tc_symbol_valueX(head)); ana_it != m_SpecialAnalyzers.end()) {
@@ -56,8 +58,19 @@ AExpr Parser::analyze(CompilerContext &ctx, const Object *form) {
         case ObjectType::STRING:
             return std::make_unique<StringExpr>(tc_string_valueX(form));
         case ObjectType::SYMBOL:
-            return VarExpr::resolveVar(ctx, tc_symbol_valueX(form));
+            return VarExpr::resolveVar(ctx, form);
         case ObjectType::FUNCTION:
             throw std::runtime_error("Functions are not supported yet");
     }
+    std::unreachable();
+}
+
+Object *Parser::eval(CompilerContext &ctx, const Object *form) {
+    // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
+    const Object *new_form = tc_list_cons(tc_symbol_new("fn*"),
+                                          tc_list_cons(empty_list(), form));
+    AExpr expr = analyze(ctx, new_form);
+    // print the llvm module
+    ctx.m_Module.dump();
+    return expr->eval();
 }

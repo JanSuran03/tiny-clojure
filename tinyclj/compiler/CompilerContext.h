@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <unordered_set>
 
 #include "LoopBase.h"
 
@@ -16,7 +17,8 @@ public:
     llvm::Module &m_Module;
     std::vector<LoopBase> m_LoopLabels;
     std::atomic<int64_t> m_LabelCounter = 0;
-    std::unordered_map<std::string, llvm::Value *> m_VariableMap;
+    std::unordered_map<std::string, llvm::AllocaInst *> m_VariableMap;
+    std::unordered_set<std::string> m_AvailableSymbols;
 
     CompilerContext(llvm::LLVMContext &llvmContext,
                     llvm::IRBuilder<> &irBuilder,

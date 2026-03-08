@@ -1,13 +1,14 @@
 #pragma once
 
-#include "Expr.h"
+#include "UnevaluatableExpr.h"
 
-class VarExpr : public Expr {
+// todo: implement eval
+class VarExpr : public UnevaluatableExpr {
     std::string m_Value;
 public:
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
     VarExpr(std::string value);
 
-    static AExpr resolveVar(CompilerContext &ctx, const std::string &name);
+    static AExpr resolveVar(CompilerContext &ctx, const Object *symbol);
 };
