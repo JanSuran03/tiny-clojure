@@ -10,5 +10,5 @@ struct TCDouble {
 extern "C" {
 Object *tc_double_new(tc_double_t value);
 
-tc_double_t tc_double_valueX(Object *obj);
+tc_double_t tc_double_valueX(const Object *obj);
 }

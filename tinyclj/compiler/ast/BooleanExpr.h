@@ -1,12 +1,11 @@
 #pragma once
 
 #include "ConstantExpr.h"
-#include "../../tcdef.h"
 
-class IntegerExpr : public ConstantExpr {
-    tc_int_t m_Value;
+class BooleanExpr : public ConstantExpr {
+    bool m_Value;
 public:
     llvm::Value * getConstantValue(CompilerContext &ctx) const override;
 
-    IntegerExpr(tc_int_t value);
+    BooleanExpr(bool value);
 };

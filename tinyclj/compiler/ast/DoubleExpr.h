@@ -1,11 +1,12 @@
 #pragma once
 
 #include "ConstantExpr.h"
+#include "../../tcdef.h"
 
 class DoubleExpr : public ConstantExpr {
-    double m_Value;
+    tc_double_t m_Value;
 public:
     llvm::Value * getConstantValue(CompilerContext &ctx) const override;
 
-    DoubleExpr(double value);
+    DoubleExpr(tc_double_t value);
 };

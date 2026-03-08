@@ -12,7 +12,7 @@ Object *tc_symbol_new(const char *value) {
     };
 }
 
-const char *tc_symbol_name(Object *obj) {
+const char *tc_symbol_valueX(const Object *obj) {
     return static_cast<TCSymbol *>(tinyclj_object_get_data(obj))->m_Value;
 }
 }

@@ -10,5 +10,5 @@ struct TCSymbol {
 extern "C" {
 Object *tc_symbol_new(const char *value);
 
-const char *tc_symbol_name(Object *obj);
+const char *tc_symbol_valueX(const Object *obj);
 }

@@ -3,10 +3,10 @@
 #include "ConstantExpr.h"
 #include "../../tcdef.h"
 
-class IntegerExpr : public ConstantExpr {
-    tc_int_t m_Value;
+class CharExpr : public ConstantExpr {
+    char m_Value;
 public:
     llvm::Value * getConstantValue(CompilerContext &ctx) const override;
 
-    IntegerExpr(tc_int_t value);
+    CharExpr(char value);
 };

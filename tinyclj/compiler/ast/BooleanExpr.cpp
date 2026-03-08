@@ -1,0 +1,20 @@
+#include "BooleanExpr.h"
+
+llvm::Value *BooleanExpr::getConstantValue(CompilerContext &ctx) const {
+    // call a linked function "tc_boolean_new" with m_Value
+    llvm::Function *func = ctx.m_Module.getFunction("tc_boolean_new");
+    if (!func) {
+        // declare the function
+        llvm::FunctionType *funcType = llvm::FunctionType::get(
+                llvm::Type::getInt8PtrTy(ctx.m_LLVMContext), // return type: i8*
+                {llvm::Type::getInt8Ty(ctx.m_LLVMContext)}, // parameter type: i8
+                false // isVarArg
+        );
+        func = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "tc_boolean_new", ctx.m_Module);
+    }
+    llvm::Value *arg = llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(8, m_Value ? 1 : 0, true));
+    return ctx.m_IRBuilder.CreateCall(func, {arg});
+    //return llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(64, m_Value, true));
+}
+
+BooleanExpr::BooleanExpr(bool value) : m_Value(value) {}

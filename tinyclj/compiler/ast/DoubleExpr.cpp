@@ -17,4 +17,4 @@ llvm::Value *DoubleExpr::getConstantValue(CompilerContext &ctx) const {
     //return llvm::ConstantFP::get(ctx.m_LLVMContext, llvm::APFloat(m_Value));
 }
 
-DoubleExpr::DoubleExpr(double value) : m_Value(value) {}
+DoubleExpr::DoubleExpr(tc_double_t value) : m_Value(value) {}

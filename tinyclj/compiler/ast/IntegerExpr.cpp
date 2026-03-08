@@ -17,4 +17,4 @@ llvm::Value *IntegerExpr::getConstantValue(CompilerContext &ctx) const {
     //return llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(64, m_Value, true));
 }
 
-IntegerExpr::IntegerExpr(int64_t value) : m_Value(value) {}
+IntegerExpr::IntegerExpr(tc_int_t value) : m_Value(value) {}
