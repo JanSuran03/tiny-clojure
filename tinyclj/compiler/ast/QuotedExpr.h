@@ -2,15 +2,14 @@
 
 #include "Expr.h"
 
-class BodyExpr : public Expr {
-    std::vector<AExpr> m_Exprs;
-
+class QuotedExpr : public Expr {
+    const Object *m_QuotedValue;
 public:
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
-    Object * eval() const override;
+    Object *eval() const override;
 
-    BodyExpr(std::vector<AExpr> exprs);
+    QuotedExpr(const Object *quotedValue);
 
     static AExpr parse(CompilerContext &ctx, const Object *form);
 };

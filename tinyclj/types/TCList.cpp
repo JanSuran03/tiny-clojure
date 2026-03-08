@@ -16,7 +16,7 @@ const Object *empty_list() {
     return &emptylist_obj;
 }
 
-Object *tc_list_cons(Object *head, Object *tail) {
+const Object *tc_list_cons(const Object *head,const Object *tail) {
     if (tail == nullptr) {
         TCList *list = new TCList{
                 .m_Head = head,
@@ -45,9 +45,9 @@ Object *tc_list_cons(Object *head, Object *tail) {
     }
 }
 
-Object *tc_list_first(Object *list) {
+const Object *tc_list_first(const Object *list) {
     if (list == nullptr) {
-        throw std::runtime_error("Cannot get first of null list");
+        return nullptr;
     }
     if (list->m_Type != ObjectType::LIST) {
         throw std::runtime_error("Cannot get first of non-list type");
@@ -56,9 +56,9 @@ Object *tc_list_first(Object *list) {
     return list_data->m_Head;
 }
 
-Object *tc_list_next(Object *list) {
+const Object *tc_list_next(const Object *list) {
     if (list == nullptr) {
-        throw std::runtime_error("Cannot get next of null list");
+        return nullptr;
     }
     if (list->m_Type != ObjectType::LIST) {
         throw std::runtime_error("Cannot get next of non-list type");
@@ -70,7 +70,7 @@ Object *tc_list_next(Object *list) {
     return list_data->m_Tail;
 }
 
-Object *tc_list_seq(Object *list) {
+const Object *tc_list_seq(const Object *list) {
     if (list == nullptr) {
         return nullptr;
     }

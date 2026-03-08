@@ -24,6 +24,7 @@ add_executable(tiny-clojure main.cpp
         tinyclj/compiler/ast/IntegerExpr.cpp
         tinyclj/compiler/ast/LetExpr.cpp
         tinyclj/compiler/ast/NilExpr.cpp
+        tinyclj/compiler/ast/QuotedExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarExpr.cpp

@@ -10,5 +10,9 @@ class IfExpr : public Expr {
 public:
     void emitIR(ExpressionMode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
+    Object * eval() const override;
+
     IfExpr(AExpr condExpr, AExpr thenExpr, AExpr elseExpr);
+
+    static AExpr parse(CompilerContext &ctx, const Object *form);
 };

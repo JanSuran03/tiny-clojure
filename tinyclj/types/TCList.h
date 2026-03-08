@@ -3,21 +3,21 @@
 #include "Object.h"
 
 struct TCList {
-    Object *m_Head;
-    Object *m_Tail;
+    const Object *m_Head;
+    const Object *m_Tail;
     size_t m_Length;
 };
 
 extern "C" {
     const Object *empty_list();
 
-    Object *tc_list_cons(Object *head, Object *tail);
+    const Object *tc_list_cons(const Object *head,const Object *tail);
 
-    Object *tc_list_first(Object *list);
+    const Object *tc_list_first(const Object *list);
 
-    Object *tc_list_next(Object *list);
+    const Object *tc_list_next(const Object *list);
 
-    Object *tc_list_seq(Object *list);
+    const Object *tc_list_seq(const Object *list);
 
     // todo
     // void tc_list_destroy(TCList *list);

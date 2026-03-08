@@ -6,15 +6,15 @@
 #include "../types/TCList.h"
 
 extern "C" {
-Object *tinyclj_rt_add(Object *arglist) {
+Object *tinyclj_rt_add(const Object *arglist) {
     TCList *list = static_cast<TCList *>(arglist->m_Data);
     if (list == nullptr || list->m_Length != 2) {
         throw std::runtime_error("add function requires exactly 2 arguments");
     }
 
-    Object *a = list->m_Head;
+    const Object *a = list->m_Head;
     list = static_cast<TCList *>(list->m_Tail->m_Data);
-    Object *b = list->m_Head;
+    const Object *b = list->m_Head;
 
     switch (a->m_Type) {
         case ObjectType::INTEGER:
@@ -52,7 +52,7 @@ Object *tinyclj_rt_add(Object *arglist) {
     }
 }
 
-Object *tinyclj_rt_print(Object *a) {
+Object *tinyclj_rt_print(const Object *a) {
     if (a == nullptr) {
         std::cout << "nil"; // todo: "nil" or ""?
     } else {
@@ -75,7 +75,7 @@ Object *tinyclj_rt_print(Object *a) {
             case ObjectType::LIST: {
                 std::cout << '(';
                 bool first = true;
-                for (Object *s = tc_list_seq(a); s; s = tc_list_next(s)) {
+                for (const Object *s = tc_list_seq(a); s; s = tc_list_next(s)) {
                     if (first) {
                         first = false;
                     } else {

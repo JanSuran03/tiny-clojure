@@ -3,7 +3,7 @@
 #include "../types/Object.h"
 
 extern "C" {
-Object *tinyclj_rt_add(Object *arglist);
+Object *tinyclj_rt_add(const Object *arglist);
 
-Object *tinyclj_rt_print(Object *obj);
+Object *tinyclj_rt_print(const Object *obj);
 }
