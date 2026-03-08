@@ -9,3 +9,7 @@ void NilExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
                     llvm::Type::getInt64PtrTy(ctx.m_LLVMContext)), dst);
     }
 }
+
+Object *NilExpr::eval() const {
+    return nullptr;
+}

@@ -1,6 +1,7 @@
 #include "CharExpr.h"
+#include "../../types/TCChar.h"
 
-llvm::Value *CharExpr::getConstantValue(CompilerContext &ctx) const {
+llvm::Value *CharExpr::emitConstantValue(CompilerContext &ctx) const {
     // call a linked function "tc_char_new" with m_Value
     llvm::Function *func = ctx.m_Module.getFunction("tc_char_new");
     if (!func) {
@@ -14,6 +15,10 @@ llvm::Value *CharExpr::getConstantValue(CompilerContext &ctx) const {
     }
     llvm::Value *arg = llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(8, m_Value, true));
     return ctx.m_IRBuilder.CreateCall(func, {arg});
+}
+
+Object *CharExpr::evalConstantValue() const {
+    return tc_char_new(m_Value);
 }
 
 CharExpr::CharExpr(char value) : m_Value(value) {}

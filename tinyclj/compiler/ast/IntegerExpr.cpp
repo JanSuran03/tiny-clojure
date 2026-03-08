@@ -1,6 +1,7 @@
 #include "IntegerExpr.h"
+#include "../../types/TCInteger.h"
 
-llvm::Value *IntegerExpr::getConstantValue(CompilerContext &ctx) const {
+llvm::Value *IntegerExpr::emitConstantValue(CompilerContext &ctx) const {
     // call a linked function "tc_integer_new" with m_Value
     llvm::Function *func = ctx.m_Module.getFunction("tc_integer_new");
     if (!func) {
@@ -15,6 +16,10 @@ llvm::Value *IntegerExpr::getConstantValue(CompilerContext &ctx) const {
     llvm::Value *arg = llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(64, m_Value, true));
     return ctx.m_IRBuilder.CreateCall(func, {arg});
     //return llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(64, m_Value, true));
+}
+
+Object *IntegerExpr::evalConstantValue() const {
+    return tc_integer_new(m_Value);
 }
 
 IntegerExpr::IntegerExpr(tc_int_t value) : m_Value(value) {}

@@ -11,7 +11,7 @@ Object *tc_char_new(char value) {
     };
 }
 
-char tc_integer_valueX(const Object *obj) {
+char tc_char_valueX(const Object *obj) {
     return static_cast<TCChar *>(tinyclj_object_get_data(obj))->m_Value;
 }
 }

@@ -5,14 +5,18 @@ void ConstantExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCo
         case ExpressionMode::STATEMENT:
             break;
         case ExpressionMode::EXPRESSION: {
-            llvm::Value *value = getConstantValue(ctx);
+            llvm::Value *value = emitConstantValue(ctx);
             ctx.m_IRBuilder.CreateStore(value, dst);
             break;
         }
         case ExpressionMode::RETURN: {
-            llvm::Value *value = getConstantValue(ctx);
+            llvm::Value *value = emitConstantValue(ctx);
             ctx.m_IRBuilder.CreateRet(value);
             break;
         }
     }
+}
+
+Object *ConstantExpr::eval() const {
+    return evalConstantValue();
 }
