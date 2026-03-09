@@ -1,9 +1,13 @@
 #include <iostream>
 
 #include "rt.h"
+#include "types/TCBoolean.h"
+#include "types/TCChar.h"
 #include "types/TCDouble.h"
 #include "types/TCInteger.h"
 #include "types/TCList.h"
+#include "types/TCString.h"
+#include "types/TCSymbol.h"
 
 extern "C" {
 Object *tinyclj_rt_add(const Object *arglist) {
@@ -58,7 +62,7 @@ Object *tinyclj_rt_print(const Object *a) {
     } else {
         switch (a->m_Type) {
             case ObjectType::BOOLEAN:
-                std::cout << (*static_cast<bool *>(a->m_Data) ? "true" : "false");
+                std::cout << (static_cast<TCBoolean *>(a->m_Data)->m_Value ? "true" : "false");
                 break;
             case ObjectType::INTEGER:
                 std::cout << static_cast<TCInteger *>(a->m_Data)->m_Value;
@@ -67,10 +71,10 @@ Object *tinyclj_rt_print(const Object *a) {
                 std::cout << static_cast<TCDouble *>(a->m_Data)->m_Value;
                 break;
             case ObjectType::STRING:
-                std::cout << '"' << static_cast<char *>(a->m_Data) << '"';
+                std::cout << '"' << static_cast<TCString *>(a->m_Data)->m_Value << '"';
                 break;
             case ObjectType::SYMBOL:
-                std::cout << static_cast<char *>(a->m_Data);
+                std::cout << static_cast<TCSymbol *>(a->m_Data)->m_Value;
                 break;
             case ObjectType::LIST: {
                 std::cout << '(';
@@ -86,6 +90,9 @@ Object *tinyclj_rt_print(const Object *a) {
                 std::cout << ')';
                 break;
             }
+            case ObjectType::CHARACTER:
+                std::cout << '\\' << static_cast<TCChar *>(a->m_Data)->m_Value;
+                break;
             default:
                 std::cout << "<object of type " << static_cast<int>(a->m_Type) << ">";
         }

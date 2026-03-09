@@ -22,19 +22,19 @@ Object *IfExpr::eval() const {
     }
 }
 
-AExpr IfExpr::parse(CompilerContext &ctx, const Object *form) {
+AExpr IfExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
     form = tc_list_next(form); // consume 'if
     // TODO: Check the list length instead of checking one by one
     if (form == nullptr) {
         throw std::runtime_error("if requires a condition expression");
     }
-    auto condExpr = Parser::analyze(ctx, tc_list_first(form));
+    auto condExpr = Parser::analyze(mode, ctx, tc_list_first(form));
     form = tc_list_next(form);
     if (form == nullptr) {
         throw std::runtime_error("if requires a then expression");
     }
-    auto thenExpr = Parser::analyze(ctx, tc_list_first(form));
+    auto thenExpr = Parser::analyze(mode, ctx, tc_list_first(form));
     form = tc_list_next(form);
-    AExpr elseExpr = Parser::analyze(ctx, tc_list_first(form));
+    AExpr elseExpr = Parser::analyze(mode, ctx, tc_list_first(form));
     return std::make_unique<IfExpr>(std::move(condExpr), std::move(thenExpr), std::move(elseExpr));
 }

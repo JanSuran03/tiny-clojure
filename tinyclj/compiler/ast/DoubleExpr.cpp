@@ -7,9 +7,9 @@ llvm::Value *DoubleExpr::emitConstantValue(CompilerContext &ctx) const {
     if (!func) {
         // declare the function
         llvm::FunctionType *funcType = llvm::FunctionType::get(
-            llvm::Type::getInt8PtrTy(ctx.m_LLVMContext), // return type: i8*
-            {llvm::Type::getDoubleTy(ctx.m_LLVMContext)}, // parameter type: double
-            false // isVarArg
+                ctx.objectPointerType(), // return type: Object*
+                {llvm::Type::getDoubleTy(ctx.m_LLVMContext)}, // parameter type: double
+                false // isVarArg
         );
         func = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "tc_double_new", ctx.m_Module);
     }

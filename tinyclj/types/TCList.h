@@ -16,7 +16,7 @@ const Object *tc_list_cons(const Object *head, const Object *tail);
 
 const Object *tc_list_first(const Object *list);
 
-const Object *tc_list_next(const Object *list);
+const Object *tc_list_next(const Object *obj);
 
 const Object *tc_list_seq(const Object *list);
 

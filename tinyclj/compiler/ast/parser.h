@@ -6,5 +6,7 @@
 namespace Parser {
     AExpr analyze(CompilerContext &ctx, const Object *form);
 
+    AExpr analyze(ExpressionMode mode, CompilerContext &ctx, const Object *form);
+
     Object *eval(CompilerContext &ctx, const Object *form);
 }

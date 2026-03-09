@@ -1,9 +1,12 @@
 #include <unordered_map>
+#include <iostream>
 
+#include "runtime/rt.h"
 #include "BodyExpr.h"
 #include "BooleanExpr.h"
 #include "CharExpr.h"
 #include "DoubleExpr.h"
+#include "FunctionExpr.h"
 #include "IfExpr.h"
 #include "IntegerExpr.h"
 #include "LetExpr.h"
@@ -20,16 +23,21 @@
 #include "types/TCString.h"
 #include "types/TCSymbol.h"
 
-using AnalyzerFn = AExpr (*)(CompilerContext &ctx, const Object *form);
+using AnalyzerFn = AExpr (*)(ExpressionMode mode, CompilerContext &ctx, const Object *form);
 
 std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
         {"if",    IfExpr::parse},
-        {"do",    IfExpr::parse},
+        {"do",    BodyExpr::parse},
         {"quote", QuotedExpr::parse},
         {"let*",  LetExpr::parse},
+        {"fn*",   FunctionExpr::parse},
 };
 
 AExpr Parser::analyze(CompilerContext &ctx, const Object *form) {
+    return analyze(ExpressionMode::EXPRESSION, ctx, form);
+}
+
+AExpr Parser::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
     if (form == nullptr) {
         return std::make_unique<NilExpr>();
     }
@@ -46,7 +54,7 @@ AExpr Parser::analyze(CompilerContext &ctx, const Object *form) {
             }
             const Object *head = tc_list_first(form);
             if (auto ana_it = m_SpecialAnalyzers.find(tc_symbol_valueX(head)); ana_it != m_SpecialAnalyzers.end()) {
-                return ana_it->second(ctx, form);
+                return ana_it->second(mode, ctx, form);
             }
 
 
@@ -67,8 +75,16 @@ AExpr Parser::analyze(CompilerContext &ctx, const Object *form) {
 
 Object *Parser::eval(CompilerContext &ctx, const Object *form) {
     // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
+    // (-> (fn* fn_name [] form))
     const Object *new_form = tc_list_cons(tc_symbol_new("fn*"),
-                                          tc_list_cons(empty_list(), form));
+                                          tc_list_cons
+                                                  (empty_list(),
+                                                   tc_list_cons(form, empty_list())));
+
+    std::cout << "Analyzing form: " << std::flush;
+    tinyclj_rt_print(new_form);
+    std::cout << std::flush;
+
     AExpr expr = analyze(ctx, new_form);
     // print the llvm module
     ctx.m_Module.dump();

@@ -9,28 +9,36 @@ void LetExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
     for (const auto &[name, value]: m_Bindings) {
         // allocate space for a 64-bit pointer as every runtime object is a pointer to the Object struct
         llvm::AllocaInst *alloca = ctx.m_IRBuilder.CreateAlloca(
-                llvm::Type::getInt64PtrTy(ctx.m_LLVMContext),
+                ctx.objectPointerType(),
                 nullptr,
                 name);
         value->emitIR(ExpressionMode::EXPRESSION, alloca, ctx);
         // if the variable is shadowing another variable, save the old alloca to restore it later
         if (auto old_alloca = ctx.m_VariableMap.find(name); old_alloca != ctx.m_VariableMap.end()) {
             shadowed_allocas[name] = old_alloca->second;
+        } else {
+            shadowed_allocas[name] = nullptr;
         }
         ctx.m_VariableMap[name] = alloca;
     }
-    m_Body->emitIR(mode, dst, ctx);
+    for (const AExpr &expr: m_Body) {
+        expr->emitIR(mode, dst, ctx);
+    }
     // restore shadowed variables in the context
     for (const auto &[name, alloca]: shadowed_allocas) {
-        ctx.m_VariableMap[name] = alloca;
+        if (alloca) {
+            ctx.m_VariableMap[name] = alloca;
+        } else {
+            ctx.m_VariableMap.erase(name);
+        }
     }
 }
 
-LetExpr::LetExpr(std::vector<std::tuple<std::string, AExpr>> bindings, AExpr body)
+LetExpr::LetExpr(std::vector<std::tuple<std::string, AExpr>> bindings, std::vector<AExpr> body)
         : m_Bindings(std::move(bindings)),
           m_Body(std::move(body)) {}
 
-AExpr LetExpr::parse(CompilerContext &ctx, const Object *form) {
+AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
     form = tc_list_next(form); // consume 'let
     const Object *bindings = tc_list_first(form);
     form = tc_list_next(form);
@@ -64,9 +72,17 @@ AExpr LetExpr::parse(CompilerContext &ctx, const Object *form) {
             new_scope_vars.push_back(binding_name);
         }
 
-        parsed_bindings.emplace_back(tc_symbol_valueX(binding_sym), Parser::analyze(ctx, binding_val));
+        parsed_bindings.emplace_back(tc_symbol_valueX(binding_sym), Parser::analyze(
+                ExpressionMode::EXPRESSION,
+                ctx,
+                binding_val));
     }
-    AExpr body = Parser::analyze(ctx, tc_list_cons(tc_symbol_new("do"), form));
+    std::vector<AExpr> body;
+    for (; form; form = tc_list_next(form)) {
+        body.push_back(Parser::analyze(tc_list_next(form) == nullptr ? mode : ExpressionMode::STATEMENT,
+                                       ctx,
+                                       tc_list_first(form)));
+    }
 
     for (const std::string &var: new_scope_vars) {
         ctx.m_AvailableSymbols.erase(var);

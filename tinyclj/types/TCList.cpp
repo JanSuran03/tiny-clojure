@@ -58,18 +58,18 @@ const Object *tc_list_first(const Object *list) {
     return list_data->m_Head;
 }
 
-const Object *tc_list_next(const Object *list) {
-    if (list == nullptr) {
+const Object *tc_list_next(const Object *obj) {
+    if (obj == nullptr) {
         return nullptr;
     }
-    if (list->m_Type != ObjectType::LIST) {
-        throw std::runtime_error("Cannot get next of non-list type");
+    if (obj->m_Type != ObjectType::LIST) {
+        throw std::runtime_error("Cannot get next of non-obj type");
     }
-    TCList *list_data = static_cast<TCList *>(list->m_Data);
-    if (list_data && list_data->m_Length == 0) {
+    const Object *ret = static_cast<TCList *>(obj->m_Data)->m_Tail;
+    if (ret == nullptr || static_cast<TCList *>(ret->m_Data)->m_Length == 0) {
         return nullptr;
     }
-    return list_data->m_Tail;
+    return ret;
 }
 
 const Object *tc_list_seq(const Object *list) {

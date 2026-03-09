@@ -12,5 +12,5 @@ public:
 
     BodyExpr(std::vector<AExpr> exprs);
 
-    static AExpr parse(CompilerContext &ctx, const Object *form);
+    static AExpr parse(ExpressionMode mode, CompilerContext &ctx, const Object *form);
 };

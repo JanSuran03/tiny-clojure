@@ -11,5 +11,5 @@ public:
 
     QuotedExpr(const Object *quotedValue);
 
-    static AExpr parse(CompilerContext &ctx, const Object *form);
+    static AExpr parse(ExpressionMode mode, CompilerContext &ctx, const Object *form);
 };

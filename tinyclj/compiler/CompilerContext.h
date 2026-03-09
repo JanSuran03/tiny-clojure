@@ -16,6 +16,7 @@ public:
     llvm::IRBuilder<> &m_IRBuilder;
     llvm::Module &m_Module;
     std::vector<LoopBase> m_LoopLabels;
+    llvm::Function *m_CurrentFunction = nullptr;
     std::atomic<int64_t> m_LabelCounter = 0;
     std::unordered_map<std::string, llvm::AllocaInst *> m_VariableMap;
     std::unordered_set<std::string> m_AvailableSymbols;
@@ -23,4 +24,6 @@ public:
     CompilerContext(llvm::LLVMContext &llvmContext,
                     llvm::IRBuilder<> &irBuilder,
                     llvm::Module &module);
+
+    llvm::PointerType *objectPointerType() const;
 };

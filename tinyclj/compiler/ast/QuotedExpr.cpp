@@ -12,7 +12,7 @@ Object *QuotedExpr::eval() const {
 
 QuotedExpr::QuotedExpr(const Object *quotedValue) : m_QuotedValue(quotedValue) {}
 
-AExpr QuotedExpr::parse(CompilerContext &ctx, const Object *form) {
+AExpr QuotedExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
     form = tc_list_next(form);
     if (!form) {
         throw std::runtime_error("quote requires an argument");
