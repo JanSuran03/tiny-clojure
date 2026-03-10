@@ -72,21 +72,3 @@ AExpr Parser::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *f
     }
     std::unreachable();
 }
-
-Object *Parser::eval(CompilerContext &ctx, const Object *form) {
-    // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
-    // (-> (fn* fn_name [] form))
-    const Object *new_form = tc_list_cons(tc_symbol_new("fn*"),
-                                          tc_list_cons
-                                                  (empty_list(),
-                                                   tc_list_cons(form, empty_list())));
-
-    std::cout << "Analyzing form: " << std::flush;
-    tinyclj_rt_print(new_form);
-    std::cout << std::flush;
-
-    AExpr expr = analyze(ctx, new_form);
-    // print the llvm module
-    ctx.m_Module.dump();
-    return expr->eval();
-}

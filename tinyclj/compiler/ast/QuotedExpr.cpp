@@ -5,7 +5,7 @@ void QuotedExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
     throw std::runtime_error("Cannot emit IR for quoted expression just yet");
 }
 
-Object *QuotedExpr::eval() const {
+Object *QuotedExpr::eval(Runtime &runtime) const {
     // todo: this hurts, rewrite this!!!
     return const_cast<Object *>(m_QuotedValue);
 }

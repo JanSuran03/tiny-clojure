@@ -6,7 +6,7 @@ class ConstantExpr : public Expr {
 public:
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const final;
 
-    Object *eval() const final;
+    Object *eval(Runtime &runtime) const final;
 
 protected:
     virtual llvm::Value *emitConstantValue(CompilerContext &ctx) const = 0;

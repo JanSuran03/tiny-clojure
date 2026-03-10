@@ -12,6 +12,7 @@ include_directories(${LLVM_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/tinyclj)
 add_definitions(${LLVM_DEFINITIONS})
 
 add_executable(tiny-clojure main.cpp
+        tinyclj/Runtime.cpp
         tinyclj/compiler/CompilerContext.cpp
         tinyclj/compiler/ast/BodyExpr.cpp
         tinyclj/compiler/ast/BooleanExpr.cpp

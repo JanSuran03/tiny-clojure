@@ -1,4 +1,5 @@
 #include "FunctionExpr.h"
+#include "Runtime.h"
 #include "parser.h"
 #include "types/TCInteger.h"
 #include "types/TCList.h"
@@ -28,6 +29,20 @@ void compile_thunk(const std::string &thunk_name, const std::string &fn_name, ll
                                                 llvm::Function::ExternalLinkage,
                                                 thunk_name,
                                                 ctx.m_Module);
+    BasicBlock *entry_block = BasicBlock::Create(ctx.m_LLVMContext, "entry", thunk_fn);
+
+
+    FunctionType *get_type_fn_type = FunctionType::get(Type::getInt32Ty(ctx.m_LLVMContext), {arg_type}, false);
+    FunctionType *list_length_fn_type = FunctionType::get(arg_type, {arg_type}, false);
+    FunctionType *list_first_fn_type = FunctionType::get(arg_type, {arg_type}, false);
+    FunctionType *list_next_fn_type = FunctionType::get(arg_type, {arg_type}, false);
+    FunctionType *integer_value_fn_type = FunctionType::get(Type::getInt64Ty(ctx.m_LLVMContext), {arg_type}, false);
+    FunctionCallee get_type_fn = ctx.m_Module.getOrInsertFunction("tinyclj_object_get_type", get_type_fn_type);
+    FunctionCallee list_length_fn = ctx.m_Module.getOrInsertFunction("tc_list_length", list_length_fn_type);
+    FunctionCallee list_first_fn = ctx.m_Module.getOrInsertFunction("tc_list_first", list_first_fn_type);
+    FunctionCallee list_next_fn = ctx.m_Module.getOrInsertFunction("tc_list_next", list_next_fn_type);
+    FunctionCallee integer_value_fn = ctx.m_Module.getOrInsertFunction("tc_integer_valueX", integer_value_fn_type);
+
 
     BasicBlock *check_arg_is_nullptr_block = BasicBlock::Create(ctx.m_LLVMContext, "check_arg_is_nullptr", thunk_fn);
     BasicBlock *arg_is_nullptr_block = BasicBlock::Create(ctx.m_LLVMContext, "arg_is_nullptr", thunk_fn);
@@ -40,17 +55,11 @@ void compile_thunk(const std::string &thunk_name, const std::string &fn_name, ll
 
     BasicBlock *call_internal_block = BasicBlock::Create(ctx.m_LLVMContext, "thunk_call_internal", thunk_fn);
 
-    FunctionType *get_type_fn_type = FunctionType::get(Type::getInt32Ty(ctx.m_LLVMContext), {arg_type}, false);
-    FunctionType *list_length_fn_type = FunctionType::get(Type::getInt64Ty(ctx.m_LLVMContext), {arg_type}, false);
-    FunctionType *list_first_fn_type = FunctionType::get(arg_type, {arg_type}, false);
-    FunctionType *list_next_fn_type = FunctionType::get(arg_type, {arg_type}, false);
-    FunctionCallee get_type_fn = ctx.m_Module.getOrInsertFunction("tinyclj_object_get_type", get_type_fn_type);
-    FunctionCallee list_length_fn = ctx.m_Module.getOrInsertFunction("tc_list_length", list_length_fn_type);
-    FunctionCallee list_first_fn = ctx.m_Module.getOrInsertFunction("tc_list_first", list_first_fn_type);
-    FunctionCallee list_next_fn = ctx.m_Module.getOrInsertFunction("tc_list_next", list_next_fn_type);
+    ctx.m_IRBuilder.SetInsertPoint(entry_block);
 
     // allocate space for the arg which is used to iterate over the arglist to unpack it
     auto arg_alloca = ctx.m_IRBuilder.CreateAlloca(arg_type, nullptr, "arglist_alloca");
+    ctx.m_IRBuilder.CreateBr(check_arg_is_nullptr_block);
 
     // load arg, compare arg == nullptr
     ctx.m_IRBuilder.SetInsertPoint(check_arg_is_nullptr_block);
@@ -64,6 +73,7 @@ void compile_thunk(const std::string &thunk_name, const std::string &fn_name, ll
     llvm::Value *nullptr_msg = ctx.m_IRBuilder.CreateGlobalStringPtr("Error: Function arguments cannot be null\n");
     ctx.m_IRBuilder.CreateCall(printf_func, {nullptr_msg});
     ctx.m_IRBuilder.CreateCall(exit_func, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx.m_LLVMContext), 1)});
+    ctx.m_IRBuilder.CreateUnreachable();
 
     // arg != nullptr -> check if it's a list
     ctx.m_IRBuilder.SetInsertPoint(check_arg_is_list_block);
@@ -81,13 +91,16 @@ void compile_thunk(const std::string &thunk_name, const std::string &fn_name, ll
             "Error: Function arguments must be passed as a list\n");
     ctx.m_IRBuilder.CreateCall(printf_func, {not_list_msg});
     ctx.m_IRBuilder.CreateCall(exit_func, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx.m_LLVMContext), 1)});
+    ctx.m_IRBuilder.CreateUnreachable();
 
     // check list length
     ctx.m_IRBuilder.SetInsertPoint(check_argcnt_block);
-    llvm::Value *arg_list_len = ctx.m_IRBuilder.CreateCall(list_length_fn, {arg}, "arg_list_len");
+    llvm::Value *arg_list_len_obj = ctx.m_IRBuilder.CreateCall(list_length_fn, {arg}, "arg_list_len_obj");
+    llvm::Value *arg_list_len_int64_t = ctx.m_IRBuilder.CreateCall(
+            integer_value_fn, {arg_list_len_obj}, "arg_list_len_int64");
     llvm::Value *expected_argcnt = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx.m_LLVMContext),
                                                           internal_fn->arg_size());
-    llvm::Value *is_argcnt_correct = ctx.m_IRBuilder.CreateICmpEQ(arg_list_len, expected_argcnt,
+    llvm::Value *is_argcnt_correct = ctx.m_IRBuilder.CreateICmpEQ(arg_list_len_int64_t, expected_argcnt,
                                                                   "is_argcnt_correct");
     ctx.m_IRBuilder.CreateCondBr(is_argcnt_correct, call_internal_block, wrong_argcnt_block);
 
@@ -95,10 +108,10 @@ void compile_thunk(const std::string &thunk_name, const std::string &fn_name, ll
     ctx.m_IRBuilder.SetInsertPoint(wrong_argcnt_block);
     llvm::Value *wrong_argcnt_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(
             "Error: Wrong number of arguments (%ld) passed to a function %s, expected %ld\n");
-    llvm::Value *arg_list_len_64 = ctx.m_IRBuilder.CreateZExt(arg_list_len, llvm::Type::getInt64Ty(ctx.m_LLVMContext));
     llvm::Value *fn_name_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(fn_name);
-    ctx.m_IRBuilder.CreateCall(printf_func, {wrong_argcnt_msg, arg_list_len_64, fn_name_msg, expected_argcnt});
+    ctx.m_IRBuilder.CreateCall(printf_func, {wrong_argcnt_msg, arg_list_len_int64_t, fn_name_msg, expected_argcnt});
     ctx.m_IRBuilder.CreateCall(exit_func, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx.m_LLVMContext), 1)});
+    ctx.m_IRBuilder.CreateUnreachable();
 
     // call the internal function with unpacked arguments
     ctx.m_IRBuilder.SetInsertPoint(call_internal_block);
@@ -242,7 +255,10 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
     return emitIR(ExpressionMode::STATEMENT, nullptr, ctx);
 }
 
-Object *FunctionExpr::eval() const {
-    throw std::runtime_error("Todo: Link the generated function into the runtime using LLVM' JIT"
-                             " and return a function object that wraps the generated function");
+Object *FunctionExpr::eval(Runtime &runtime) const {
+    auto &jit = runtime.getJIT();
+
+    const Object *(*thunk_fn)(const Object *arglist) = reinterpret_cast<const Object *(*)(const Object *)>(
+            jit->lookup(m_Name + "__thunk")->getAddress());
+    return const_cast<Object *>(thunk_fn(empty_list()));
 }

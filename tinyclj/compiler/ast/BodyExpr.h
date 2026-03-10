@@ -8,7 +8,7 @@ class BodyExpr : public Expr {
 public:
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
-    Object * eval() const override;
+    Object * eval(Runtime &runtime) const override;
 
     BodyExpr(std::vector<AExpr> exprs);
 

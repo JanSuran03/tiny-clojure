@@ -17,6 +17,6 @@ void ConstantExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCo
     }
 }
 
-Object *ConstantExpr::eval() const {
+Object *ConstantExpr::eval(Runtime &runtime) const {
     return evalConstantValue();
 }

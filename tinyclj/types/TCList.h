@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Object.h"
-#include "tcdef.h"
+#include "../tcdef.h"
 
 struct TCList {
     const Object *m_Head;

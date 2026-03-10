@@ -12,10 +12,10 @@ void BodyExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContex
     m_Exprs.back()->emitIR(mode, dst, ctx);
 }
 
-Object *BodyExpr::eval() const {
+Object *BodyExpr::eval(Runtime &runtime) const {
     Object *result = nullptr;
     for (const auto &expr: m_Exprs) {
-        result = expr->eval();
+        result = expr->eval(runtime);
     }
     return result;
 }

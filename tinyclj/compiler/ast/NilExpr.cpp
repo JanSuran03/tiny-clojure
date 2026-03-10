@@ -9,6 +9,6 @@ void NilExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
     }
 }
 
-Object *NilExpr::eval() const {
+Object *NilExpr::eval(Runtime &runtime) const {
     return nullptr;
 }

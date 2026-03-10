@@ -12,13 +12,13 @@ void IfExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext 
     throw std::runtime_error("IfExpr::emitIR not implemented");
 }
 
-Object *IfExpr::eval() const {
-    auto res = m_CondExpr->eval();
+Object *IfExpr::eval(Runtime &runtime) const {
+    auto res = m_CondExpr->eval(runtime);
     if (res == nullptr ||
             (res->m_Type == ObjectType::BOOLEAN && !tc_boolean_valueX(res))) {
-        return m_ElseExpr->eval();
+        return m_ElseExpr->eval(runtime);
     } else {
-        return m_ThenExpr->eval();
+        return m_ThenExpr->eval(runtime);
     }
 }
 
