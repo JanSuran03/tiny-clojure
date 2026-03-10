@@ -21,6 +21,7 @@ Object *BodyExpr::eval(Runtime &runtime) const {
 }
 
 AExpr BodyExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+    form = tc_list_next(form); // consume 'do
     std::vector<AExpr> exprs;
     for (const Object *lst = tc_list_seq(form); lst; lst = tc_list_next(lst)) {
         const Object *exprForm = tc_list_first(lst);

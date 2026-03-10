@@ -17,13 +17,14 @@ public:
     llvm::Module &m_Module;
     std::vector<LoopBase> m_LoopLabels;
     llvm::Function *m_CurrentFunction = nullptr;
-    std::atomic<int64_t> m_LabelCounter = 0;
+    std::atomic<int64_t> &m_IdCounter;
     std::unordered_map<std::string, llvm::AllocaInst *> m_VariableMap;
     std::unordered_set<std::string> m_AvailableSymbols;
 
     CompilerContext(llvm::LLVMContext &llvmContext,
                     llvm::IRBuilder<> &irBuilder,
-                    llvm::Module &module);
+                    llvm::Module &module,
+                    std::atomic<int64_t> &idCounter);
 
     llvm::PointerType *objectPointerType() const;
 };

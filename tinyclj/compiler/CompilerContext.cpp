@@ -2,10 +2,12 @@
 
 CompilerContext::CompilerContext(llvm::LLVMContext &llvmContext,
                                  llvm::IRBuilder<> &irBuilder,
-                                 llvm::Module &module)
+                                 llvm::Module &module,
+                                 std::atomic<int64_t> &idCounter)
         : m_LLVMContext(llvmContext),
           m_IRBuilder(irBuilder),
-          m_Module(module) {
+          m_Module(module),
+          m_IdCounter(idCounter) {
     declareStdLibFunctions();
 }
 

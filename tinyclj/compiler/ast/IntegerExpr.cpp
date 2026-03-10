@@ -8,14 +8,13 @@ llvm::Value *IntegerExpr::emitConstantValue(CompilerContext &ctx) const {
         // declare the function
         llvm::FunctionType *funcType = llvm::FunctionType::get(
                 ctx.objectPointerType(), // return type: Object*
-                {llvm::Type::getInt64Ty(ctx.m_LLVMContext)}, // parameter type: i64
+                {llvm::Type::getInt64Ty(ctx.m_LLVMContext)}, // parameter type: 64-bit integer
                 false // isVarArg
         );
         func = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "tc_integer_new", ctx.m_Module);
     }
     llvm::Value *arg = llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(64, m_Value, true));
     return ctx.m_IRBuilder.CreateCall(func, {arg});
-    //return llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(64, m_Value, true));
 }
 
 Object *IntegerExpr::evalConstantValue() const {

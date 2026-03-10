@@ -4,11 +4,11 @@
 
 extern "C" {
 Object *tc_string_new(const char *value) {
-    TCString *symbol = new TCString{.m_Value = strdup(value)};
+    TCString *str = new TCString{.m_Value = strdup(value)};
 
     return new Object{
-            .m_Data = symbol,
-            .m_Type = ObjectType::SYMBOL,
+            .m_Data = str,
+            .m_Type = ObjectType::STRING,
             .m_Call = nullptr
     };
 }

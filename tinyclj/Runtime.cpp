@@ -1,9 +1,11 @@
+#include <iostream>
 #include <unordered_map>
 
 #include "llvm/IR/Verifier.h"
 
 #include "Runtime.h"
 #include "compiler/ast/parser.h"
+#include "compiler/reader/LispReader.h"
 #include "runtime/rt.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
@@ -32,7 +34,7 @@ std::unique_ptr<llvm::orc::LLJIT> Runtime::createJIT() {
 
 Runtime::Runtime(const std::vector<std::string> &objectFiles)
         : m_JIT(createJIT()) {
-    for (const auto &objectFile : objectFiles) {
+    for (const auto &objectFile: objectFiles) {
         auto buffer_or_err = llvm::MemoryBuffer::getFile(objectFile);
         if (!buffer_or_err) {
             throw std::runtime_error("Failed to read object file: " + std::to_string(buffer_or_err.getError().value()));
@@ -53,7 +55,7 @@ Object *Runtime::eval(const Object *form) {
     std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("eval_module", *llvm_ctx);
     llvm::IRBuilder<> builder(*llvm_ctx);
 
-    CompilerContext ctx(*llvm_ctx, builder, *module);
+    CompilerContext ctx(*llvm_ctx, builder, *module, m_IdCounter);
 
     // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
     // (-> (fn* fn_name [] form))
@@ -75,6 +77,30 @@ Object *Runtime::eval(const Object *form) {
         throw std::runtime_error("Failed to add module to JIT: " + llvm::toString(std::move(err)));
     }
 
-    // print the llvm module
     return expr->eval(*this);
+}
+
+void Runtime::repl() {
+    BufferedReader reader(std::cin);
+
+    while (true) {
+        std::cout << "> " << std::flush;
+        const Object *form = LispReader::read(reader);
+        if (form == LispReader::eof_object()
+            || (form != nullptr
+                && form->m_Type == ObjectType::SYMBOL
+                && strcmp(static_cast<const TCSymbol *>(form->m_Data)->m_Value, "exit") == 0)) {
+            std::cout << "Goodbye!" << std::endl;
+            break;
+        }
+
+        try {
+            const Object *res = eval(form);
+            std::cout << "=> ";
+            tinyclj_rt_print(res);
+            std::cout << std::endl;
+        } catch (const std::runtime_error &e) {
+            std::cout << "Runtime error: " << e.what() << std::endl;
+        }
+    }
 }

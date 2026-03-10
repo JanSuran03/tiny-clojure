@@ -40,17 +40,18 @@ int main() {
     llvm::InitializeNativeTargetAsmParser();
 
     // (let* (a 1) a)
-    const Object *bindings = tc_list_cons(tc_symbol_new("a"),
-                                          tc_list_cons(tc_integer_new(1), empty_list()));
-    const Object *form = tc_list_cons(tc_symbol_new("let*"),
-                                      tc_list_cons(bindings,
-                                                   tc_list_cons(tc_symbol_new("a"),
-                                                                empty_list())));
+    //const Object *bindings = tc_list_cons(tc_symbol_new("a"),
+    //                                      tc_list_cons(tc_integer_new(1), empty_list()));
+    //const Object *form = tc_list_cons(tc_symbol_new("let*"),
+    //                                  tc_list_cons(bindings,
+    //                                               tc_list_cons(tc_symbol_new("a"),
+    //                                                            empty_list())));
 
     Runtime runtime(compiled_files);
+    runtime.repl();
 
-    Object *res = runtime.eval(form);
-    tinyclj_rt_print(res);
+    //Object *res = runtime.eval(form);
+    //tinyclj_rt_print(res);
 
     //std::cout << "Hello, World!" << std::endl;
 

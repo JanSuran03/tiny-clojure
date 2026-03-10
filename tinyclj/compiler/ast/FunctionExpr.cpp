@@ -205,7 +205,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     if (name != nullptr && name->m_Type == ObjectType::SYMBOL) {
         form = tc_list_next(form); // consume the name if it's present
     } else {
-        name = tc_symbol_new(("fn__" + std::to_string(ctx.m_LabelCounter++)).c_str());
+        name = tc_symbol_new(("fn__" + std::to_string(ctx.m_IdCounter++)).c_str());
     }
 
     const Object *arglist = tc_list_first(form);

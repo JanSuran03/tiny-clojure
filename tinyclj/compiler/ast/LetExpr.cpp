@@ -39,7 +39,7 @@ LetExpr::LetExpr(std::vector<std::tuple<std::string, AExpr>> bindings, std::vect
           m_Body(std::move(body)) {}
 
 AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
-    form = tc_list_next(form); // consume 'let
+    form = tc_list_next(form); // consume 'let*
     const Object *bindings = tc_list_first(form);
     form = tc_list_next(form);
     if (bindings == nullptr || tinyclj_object_get_type(bindings) != ObjectType::LIST) {

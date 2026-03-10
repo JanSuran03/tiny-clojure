@@ -2,23 +2,19 @@
 #include "types/TCString.h"
 
 llvm::Value *StringExpr::emitConstantValue(CompilerContext &ctx) const {
-    // Create a global string and reference it here
-    /*llvm::Constant *strConstant = llvm::ConstantDataArray::getString(ctx.m_LLVMContext, m_Value, true);
-    llvm::GlobalVariable *strVar = new llvm::GlobalVariable(
-            ctx.m_Module,
-            strConstant->getType(),
-            true, // isConstant
-            llvm::GlobalValue::PrivateLinkage,
-            strConstant
-    );
-
-    return llvm::ConstantExpr::getGetElementPtr(
-            llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx.m_LLVMContext), m_Value.size() + 1),
-            strVar,
-            {llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx.m_LLVMContext), 0),
-             llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx.m_LLVMContext), 0)}
-    );*/
-    throw std::runtime_error("String constants not implemented yet");
+    // call a linked function "tc_integer_new" with m_Value
+    llvm::Function *func = ctx.m_Module.getFunction("tc_string_new");
+    if (!func) {
+        // declare the function
+        llvm::FunctionType *funcType = llvm::FunctionType::get(
+                ctx.objectPointerType(), // return type: Object*
+                {llvm::Type::getInt8PtrTy(ctx.m_LLVMContext)}, // parameter type: char *
+                false // isVarArg
+        );
+        func = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "tc_string_new", ctx.m_Module);
+    }
+    llvm::Value *strPtr = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Value, "str");
+    return ctx.m_IRBuilder.CreateCall(func, {strPtr}, "str_obj");
 }
 
 Object *StringExpr::evalConstantValue() const {

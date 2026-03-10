@@ -30,6 +30,8 @@ add_executable(tiny-clojure main.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarExpr.cpp
         tinyclj/compiler/ast/parser.cpp
+        tinyclj/compiler/reader/BufferedReader.cpp
+        tinyclj/compiler/reader/LispReader.cpp
         tinyclj/runtime/rt.cpp
         tinyclj/types/Object.cpp
         tinyclj/types/TCBoolean.cpp
