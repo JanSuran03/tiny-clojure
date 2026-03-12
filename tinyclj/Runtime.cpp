@@ -63,7 +63,6 @@ Object *Runtime::eval(const Object *form) {
                                           tc_list_cons
                                                   (empty_list(),
                                                    tc_list_cons(form, empty_list())));
-
     AExpr expr = Parser::analyze(ctx, new_form);
 
     if (llvm::verifyModule(ctx.m_Module, &llvm::errs())) {
@@ -77,7 +76,7 @@ Object *Runtime::eval(const Object *form) {
         throw std::runtime_error("Failed to add module to JIT: " + llvm::toString(std::move(err)));
     }
 
-    return expr->eval(*this);
+    return expr->eval(*this)->m_Call(nullptr, 0);
 }
 
 void Runtime::repl() {

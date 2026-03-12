@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "LispReader.h"
+#include "runtime/rt.h"
 #include "types/TCBoolean.h"
 #include "types/TCDouble.h"
 #include "types/TCInteger.h"
@@ -55,13 +56,7 @@ const Object *read_list(BufferedReader &rdr) {
 
         elements.emplace_back(elem);
     }
-
-    // Create the list object
-    const Object *ret = empty_list();
-    for (ssize_t i = ((ssize_t) elements.size()) - 1; i >= 0; i--) {
-        ret = tc_list_cons(elements[i], ret);
-    }
-    return ret;
+    return tinyclj_vec_to_list(elements);
 }
 
 const Object *read_string(BufferedReader &rdr) {

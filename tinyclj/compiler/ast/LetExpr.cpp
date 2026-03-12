@@ -1,3 +1,4 @@
+#include "ASTUtils.h"
 #include "LetExpr.h"
 #include "parser.h"
 #include "types/TCList.h"
@@ -21,9 +22,8 @@ void LetExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
         }
         ctx.m_VariableMap[name] = alloca;
     }
-    for (const AExpr &expr: m_Body) {
-        expr->emitIR(mode, dst, ctx);
-    }
+    AstUtils::emitBody(m_Body, "let", mode, dst, ctx);
+
     // restore shadowed variables in the context
     for (const auto &[name, alloca]: shadowed_allocas) {
         if (alloca) {

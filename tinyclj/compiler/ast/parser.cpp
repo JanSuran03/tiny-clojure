@@ -9,6 +9,7 @@
 #include "FunctionExpr.h"
 #include "IfExpr.h"
 #include "IntegerExpr.h"
+#include "InvokeExpr.h"
 #include "LetExpr.h"
 #include "NilExpr.h"
 #include "QuotedExpr.h"
@@ -57,9 +58,8 @@ AExpr Parser::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *f
                 return ana_it->second(mode, ctx, form);
             }
 
-
-            // todo: macroexpansion, special forms, invokes
-            throw std::runtime_error("Lists are not fully supported yet");
+            // todo: macroexpansion
+            return InvokeExpr::parse(mode, ctx, form);
         }
         case ObjectType::CHARACTER:
             return std::make_unique<CharExpr>(tc_char_valueX(form));

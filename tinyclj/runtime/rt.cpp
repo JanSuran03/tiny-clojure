@@ -4,6 +4,7 @@
 #include "types/TCBoolean.h"
 #include "types/TCChar.h"
 #include "types/TCDouble.h"
+#include "types/TCFunction.h"
 #include "types/TCInteger.h"
 #include "types/TCList.h"
 #include "types/TCString.h"
@@ -93,10 +94,23 @@ Object *tinyclj_rt_print(const Object *a) {
             case ObjectType::CHARACTER:
                 std::cout << '\\' << static_cast<TCChar *>(a->m_Data)->m_Value;
                 break;
+            case ObjectType::FUNCTION:
+                std::cout << "Function '"
+                          << static_cast<TCFunction *>(a->m_Data)->m_Name
+                          << " @" << ((void *) (a->m_Call));
+                break;
             default:
                 std::cout << "<object of type " << static_cast<int>(a->m_Type) << ">";
         }
     }
     return nullptr;
+}
+
+const Object *tinyclj_vec_to_list(const std::vector<const Object *> &vec) {
+    const Object *ret = empty_list();
+    for (ssize_t i = ((ssize_t) vec.size()) - 1; i >= 0; i--) {
+        ret = tc_list_cons(vec[i], ret);
+    }
+    return ret;
 }
 }
