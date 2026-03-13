@@ -21,8 +21,16 @@ void CompilerContext::declareStdLibFunctions() {
                                  objectPointerType());
     m_Module.getOrInsertFunction("tinyclj_object_get_type", llvm::Type::getInt32Ty(m_LLVMContext),
                                  objectPointerType());
+    //m_Module.getOrInsertFunction("tinyclj_rt_add", objectPointerType(), objectPointerType());
 }
 
 llvm::PointerType *CompilerContext::objectPointerType() const {
     return llvm::PointerType::get(m_LLVMContext, 0);
+}
+
+void CompilerContext::newBasicBlock() {
+    auto block_id = "block__" + std::to_string(m_IdCounter++);
+    llvm::BasicBlock *block = llvm::BasicBlock::Create(m_LLVMContext, block_id, m_CurrentFunction);
+    m_IRBuilder.CreateBr(block);
+    m_IRBuilder.SetInsertPoint(block);
 }

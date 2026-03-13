@@ -8,10 +8,9 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-include_directories(${LLVM_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/tinyclj)
 add_definitions(${LLVM_DEFINITIONS})
 
-add_executable(tiny-clojure main.cpp
+add_library(tinyclj_lib
         tinyclj/Runtime.cpp
         tinyclj/compiler/CompilerContext.cpp
         tinyclj/compiler/ast/ASTUtils.cpp
@@ -32,8 +31,8 @@ add_executable(tiny-clojure main.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarExpr.cpp
         tinyclj/compiler/ast/parser.cpp
-        tinyclj/compiler/reader/BufferedReader.cpp
-        tinyclj/compiler/reader/LispReader.cpp
+        tinyclj/reader/BufferedReader.cpp
+        tinyclj/reader/LispReader.cpp
         tinyclj/runtime/rt.cpp
         #tinyclj/types/builtins.cpp
         tinyclj/types/Object.cpp
@@ -46,6 +45,10 @@ add_executable(tiny-clojure main.cpp
         tinyclj/types/TCString.cpp
         tinyclj/types/TCSymbol.cpp
 )
+
+target_include_directories(tinyclj_lib PUBLIC
+        ${LLVM_INCLUDE_DIRS}
+        ${PROJECT_SOURCE_DIR}/tinyclj)
 
 llvm_map_components_to_libnames(LLVM_LIBS
         core
@@ -67,4 +70,10 @@ llvm_map_components_to_libnames(LLVM_LIBS
         bitreader
 )
 
-target_link_libraries(tiny-clojure ${LLVM_LIBS})
+target_link_libraries(tinyclj_lib PUBLIC ${LLVM_LIBS})
+
+add_executable(tiny-clojure main.cpp)
+target_link_libraries(tiny-clojure PRIVATE tinyclj_lib)
+
+enable_testing()
+add_subdirectory(test)
