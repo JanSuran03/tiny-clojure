@@ -27,7 +27,8 @@ bool test_eval(Runtime &runtime, const std::string &input, const std::string &ex
 
     auto orig_rdbuf = std::cout.rdbuf();
     std::cout.rdbuf(oss.rdbuf());
-    tinyclj_rt_print(runtime.eval(obj));
+    const Object *res = runtime.eval(obj);
+    tinyclj_rt_print(&res, 1);
 
     std::cout.rdbuf(orig_rdbuf);
 
@@ -39,19 +40,26 @@ void test(const std::string &name, Fn test_fn, ErrFn err_fn, const std::vector<s
     unsigned passed = 0;
 
     for (size_t i = 0; i < cases.size(); i++) {
-        if (std::apply(test_fn, cases[i])) {
-            passed++;
-        } else {
-            std::cerr << "Failed test '" << name << "' (" << (i + 1) << "/" << cases.size() << "): "
-                      << std::apply(err_fn, cases[i]) << '\n';
+        try {
+            if (std::apply(test_fn, cases[i])) {
+                passed++;
+            } else {
+                std::cerr << "Failed test '" << name << "' (" << (i + 1) << "/" << cases.size() << "): "
+                          << std::apply(err_fn, cases[i]) << '\n';
+            }
+        } catch (const std::exception &e) {
+            std::cerr << "Failed test '" << name << "' (" << (i + 1) << "/" << cases.size() <<
+                      ") due to an uncaught exception: "
+                      << std::apply(err_fn, cases[i]) << '\n' << e.what() << '\n';
         }
     }
 
     if (passed != cases.size()) {
         std::cerr << "Not all test cases in test '" << name << "' passed, exiting...\n";
         exit(1);
+    } else {
+        std::cout << "Passed all " << cases.size() << " test cases in test '" << name << "'.\n";
     }
-    std::cout << std::flush;
 }
 
 int main() {
@@ -80,16 +88,20 @@ int main() {
              return "eval '" + input + "' == '" + expected_output + '\'';
          },
          std::vector<std::tuple<std::string, std::string>>
-                 {{"67",       "67"},
-                  {"6.9",      "6.9"},
-                  {"nil",      "nil"},
-                  {"true",     "true"},
-                  {"false",    "false"},
-                  {"(do 1 2)", "2"},
-                  {"(do)",     "nil"},
-                  {"(if true 1 2)", "1"},
-                  {"(if false 1 2)", "2"},
-                  {"(if nil 1 2)", "2"},
-                  {"(if 1 1 2)", "1"},
-                  {"(if 0 1 2)", "1"}});
+                 {{"67",                                        "67"},
+                  {"6.9",                                       "6.9"},
+                  {"nil",                                       "nil"},
+                  {"\"hello world!\"",                          "\"hello world!\""},
+                  {"true",                                      "true"},
+                  {"false",                                     "false"},
+                  {"(do 1 2)",                                  "2"},
+                  {"(do)",                                      "nil"},
+                  {"(if true 1 2)",                             "1"},
+                  {"(if false 1 2)",                            "2"},
+                  {"(if nil 1 2)",                              "2"},
+                  {"(if 1 1 2)",                                "1"},
+                  {"(if 0 1 2)",                                "1"},
+                  {"(let* (a 1 b 2) a)",                        "1"},
+                  {"(builtin_binary_add 1 2)",                  "3"},
+                  {"(let* (a 1 b 2) (builtin_binary_add a b))", "3"}});
 }

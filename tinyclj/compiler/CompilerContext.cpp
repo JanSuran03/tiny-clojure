@@ -1,10 +1,12 @@
 #include "CompilerContext.h"
 
-CompilerContext::CompilerContext(llvm::LLVMContext &llvmContext,
+CompilerContext::CompilerContext(Runtime &runtimeRef,
+                                 llvm::LLVMContext &llvmContext,
                                  llvm::IRBuilder<> &irBuilder,
                                  llvm::Module &module,
                                  std::atomic<int64_t> &idCounter)
-        : m_LLVMContext(llvmContext),
+        : m_RuntimeRef(runtimeRef),
+          m_LLVMContext(llvmContext),
           m_IRBuilder(irBuilder),
           m_Module(module),
           m_IdCounter(idCounter) {
@@ -28,9 +30,15 @@ llvm::PointerType *CompilerContext::objectPointerType() const {
     return llvm::PointerType::get(m_LLVMContext, 0);
 }
 
-void CompilerContext::newBasicBlock() {
+void CompilerContext::newTmpBasicBlock() {
     auto block_id = "block__" + std::to_string(m_IdCounter++);
     llvm::BasicBlock *block = llvm::BasicBlock::Create(m_LLVMContext, block_id, m_CurrentFunction);
     m_IRBuilder.CreateBr(block);
     m_IRBuilder.SetInsertPoint(block);
+}
+
+llvm::BasicBlock *CompilerContext::createBasicBlock(const std::string &name) {
+    return llvm::BasicBlock::Create(m_LLVMContext,
+                                    name,
+                                    m_CurrentFunction);
 }

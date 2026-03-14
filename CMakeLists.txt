@@ -25,6 +25,7 @@ add_library(tinyclj_lib
         tinyclj/compiler/ast/IntegerExpr.cpp
         tinyclj/compiler/ast/InvokeExpr.cpp
         tinyclj/compiler/ast/LetExpr.cpp
+        tinyclj/compiler/ast/LocalBindingExpr.cpp
         tinyclj/compiler/ast/NilExpr.cpp
         tinyclj/compiler/ast/QuotedExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
@@ -44,6 +45,7 @@ add_library(tinyclj_lib
         tinyclj/types/TCList.cpp
         tinyclj/types/TCString.cpp
         tinyclj/types/TCSymbol.cpp
+        tinyclj/types/TCVar.cpp
 )
 
 target_include_directories(tinyclj_lib PUBLIC

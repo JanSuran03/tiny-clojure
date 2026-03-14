@@ -1,13 +1,11 @@
 #pragma once
 
 #include "UnevaluatableExpr.h"
-#include "types/TCVar.h"
 
-// todo: implement eval?
-class VarExpr : public UnevaluatableExpr {
-    TCVar *m_Var;
+class LocalBindingExpr : public UnevaluatableExpr {
+    std::string m_Value;
 public:
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
-    VarExpr(TCVar *var);
+    LocalBindingExpr(std::string value);
 };

@@ -11,15 +11,13 @@
 #include "types/TCSymbol.h"
 
 extern "C" {
-Object *tinyclj_rt_add(const Object *arglist) {
-    TCList *list = static_cast<TCList *>(arglist->m_Data);
-    if (list == nullptr || list->m_Length != 2) {
+Object *tinyclj_rt_add(const Object **argv, size_t argc) {
+    if (argc != 2) {
         throw std::runtime_error("add function requires exactly 2 arguments");
     }
 
-    const Object *a = list->m_Head;
-    list = static_cast<TCList *>(list->m_Tail->m_Data);
-    const Object *b = list->m_Head;
+    const Object *a = argv[0];
+    const Object *b = argv[1];
 
     switch (a->m_Type) {
         case ObjectType::INTEGER:
@@ -57,7 +55,8 @@ Object *tinyclj_rt_add(const Object *arglist) {
     }
 }
 
-Object *tinyclj_rt_print(const Object *a) {
+Object *tinyclj_rt_print(const Object **argv, size_t argc) {
+    const Object *a = argv[0];
     if (a == nullptr) {
         std::cout << "nil"; // todo: "nil" or ""?
     } else {
@@ -86,7 +85,8 @@ Object *tinyclj_rt_print(const Object *a) {
                     } else {
                         std::cout << ' ';
                     }
-                    tinyclj_rt_print(tc_list_first(s));
+                    const Object *list_elem = tc_list_first(s);
+                    tinyclj_rt_print(&list_elem, 1);
                 }
                 std::cout << ')';
                 break;

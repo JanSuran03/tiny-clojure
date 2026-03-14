@@ -11,7 +11,6 @@ enum class ObjectType {
     STRING,
     SYMBOL,
     FUNCTION,
-    //VAR,
 };
 
 struct Object;

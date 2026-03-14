@@ -150,13 +150,14 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
 
     std::vector<std::string> args;
     std::vector<std::string> new_scope_vars;
-    for (const Object *arg = tc_list_seq(arglist); arg; arg = tc_list_next(arg)) {
+    for (arglist = tc_list_seq(arglist); arglist; arglist = tc_list_next(arglist)) {
+        const Object*arg = tc_list_first(arglist);
         if (tinyclj_object_get_type(arg) != ObjectType::SYMBOL) {
             throw std::runtime_error("fn argument must be a symbol");
         }
         args.emplace_back(tc_symbol_valueX(arg));
-        if (!ctx.m_AvailableSymbols.contains(args.back())) {
-            ctx.m_AvailableSymbols.insert(args.back());
+        if (!ctx.m_LocalBindings.contains(args.back())) {
+            ctx.m_LocalBindings.insert(args.back());
             new_scope_vars.push_back(args.back());
         }
     }
@@ -171,7 +172,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     }
 
     for (const auto &var: new_scope_vars) {
-        ctx.m_AvailableSymbols.erase(var);
+        ctx.m_LocalBindings.erase(var);
     }
 
     auto fn = std::make_unique<FunctionExpr>(

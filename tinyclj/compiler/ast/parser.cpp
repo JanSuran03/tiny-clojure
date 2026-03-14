@@ -1,7 +1,6 @@
 #include <unordered_map>
 #include <iostream>
 
-#include "runtime/rt.h"
 #include "BodyExpr.h"
 #include "BooleanExpr.h"
 #include "CharExpr.h"
@@ -11,11 +10,13 @@
 #include "IntegerExpr.h"
 #include "InvokeExpr.h"
 #include "LetExpr.h"
+#include "LocalBindingExpr.h"
 #include "NilExpr.h"
 #include "QuotedExpr.h"
 #include "StringExpr.h"
 #include "VarExpr.h"
 #include "parser.h"
+#include "Runtime.h"
 #include "types/TCBoolean.h"
 #include "types/TCChar.h"
 #include "types/TCDouble.h"
@@ -23,6 +24,7 @@
 #include "types/TCList.h"
 #include "types/TCString.h"
 #include "types/TCSymbol.h"
+#include "types/TCVar.h"
 
 using AnalyzerFn = AExpr (*)(ExpressionMode mode, CompilerContext &ctx, const Object *form);
 
@@ -33,6 +35,17 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
         {"let*",  LetExpr::parse},
         {"fn*",   FunctionExpr::parse},
 };
+
+AExpr resolveSymbol(CompilerContext &ctx, const Object *form) {
+    std::string name = tc_symbol_valueX(form);
+    if (ctx.m_LocalBindings.contains(name)) {
+        return std::make_unique<LocalBindingExpr>(name);
+    }
+    if (TCVar *var = ctx.m_RuntimeRef.getVar(name)) {
+        return std::make_unique<VarExpr>(var);
+    }
+    throw std::runtime_error(std::string("Cannot resolve symbol: ").append(name).append(" in the context"));
+}
 
 AExpr Parser::analyze(CompilerContext &ctx, const Object *form) {
     return analyze(ExpressionMode::EXPRESSION, ctx, form);
@@ -66,7 +79,7 @@ AExpr Parser::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *f
         case ObjectType::STRING:
             return std::make_unique<StringExpr>(tc_string_valueX(form));
         case ObjectType::SYMBOL:
-            return VarExpr::resolveVar(ctx, form);
+            return resolveSymbol(ctx, form);
         case ObjectType::FUNCTION:
             throw std::runtime_error("Functions are not supported yet");
     }

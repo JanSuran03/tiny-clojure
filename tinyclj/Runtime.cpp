@@ -6,6 +6,7 @@
 #include "compiler/ast/parser.h"
 #include "reader/LispReader.h"
 #include "runtime/rt.h"
+#include "types/TCFunction.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
 
@@ -31,6 +32,29 @@ std::unique_ptr<llvm::orc::LLJIT> Runtime::createJIT() {
     return jit;
 }
 
+TCVar *Runtime::declareVar(const std::string &name) {
+    if (auto it = m_GlobalVarStorage.find(name); it != m_GlobalVarStorage.end()) {
+        return it->second;
+    } else {
+        return m_GlobalVarStorage.emplace(name, tc_var_new()).first->second;
+    }
+}
+
+TCVar *Runtime::getVar(const std::string &name) const {
+    if (auto var = m_GlobalVarStorage.find(name); var != m_GlobalVarStorage.end()) {
+        return var->second;
+    } else {
+        return nullptr;
+    }
+}
+
+void Runtime::init() {
+    auto binary_add = declareVar("builtin_binary_add");
+    auto unary_print = declareVar("builtin_unary_print");
+    tc_var_bind_root(binary_add, tc_function_new(tinyclj_rt_add, "builtin_binary_add"));
+    tc_var_bind_root(unary_print, tc_function_new(tinyclj_rt_print, "builtin_unary_print"));
+}
+
 Runtime::Runtime(const std::vector<std::string> &objectFiles)
         : m_JIT(createJIT()) {
     for (const auto &objectFile: objectFiles) {
@@ -43,6 +67,8 @@ Runtime::Runtime(const std::vector<std::string> &objectFiles)
             throw std::runtime_error("Failed to add object file to JIT: " + llvm::toString(std::move(err)));
         }
     }
+
+    init();
 }
 
 std::unique_ptr<llvm::orc::LLJIT> &Runtime::getJIT() {
@@ -54,7 +80,7 @@ Object *Runtime::eval(const Object *form) {
     std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("eval_module", *llvm_ctx);
     llvm::IRBuilder<> builder(*llvm_ctx);
 
-    CompilerContext ctx(*llvm_ctx, builder, *module, m_IdCounter);
+    CompilerContext ctx(*this, *llvm_ctx, builder, *module, m_IdCounter);
 
     // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
     // (-> (fn* fn_name [] form))
@@ -95,7 +121,7 @@ void Runtime::repl() {
         try {
             const Object *res = eval(form);
             std::cout << "=> ";
-            tinyclj_rt_print(res);
+            tinyclj_rt_print(&res, 1);
             std::cout << std::endl;
         } catch (const std::runtime_error &e) {
             std::cout << "Runtime error: " << e.what() << std::endl;

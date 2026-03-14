@@ -67,8 +67,8 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
             throw std::runtime_error("let binding name must be a symbol");
         }
         // if the variable is shadowed, don't do anything
-        if (!ctx.m_AvailableSymbols.contains(binding_name)) {
-            ctx.m_AvailableSymbols.insert(binding_name);
+        if (!ctx.m_LocalBindings.contains(binding_name)) {
+            ctx.m_LocalBindings.insert(binding_name);
             new_scope_vars.push_back(binding_name);
         }
 
@@ -85,7 +85,7 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
     }
 
     for (const std::string &var: new_scope_vars) {
-        ctx.m_AvailableSymbols.erase(var);
+        ctx.m_LocalBindings.erase(var);
     }
 
     return std::make_unique<LetExpr>(std::move(parsed_bindings), std::move(body));
