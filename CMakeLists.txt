@@ -31,7 +31,7 @@ add_library(tinyclj_lib
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarExpr.cpp
-        tinyclj/compiler/ast/parser.cpp
+        tinyclj/compiler/ast/SemanticAnalyzer.cpp
         tinyclj/reader/BufferedReader.cpp
         tinyclj/reader/LispReader.cpp
         tinyclj/runtime/rt.cpp
@@ -39,6 +39,7 @@ add_library(tinyclj_lib
         tinyclj/types/Object.cpp
         tinyclj/types/TCBoolean.cpp
         tinyclj/types/TCChar.cpp
+        tinyclj/types/TCClosure.cpp
         tinyclj/types/TCDouble.cpp
         tinyclj/types/TCFunction.cpp
         tinyclj/types/TCInteger.cpp

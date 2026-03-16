@@ -11,11 +11,14 @@ enum class ObjectType {
     STRING,
     SYMBOL,
     FUNCTION,
+    CLOSURE,
 };
 
 struct Object;
 
-typedef Object *(*CallFn)(const struct Object **arglist, size_t argcnt);
+typedef Object *(*CallFn)(const Object *self,
+                          size_t argc,
+                          const struct Object **argv);
 
 struct Object {
     void *m_Data;

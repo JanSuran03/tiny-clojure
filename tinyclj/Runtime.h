@@ -11,7 +11,7 @@
 
 class Runtime {
     std::unique_ptr<llvm::orc::LLJIT> m_JIT;
-    std::atomic<int64_t> m_IdCounter = 0;
+    std::atomic<size_t> m_IdCounter = 0;
     std::unordered_map<std::string, TCVar *> m_GlobalVarStorage;
 
     static std::unique_ptr<llvm::orc::LLJIT> createJIT();

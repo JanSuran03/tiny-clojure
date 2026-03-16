@@ -3,7 +3,7 @@
 #include "llvm/IR/Verifier.h"
 
 #include "Runtime.h"
-#include "compiler/ast/parser.h"
+#include "compiler/ast/SemanticAnalyzer.h"
 #include "reader/LispReader.h"
 #include "runtime/rt.h"
 #include "types/TCFunction.h"
@@ -36,7 +36,7 @@ TCVar *Runtime::declareVar(const std::string &name) {
     if (auto it = m_GlobalVarStorage.find(name); it != m_GlobalVarStorage.end()) {
         return it->second;
     } else {
-        return m_GlobalVarStorage.emplace(name, tc_var_new()).first->second;
+        return m_GlobalVarStorage[name] = tc_var_new();
     }
 }
 
@@ -84,11 +84,30 @@ Object *Runtime::eval(const Object *form) {
 
     // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
     // (-> (fn* fn_name [] form))
-    const Object *new_form = tc_list_cons(tc_symbol_new("fn*"),
-                                          tc_list_cons
-                                                  (empty_list(),
-                                                   tc_list_cons(form, empty_list())));
-    AExpr expr = Parser::analyze(ctx, new_form);
+
+    const Object *new_form = form;
+
+    if (form && form->m_Type == ObjectType::LIST) {
+        const Object *op = tc_list_first(form);
+        if (op != nullptr) {
+            const char *name = static_cast<TCSymbol *>(op->m_Data)->m_Value;
+            if (!strcmp(name, "do")) {
+                Object *res = nullptr;
+                for (const Object *forms = tc_list_next(form); forms; forms = tc_list_next(forms)) {
+                    res = eval(tc_list_first(forms));
+                }
+                return res;
+            } else if (!strcmp(name, "def")) {
+                throw std::runtime_error("cannot eval def (yet)");
+            }
+        }
+    }
+    new_form = tc_list_cons(tc_symbol_new("fn*"),
+                            tc_list_cons
+                                    (empty_list(),
+                                     tc_list_cons(form, empty_list())));
+
+    AExpr expr = SemanticAnalyzer::analyze(ctx, new_form);
 
     if (llvm::verifyModule(ctx.m_Module, &llvm::errs())) {
         ctx.m_Module.dump();
@@ -101,7 +120,8 @@ Object *Runtime::eval(const Object *form) {
         throw std::runtime_error("Failed to add module to JIT: " + llvm::toString(std::move(err)));
     }
 
-    return expr->eval(*this)->m_Call(nullptr, 0);
+    const Object *evaled_wrapper_fn = expr->eval(*this);
+    return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);
 }
 
 void Runtime::repl() {
@@ -121,7 +141,7 @@ void Runtime::repl() {
         try {
             const Object *res = eval(form);
             std::cout << "=> ";
-            tinyclj_rt_print(&res, 1);
+            tinyclj_rt_print(res, 1, &res);
             std::cout << std::endl;
         } catch (const std::runtime_error &e) {
             std::cout << "Runtime error: " << e.what() << std::endl;

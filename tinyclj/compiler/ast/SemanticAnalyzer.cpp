@@ -4,6 +4,7 @@
 #include "BodyExpr.h"
 #include "BooleanExpr.h"
 #include "CharExpr.h"
+#include "DefExpr.h"
 #include "DoubleExpr.h"
 #include "FunctionExpr.h"
 #include "IfExpr.h"
@@ -15,7 +16,7 @@
 #include "QuotedExpr.h"
 #include "StringExpr.h"
 #include "VarExpr.h"
-#include "parser.h"
+#include "SemanticAnalyzer.h"
 #include "Runtime.h"
 #include "types/TCBoolean.h"
 #include "types/TCChar.h"
@@ -29,6 +30,7 @@
 using AnalyzerFn = AExpr (*)(ExpressionMode mode, CompilerContext &ctx, const Object *form);
 
 std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
+        {"def",   DefExpr::parse},
         {"if",    IfExpr::parse},
         {"do",    BodyExpr::parse},
         {"quote", QuotedExpr::parse},
@@ -38,20 +40,32 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
 
 AExpr resolveSymbol(CompilerContext &ctx, const Object *form) {
     std::string name = tc_symbol_valueX(form);
+    // Step 1: Try local bindings (locals can override globals)
     if (ctx.m_LocalBindings.contains(name)) {
-        return std::make_unique<LocalBindingExpr>(name);
+        for (FunctionFrame *currentFrame = ctx.m_CurrentFunctionFrame;
+             currentFrame;
+             currentFrame = currentFrame->m_ParentFrame) {
+            // local var or already captured
+            if (currentFrame->m_Locals.contains(name) ||
+                currentFrame->m_Captures.contains(name)) {
+                return std::make_unique<LocalBindingExpr>(name);
+            }
+            // not captured -> capture recursively
+            currentFrame->m_Captures.emplace(name, currentFrame->m_Captures.size());
+        }
     }
+    // Step 2: Try global vars
     if (TCVar *var = ctx.m_RuntimeRef.getVar(name)) {
         return std::make_unique<VarExpr>(var);
     }
     throw std::runtime_error(std::string("Cannot resolve symbol: ").append(name).append(" in the context"));
 }
 
-AExpr Parser::analyze(CompilerContext &ctx, const Object *form) {
+AExpr SemanticAnalyzer::analyze(CompilerContext &ctx, const Object *form) {
     return analyze(ExpressionMode::EXPRESSION, ctx, form);
 }
 
-AExpr Parser::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+AExpr SemanticAnalyzer::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
     if (form == nullptr) {
         return std::make_unique<NilExpr>();
     }
@@ -67,6 +81,11 @@ AExpr Parser::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *f
                 throw std::runtime_error("Empty lists are not supported yet");
             }
             const Object *head = tc_list_first(form);
+
+            if (head == nullptr) {
+                throw std::runtime_error("Cannot call nil.");
+            }
+
             if (auto ana_it = m_SpecialAnalyzers.find(tc_symbol_valueX(head)); ana_it != m_SpecialAnalyzers.end()) {
                 return ana_it->second(mode, ctx, form);
             }
@@ -82,6 +101,8 @@ AExpr Parser::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *f
             return resolveSymbol(ctx, form);
         case ObjectType::FUNCTION:
             throw std::runtime_error("Functions are not supported yet");
+        case ObjectType::CLOSURE:
+            throw std::runtime_error("Closures are not supported yet");
     }
     std::unreachable();
 }

@@ -1,14 +1,20 @@
 #include "ASTUtils.h"
 #include "FunctionExpr.h"
+
+#include <utility>
 #include "Runtime.h"
-#include "parser.h"
+#include "SemanticAnalyzer.h"
 #include "types/TCFunction.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
 
-FunctionExpr::FunctionExpr(std::string name, std::vector<std::string> args, std::vector<AExpr> body)
+FunctionExpr::FunctionExpr(std::string name,
+                           std::vector<std::string> args,
+                           Captures captures,
+                           std::vector<AExpr> body)
         : m_Name(std::move(name)),
           m_Args(std::move(args)),
+          m_Captures(std::move(captures)),
           m_Body(std::move(body)) {}
 
 void compile_thunk(const std::string &thunk_name,
@@ -129,6 +135,8 @@ void FunctionExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCo
 }
 
 AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+    // todo: use unique_ptr to clean up memory when throwing exceptions
+    FunctionFrame *currentFrame = ctx.m_CurrentFunctionFrame = new FunctionFrame(ctx.m_CurrentFunctionFrame);
     form = tc_list_next(form); // consume 'fn
 
     // (fn name (args...) body...)
@@ -151,11 +159,15 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     std::vector<std::string> args;
     std::vector<std::string> new_scope_vars;
     for (arglist = tc_list_seq(arglist); arglist; arglist = tc_list_next(arglist)) {
-        const Object*arg = tc_list_first(arglist);
+        const Object *arg = tc_list_first(arglist);
         if (tinyclj_object_get_type(arg) != ObjectType::SYMBOL) {
             throw std::runtime_error("fn argument must be a symbol");
         }
-        args.emplace_back(tc_symbol_valueX(arg));
+
+        std::string arg_name = tc_symbol_valueX(arg);
+        currentFrame->m_Locals.emplace(arg_name);
+
+        args.emplace_back(arg_name);
         if (!ctx.m_LocalBindings.contains(args.back())) {
             ctx.m_LocalBindings.insert(args.back());
             new_scope_vars.push_back(args.back());
@@ -164,7 +176,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
 
     std::vector<AExpr> body;
     for (; form; form = tc_list_next(form)) {
-        body.push_back(Parser::analyze(
+        body.push_back(SemanticAnalyzer::analyze(
                 // discard return value of all but the last expression in the function body
                 tc_list_seq(form) == nullptr ? mode : ExpressionMode::STATEMENT,
                 ctx,
@@ -178,15 +190,22 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     auto fn = std::make_unique<FunctionExpr>(
             tc_symbol_valueX(name),
             std::move(args),
+            currentFrame->m_Captures, // todo: std::move
             std::move(body));
 
     fn->compile(ctx);
+
+    ctx.m_CurrentFunctionFrame = ctx.m_CurrentFunctionFrame->m_ParentFrame;
 
     return fn;
 }
 
 void FunctionExpr::compile(CompilerContext &ctx) const {
     return emitIR(ExpressionMode::STATEMENT, nullptr, ctx);
+}
+
+bool FunctionExpr::isClosure() {
+    return !m_Captures.empty();
 }
 
 Object *FunctionExpr::eval(Runtime &runtime) const {

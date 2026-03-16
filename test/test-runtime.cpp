@@ -28,7 +28,7 @@ bool test_eval(Runtime &runtime, const std::string &input, const std::string &ex
     auto orig_rdbuf = std::cout.rdbuf();
     std::cout.rdbuf(oss.rdbuf());
     const Object *res = runtime.eval(obj);
-    tinyclj_rt_print(&res, 1);
+    tinyclj_rt_print(res, 1, &res);
 
     std::cout.rdbuf(orig_rdbuf);
 

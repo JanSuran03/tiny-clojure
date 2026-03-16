@@ -1,5 +1,5 @@
 #include "IfExpr.h"
-#include "parser.h"
+#include "SemanticAnalyzer.h"
 #include "types/TCBoolean.h"
 #include "types/TCList.h"
 
@@ -80,13 +80,13 @@ AExpr IfExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *for
     if (form == nullptr) {
         throw std::runtime_error("if requires a condition expression");
     }
-    auto condExpr = Parser::analyze(mode, ctx, tc_list_first(form));
+    auto condExpr = SemanticAnalyzer::analyze(mode, ctx, tc_list_first(form));
     form = tc_list_next(form);
     if (form == nullptr) {
         throw std::runtime_error("if requires a then expression");
     }
-    auto thenExpr = Parser::analyze(mode, ctx, tc_list_first(form));
+    auto thenExpr = SemanticAnalyzer::analyze(mode, ctx, tc_list_first(form));
     form = tc_list_next(form);
-    AExpr elseExpr = Parser::analyze(mode, ctx, tc_list_first(form));
+    AExpr elseExpr = SemanticAnalyzer::analyze(mode, ctx, tc_list_first(form));
     return std::make_unique<IfExpr>(std::move(condExpr), std::move(thenExpr), std::move(elseExpr));
 }

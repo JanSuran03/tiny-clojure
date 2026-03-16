@@ -1,6 +1,6 @@
 #include "ASTUtils.h"
 #include "LetExpr.h"
-#include "parser.h"
+#include "SemanticAnalyzer.h"
 #include "types/TCList.h"
 #include "types/TCInteger.h"
 #include "types/TCSymbol.h"
@@ -54,7 +54,7 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
     // New scope variables that will be used for further resolution of symbols in let expression body
     // (or later in the bindings vector in the same let expression). These need to be removed from the
     // available context after parsing this let expression.
-    std::vector<std::string> new_scope_vars;
+    std::vector<std::string> new_scope_bindings;
 
     std::vector<std::tuple<std::string, AExpr>> parsed_bindings;
     for (bindings = tc_list_seq(bindings); bindings;) {
@@ -69,23 +69,26 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
         // if the variable is shadowed, don't do anything
         if (!ctx.m_LocalBindings.contains(binding_name)) {
             ctx.m_LocalBindings.insert(binding_name);
-            new_scope_vars.push_back(binding_name);
+            new_scope_bindings.push_back(binding_name);
         }
 
-        parsed_bindings.emplace_back(tc_symbol_valueX(binding_sym), Parser::analyze(
+        parsed_bindings.emplace_back(binding_name, SemanticAnalyzer::analyze(
                 ExpressionMode::EXPRESSION,
                 ctx,
                 binding_val));
+
+        ctx.m_CurrentFunctionFrame->m_Locals.emplace(binding_name);
     }
     std::vector<AExpr> body;
     for (; form; form = tc_list_next(form)) {
-        body.push_back(Parser::analyze(tc_list_next(form) == nullptr ? mode : ExpressionMode::STATEMENT,
-                                       ctx,
-                                       tc_list_first(form)));
+        body.push_back(SemanticAnalyzer::analyze(tc_list_next(form) == nullptr ? mode : ExpressionMode::STATEMENT,
+                                                 ctx,
+                                                 tc_list_first(form)));
     }
 
-    for (const std::string &var: new_scope_vars) {
-        ctx.m_LocalBindings.erase(var);
+    for (const std::string &binding_name: new_scope_bindings) {
+        ctx.m_LocalBindings.erase(binding_name);
+        ctx.m_CurrentFunctionFrame->m_Locals.erase(binding_name);
     }
 
     return std::make_unique<LetExpr>(std::move(parsed_bindings), std::move(body));

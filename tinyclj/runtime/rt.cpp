@@ -11,7 +11,7 @@
 #include "types/TCSymbol.h"
 
 extern "C" {
-Object *tinyclj_rt_add(const Object **argv, size_t argc) {
+Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("add function requires exactly 2 arguments");
     }
@@ -55,7 +55,7 @@ Object *tinyclj_rt_add(const Object **argv, size_t argc) {
     }
 }
 
-Object *tinyclj_rt_print(const Object **argv, size_t argc) {
+Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
     const Object *a = argv[0];
     if (a == nullptr) {
         std::cout << "nil"; // todo: "nil" or ""?
@@ -86,7 +86,7 @@ Object *tinyclj_rt_print(const Object **argv, size_t argc) {
                         std::cout << ' ';
                     }
                     const Object *list_elem = tc_list_first(s);
-                    tinyclj_rt_print(&list_elem, 1);
+                    tinyclj_rt_print(list_elem, 1, &list_elem); // todo: this is ugly
                 }
                 std::cout << ')';
                 break;

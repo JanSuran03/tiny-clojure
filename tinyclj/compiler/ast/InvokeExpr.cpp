@@ -1,5 +1,5 @@
 #include "InvokeExpr.h"
-#include "parser.h"
+#include "SemanticAnalyzer.h"
 #include "runtime/rt.h"
 #include "types/TCList.h"
 
@@ -86,13 +86,13 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
 
     FunctionType *callfn_type = FunctionType::get(
             ctx.objectPointerType(),
-            {objArrayTy, sizeTy},
+            {ctx.objectPointerType(), sizeTy, objArrayTy}, // this->call(this, argc, argv)
             false);
     // Object *res = native_func_ptr(arg_array, argcnt)
     Value *native_call_result = ctx.m_IRBuilder.CreateCall(
             callfn_type,
             native_func_ptr,
-            {arg_array, argcnt_val}, // Object **argv, size_t argc
+            {target_val, argcnt_val, arg_array}, // Object *self, size_t argc, Object **argv
             "native_call_result");
     ctx.m_IRBuilder.CreateStore(native_call_result, dst);
 }
@@ -103,14 +103,13 @@ Object *InvokeExpr::eval(Runtime &runtime) const {
     for (const auto &arg: m_InvokeArgs) {
         evaled_args.emplace_back(arg->eval(runtime));
     }
-    const Object *arglist = tinyclj_vec_to_list(evaled_args);
     if (evaled_target == nullptr) {
         throw std::runtime_error("Cannot call nil.");
     }
     if (evaled_target->m_Call == nullptr) {
         throw std::runtime_error("Object is not callable.");
     }
-    return evaled_target->m_Call(evaled_args.data(), evaled_args.size());
+    return evaled_target->m_Call(evaled_target, evaled_args.size(), evaled_args.data());
 }
 
 InvokeExpr::InvokeExpr(AExpr invokeTarget,
@@ -119,10 +118,10 @@ InvokeExpr::InvokeExpr(AExpr invokeTarget,
           m_InvokeArgs(std::move(invokeArgs)) {}
 
 AExpr InvokeExpr::parse(ExpressionMode _, CompilerContext &ctx, const Object *form) {
-    AExpr invokeTarget = Parser::analyze(ctx, tc_list_first(form));
+    AExpr invokeTarget = SemanticAnalyzer::analyze(ctx, tc_list_first(form));
     std::vector<AExpr> invokeArgs;
     for (const Object *args = tc_list_next(form); args; args = tc_list_next(args)) {
-        invokeArgs.emplace_back(Parser::analyze(ctx, tc_list_first(args)));
+        invokeArgs.emplace_back(SemanticAnalyzer::analyze(ctx, tc_list_first(args)));
     }
     return std::make_unique<InvokeExpr>(std::move(invokeTarget), std::move(invokeArgs));
 }

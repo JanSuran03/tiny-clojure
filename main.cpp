@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "Runtime.h"
-#include "compiler/ast/parser.h"
+#include "compiler/ast/SemanticAnalyzer.h"
 #include "runtime/rt.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"

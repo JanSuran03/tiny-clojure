@@ -1,6 +1,6 @@
 #include "ASTUtils.h"
 #include "BodyExpr.h"
-#include "parser.h"
+#include "SemanticAnalyzer.h"
 #include "types/TCList.h"
 
 BodyExpr::BodyExpr(std::vector<AExpr> exprs)
@@ -23,7 +23,7 @@ AExpr BodyExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *f
     std::vector<AExpr> exprs;
     for (const Object *lst = tc_list_seq(form); lst; lst = tc_list_next(lst)) {
         const Object *exprForm = tc_list_first(lst);
-        exprs.push_back(Parser::analyze(
+        exprs.push_back(SemanticAnalyzer::analyze(
                 tc_list_seq(lst) == nullptr ? mode : ExpressionMode::STATEMENT, // last expr in the 'do block
                 ctx,
                 exprForm));
