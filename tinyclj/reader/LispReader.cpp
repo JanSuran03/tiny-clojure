@@ -71,7 +71,6 @@ const Object *read_string(BufferedReader &rdr) {
         if (c == '"') {
             return tc_string_new(buffer.c_str());
         } else if (c == '\\') {
-            rdr.read(); // consume '\\'
             c = rdr.read();
             if (rdr.eof()) {
                 throw std::runtime_error("Error: EOF while reading string escape");
