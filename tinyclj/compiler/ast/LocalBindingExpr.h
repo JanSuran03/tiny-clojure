@@ -1,14 +1,15 @@
 #pragma once
 
-#include <optional>
-
 #include "UnevaluatableExpr.h"
 
 class LocalBindingExpr : public UnevaluatableExpr {
+protected:
     std::string m_Value;
-    std::optional<int> m_ClosureEnvIndex;
+
+    virtual llvm::Value *loadValue(CompilerContext &ctx) const = 0;
+
 public:
-    void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
+    void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const final;
 
     LocalBindingExpr(std::string value);
 };

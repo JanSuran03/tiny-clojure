@@ -12,7 +12,7 @@ AstUtils::emitBody(const std::vector<AExpr> &body,
         return;
     }
 
-    auto body_id = bodyPrefix + "__" + std::to_string(ctx.m_IdCounter++);
+    auto body_id = bodyPrefix + "__" + std::to_string(ctx.nextId());
 
     for (size_t i = 0; i + 1 < body.size(); i++) {
         ctx.newTmpBasicBlock();

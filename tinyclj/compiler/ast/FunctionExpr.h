@@ -6,13 +6,14 @@
 class FunctionExpr : public Expr {
     using Captures = std::unordered_map<std::string, int>;
     std::string m_Name;
+    std::string m_ThunkName = m_Name + "__thunk";
     std::vector<std::string> m_Args;
     Captures m_Captures;
     std::vector<AExpr> m_Body;
 
     void compile(CompilerContext &ctx) const;
 
-    bool isClosure();
+    bool isClosure() const;
 public:
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 

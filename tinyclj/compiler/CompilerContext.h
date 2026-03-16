@@ -31,7 +31,7 @@ public:
     llvm::Function *m_CurrentFunction = nullptr;
     std::atomic<size_t> &m_IdCounter;
     std::unordered_map<std::string, llvm::AllocaInst *> m_VariableMap;
-    llvm::Value *m_ClosureEnv = nullptr;
+    llvm::Argument *m_ClosureEnv = nullptr;
     std::unordered_set<std::string> m_LocalBindings;
 
     CompilerContext(Runtime &runtimeRef,

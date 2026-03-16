@@ -3,6 +3,7 @@
 
 #include "BodyExpr.h"
 #include "BooleanExpr.h"
+#include "CapturedBindingExpr.h"
 #include "CharExpr.h"
 #include "DefExpr.h"
 #include "DoubleExpr.h"
@@ -11,9 +12,9 @@
 #include "IntegerExpr.h"
 #include "InvokeExpr.h"
 #include "LetExpr.h"
-#include "LocalBindingExpr.h"
 #include "NilExpr.h"
 #include "QuotedExpr.h"
+#include "ScopedLocalBindingExpr.h"
 #include "StringExpr.h"
 #include "VarExpr.h"
 #include "SemanticAnalyzer.h"
@@ -38,20 +39,33 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
         {"fn*",   FunctionExpr::parse},
 };
 
+void captureLocalBinding(CompilerContext &ctx, const std::string &name) {
+    for (FunctionFrame *currentFrame = ctx.m_CurrentFunctionFrame;
+         currentFrame;
+         currentFrame = currentFrame->m_ParentFrame) {
+        // resolve local var
+        if (currentFrame->m_Locals.contains(name)) {
+            return;
+        }
+        // already captured var
+        if (auto capture = currentFrame->m_Captures.find(name); capture != currentFrame->m_Captures.end()) {
+            return;
+        }
+        // not captured -> capture recursively
+        currentFrame->m_Captures.emplace(name, currentFrame->m_Captures.size());
+    }
+}
+
 AExpr resolveSymbol(CompilerContext &ctx, const Object *form) {
     std::string name = tc_symbol_valueX(form);
     // Step 1: Try local bindings (locals can override globals)
     if (ctx.m_LocalBindings.contains(name)) {
-        for (FunctionFrame *currentFrame = ctx.m_CurrentFunctionFrame;
-             currentFrame;
-             currentFrame = currentFrame->m_ParentFrame) {
-            // local var or already captured
-            if (currentFrame->m_Locals.contains(name) ||
-                currentFrame->m_Captures.contains(name)) {
-                return std::make_unique<LocalBindingExpr>(name);
-            }
-            // not captured -> capture recursively
-            currentFrame->m_Captures.emplace(name, currentFrame->m_Captures.size());
+        captureLocalBinding(ctx, name);
+        FunctionFrame *currentFrame = ctx.m_CurrentFunctionFrame;
+        if (currentFrame->m_Locals.contains(name)) {
+            return std::make_unique<ScopedLocalBindingExpr>(name);
+        } else {
+            return std::make_unique<CapturedBindingExpr>(name, currentFrame->m_Captures.at(name));
         }
     }
     // Step 2: Try global vars

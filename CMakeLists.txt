@@ -16,6 +16,7 @@ add_library(tinyclj_lib
         tinyclj/compiler/ast/ASTUtils.cpp
         tinyclj/compiler/ast/BodyExpr.cpp
         tinyclj/compiler/ast/BooleanExpr.cpp
+        tinyclj/compiler/ast/CapturedBindingExpr.cpp
         tinyclj/compiler/ast/CharExpr.cpp
         tinyclj/compiler/ast/ConstantExpr.cpp
         tinyclj/compiler/ast/DefExpr.cpp
@@ -28,6 +29,7 @@ add_library(tinyclj_lib
         tinyclj/compiler/ast/LocalBindingExpr.cpp
         tinyclj/compiler/ast/NilExpr.cpp
         tinyclj/compiler/ast/QuotedExpr.cpp
+        tinyclj/compiler/ast/ScopedLocalBindingExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarExpr.cpp

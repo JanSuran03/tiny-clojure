@@ -1,7 +1,5 @@
 #include "CompilerContext.h"
 
-#include <utility>
-
 FunctionFrame::FunctionFrame(FunctionFrame *parent) : m_ParentFrame(parent) {}
 
 CompilerContext::CompilerContext(Runtime &runtimeRef,
@@ -35,7 +33,6 @@ llvm::PointerType *CompilerContext::objectPointerType() const {
 }
 
 llvm::PointerType *CompilerContext::objectPointerArrayType() const {
-    // llvm::ArrayType::get
     return llvm::PointerType::get(objectPointerType(), 0);
 }
 

@@ -88,20 +88,43 @@ int main() {
              return "eval '" + input + "' == '" + expected_output + '\'';
          },
          std::vector<std::tuple<std::string, std::string>>
-                 {{"67",                                        "67"},
-                  {"6.9",                                       "6.9"},
-                  {"nil",                                       "nil"},
-                  {"\"hello world!\"",                          "\"hello world!\""},
-                  {"true",                                      "true"},
-                  {"false",                                     "false"},
-                  {"(do 1 2)",                                  "2"},
-                  {"(do)",                                      "nil"},
-                  {"(if true 1 2)",                             "1"},
-                  {"(if false 1 2)",                            "2"},
-                  {"(if nil 1 2)",                              "2"},
-                  {"(if 1 1 2)",                                "1"},
-                  {"(if 0 1 2)",                                "1"},
-                  {"(let* (a 1 b 2) a)",                        "1"},
-                  {"(builtin_binary_add 1 2)",                  "3"},
-                  {"(let* (a 1 b 2) (builtin_binary_add a b))", "3"}});
+                 {{"67",                          "67"},
+                  {"6.9",                         "6.9"},
+                  {"nil",                         "nil"},
+                  {"\"hello world!\"",            "\"hello world!\""},
+                  {"true",                        "true"},
+                  {"false",                       "false"},
+                  {"(do 1 2)",                    "2"},
+                  {"(do)",                        "nil"},
+                  {"(if true 1 2)",               "1"},
+                  {"(if false 1 2)",              "2"},
+                  {"(if nil 1 2)",                "2"},
+                  {"(if 1 1 2)",                  "1"},
+                  {"(if 0 1 2)",                  "1"},
+                  {"(let* (a 1"
+                   "       b 2)"
+                   "  a)",                        "1"},
+                  {"(builtin_binary_add 1 2)",    "3"},
+                  {"(let* (a 1"
+                   "       b 2)"
+                   "  (builtin_binary_add a b))", "3"},
+                  {"(let* (+ builtin_binary_add)"
+                   "  (+ 1 2))",                  "3"},
+                  {"(let* (+ builtin_binary_add"
+                   "       a 1"
+                   "       b 2)"
+                   "  (+ a b))",                  "3"},
+                  {"((fn* (a)"
+                   "   (builtin_binary_add a a))"
+                   " 2)",                         "4"},
+                  {"(let* (+ (fn* (x y)"
+                   "           (builtin_binary_add x y)))"
+                   "  (+ 1 2))",
+                                                  "3"},
+                  {"(let* (a 1"
+                   "       adder (fn* (b)"
+                   "               (builtin_binary_add a b)))"
+                   "  (adder 2))",                "3"}}
+
+    );
 }
