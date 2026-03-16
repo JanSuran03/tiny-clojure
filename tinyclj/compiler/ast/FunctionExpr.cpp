@@ -35,11 +35,11 @@ void compile_thunk(const std::string &thunk_name,
                                                 {Type::getInt32Ty(ctx.m_LLVMContext)}, false);
     FunctionCallee exit_func = ctx.m_Module.getOrInsertFunction("exit", exit_type);
 
-    auto arglist_type = ctx.objectPointerArrayType(); // array of Object *
+    auto arglist_type = ctx.pointerArrayType(); // array of Object *
     auto argcnt_type = Type::getInt64Ty(ctx.m_LLVMContext);
-    auto return_type = ctx.objectPointerType();
+    auto return_type = ctx.pointerType();
     // the thunk type is Object *thunk(Object *self, size_t argcnt, Object **argv)
-    FunctionType *thunk_type = llvm::FunctionType::get(return_type, {ctx.objectPointerType(),
+    FunctionType *thunk_type = llvm::FunctionType::get(return_type, {ctx.pointerType(),
                                                                      argcnt_type,
                                                                      arglist_type}, false);
     Function *thunk_fn = llvm::Function::Create(thunk_type,
@@ -75,17 +75,17 @@ void compile_thunk(const std::string &thunk_name,
     for (size_t i = 0; i < expected_argcnt; i++) {
         // the thunk receives the arguments as an array of Object *, so we need to load each argument from the array
         // before passing it to the internal function
-        Value *slot = ctx.m_IRBuilder.CreateGEP(ctx.objectPointerType(),
+        Value *slot = ctx.m_IRBuilder.CreateGEP(ctx.pointerType(),
                                                 packed_arglist,
                                                 ctx.m_IRBuilder.getInt64(i));
-        Value *arg = ctx.m_IRBuilder.CreateLoad(ctx.objectPointerType(), slot, "arg_" + std::to_string(i));
+        Value *arg = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), slot, "arg_" + std::to_string(i));
         direct_args.push_back(arg);
     }
 
     if (is_closure) {
         // for closures, the thunk also needs to pass the closure environment pointer to the internal function
-        FunctionType *tc_closure_get_envX_type = FunctionType::get(ctx.objectPointerType(),
-                                                                   {ctx.objectPointerType()}, false);
+        FunctionType *tc_closure_get_envX_type = FunctionType::get(ctx.pointerType(),
+                                                                   {ctx.pointerType()}, false);
         FunctionCallee tc_closure_get_envX_func = ctx.m_Module.getOrInsertFunction("tc_closure_get_envX",
                                                                                    tc_closure_get_envX_type);
         Value *closure_env = ctx.m_IRBuilder.CreateCall(tc_closure_get_envX_func, {self_arg}, "closure_env");
@@ -168,13 +168,13 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
     // the function that is actually exposed to the user - takes Object * as a list of arguments.
     // checks the list length, then calls the internal function with the unpacked arguments.
 
-    std::vector<llvm::Type *> argTypes(m_Args.size(), ctx.objectPointerType()); // positional arguments
+    std::vector<llvm::Type *> argTypes(m_Args.size(), ctx.pointerType()); // positional arguments
     if (isClosure()) {
-        argTypes.emplace_back(ctx.objectPointerType()); // closure environment
+        argTypes.emplace_back(ctx.pointerType()); // closure environment
     }
 
 
-    llvm::FunctionType *funcType = llvm::FunctionType::get(ctx.objectPointerType(), argTypes, false);
+    llvm::FunctionType *funcType = llvm::FunctionType::get(ctx.pointerType(), argTypes, false);
     llvm::Function *function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, m_Name, ctx.m_Module);
     llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(ctx.m_LLVMContext, "entry", function);
     //llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(ctx.m_LLVMContext, "exit", function);
@@ -184,7 +184,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
     ctx.m_IRBuilder.SetInsertPoint(entryBlock);
 
     // allocate space for the return value
-    llvm::AllocaInst *retAlloca = ctx.m_IRBuilder.CreateAlloca(ctx.objectPointerType(), nullptr, "retval");
+    llvm::AllocaInst *retAlloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, "retval");
 
     // allocate space for arguments and store them
     std::unordered_map<std::string, llvm::AllocaInst *> shadowed_allocas;
@@ -192,7 +192,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
     for (size_t i = 0; i < m_Args.size(); i++) {
         llvm::Argument &arg = function->args().begin()[i];
         auto &arg_name = m_Args[arg_index++];
-        llvm::AllocaInst *arg_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.objectPointerType(), nullptr, arg_name);
+        llvm::AllocaInst *arg_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, arg_name);
         ctx.m_IRBuilder.CreateStore(&arg, arg_alloca);
         if (auto old_alloca = ctx.m_VariableMap.find(arg_name); old_alloca != ctx.m_VariableMap.end()) {
             shadowed_allocas[arg_name] = old_alloca->second;
@@ -214,7 +214,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
     // the following should not be needed - the builder is already placed after the last block in the function
     // ctx.m_IRBuilder.CreateBr(exitBlock);
     // ctx.m_IRBuilder.SetInsertPoint(exitBlock);
-    llvm::Value *retVal = ctx.m_IRBuilder.CreateLoad(ctx.objectPointerType(), retAlloca, "retVal");
+    llvm::Value *retVal = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), retAlloca, "retVal");
     ctx.m_IRBuilder.CreateRet(retVal);
 
     // restore shadowed variables in the context
@@ -250,20 +250,20 @@ void FunctionExpr::emitIR(ExpressionMode _, llvm::AllocaInst *dst, CompilerConte
 
     // Object *thunk_fn(Object *self, size_t arg, Object **argv)
     FunctionType *call_fn_type = FunctionType::get(
-            ctx.objectPointerType(),
-            {ctx.objectPointerType(), Type::getInt64Ty(ctx.m_LLVMContext), ctx.objectPointerArrayType()},
+            ctx.pointerType(),
+            {ctx.pointerType(), Type::getInt64Ty(ctx.m_LLVMContext), ctx.pointerArrayType()},
             false);
 
     if (isClosure()) {
         // allocate the closure environment struct on the heap (the env struct is an array of Object *)
         FunctionType *allocate_env_fn_type = FunctionType::get(
-                ctx.objectPointerType(),
+                ctx.pointerType(),
                 {Type::getInt64Ty(ctx.m_LLVMContext)}, false);
         FunctionCallee allocate_env_fn = ctx.m_Module.getOrInsertFunction("tc_closure_allocate_env",
                                                                           allocate_env_fn_type);
         FunctionType *closure_new_fn_type = FunctionType::get(
-                ctx.objectPointerType(),
-                {PointerType::get(call_fn_type, 0), ctx.objectPointerType()}, // thunk fn ptr, env struct ptr
+                ctx.pointerType(),
+                {PointerType::get(call_fn_type, 0), ctx.pointerType()}, // thunk fn ptr, env struct ptr
                 false);
         FunctionCallee closure_new_fn = ctx.m_Module.getOrInsertFunction("tc_closure_new", closure_new_fn_type);
         Value *env_struct_ptr = ctx.m_IRBuilder.CreateCall(
@@ -274,11 +274,11 @@ void FunctionExpr::emitIR(ExpressionMode _, llvm::AllocaInst *dst, CompilerConte
         for (const auto &[var_name, index]: m_Captures) {
             if (auto it = ctx.m_VariableMap.find(var_name); it != ctx.m_VariableMap.end()) {
                 AllocaInst *captured_var_alloca = it->second;
-                Value *captured_var_value = ctx.m_IRBuilder.CreateLoad(ctx.objectPointerType(),
+                Value *captured_var_value = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(),
                                                                        captured_var_alloca,
                                                                        var_name + "_captured");
                 Value *env_slot_ptr = ctx.m_IRBuilder.CreateGEP(
-                        ctx.objectPointerType(),
+                        ctx.pointerType(),
                         env_struct_ptr,
                         ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), index, false),
                         var_name + "_env_slot_ptr");
@@ -292,7 +292,7 @@ void FunctionExpr::emitIR(ExpressionMode _, llvm::AllocaInst *dst, CompilerConte
     } else {
         // create the function object with the thunk pointer
         FunctionType *function_new_fn_type = FunctionType::get(
-                ctx.objectPointerType(),
+                ctx.pointerType(),
                 {PointerType::get(call_fn_type, 0), Type::getInt8PtrTy(ctx.m_LLVMContext)},
                 false);
         FunctionCallee function_new_fn = ctx.m_Module.getOrInsertFunction("tc_function_new", function_new_fn_type);

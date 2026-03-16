@@ -3,6 +3,7 @@
 #include "llvm/IR/Verifier.h"
 
 #include "Runtime.h"
+#include "compiler/ast/DefExpr.h"
 #include "compiler/ast/SemanticAnalyzer.h"
 #include "reader/LispReader.h"
 #include "runtime/rt.h"
@@ -51,8 +52,10 @@ TCVar *Runtime::getVar(const std::string &name) const {
 void Runtime::init() {
     auto binary_add = declareVar("builtin_binary_add");
     auto unary_print = declareVar("builtin_unary_print");
+    auto iszero = declareVar("builtin_iszero");
     tc_var_bind_root(binary_add, tc_function_new(tinyclj_rt_add, "builtin_binary_add"));
     tc_var_bind_root(unary_print, tc_function_new(tinyclj_rt_print, "builtin_unary_print"));
+    tc_var_bind_root(iszero, tc_function_new(tinyclj_rt_iszero, "builtin_iszero"));
 }
 
 Runtime::Runtime(const std::vector<std::string> &objectFiles)
@@ -85,23 +88,24 @@ Object *Runtime::eval(const Object *form) {
     // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
     // (-> (fn* fn_name [] form))
 
+    // todoL macroexpand
     const Object *new_form = form;
 
-    if (form && form->m_Type == ObjectType::LIST) {
-        const Object *op = tc_list_first(form);
-        if (op != nullptr) {
-            const char *name = static_cast<TCSymbol *>(op->m_Data)->m_Value;
-            if (!strcmp(name, "do")) {
-                Object *res = nullptr;
-                for (const Object *forms = tc_list_next(form); forms; forms = tc_list_next(forms)) {
-                    res = eval(tc_list_first(forms));
-                }
-                return res;
-            } else if (!strcmp(name, "def")) {
-                throw std::runtime_error("cannot eval def (yet)");
-            }
-        }
-    }
+    //if (form && form->m_Type == ObjectType::LIST) {
+    //    const Object *op = tc_list_first(form);
+    //    if (op != nullptr) {
+    //        const char *name = static_cast<TCSymbol *>(op->m_Data)->m_Value;
+    //        if (!strcmp(name, "do")) {
+    //            Object *res = nullptr;
+    //            for (const Object *forms = tc_list_next(form); forms; forms = tc_list_next(forms)) {
+    //                res = eval(tc_list_first(forms));
+    //            }
+    //            return res;
+    //        } else if (!strcmp(name, "def")) {
+    //            throw std::runtime_error("cannot eval def (yet)");
+    //        }
+    //    }
+    //}
     new_form = tc_list_cons(tc_symbol_new("fn*"),
                             tc_list_cons
                                     (empty_list(),

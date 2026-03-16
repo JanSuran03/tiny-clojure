@@ -6,17 +6,32 @@
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
 
-DefExpr::DefExpr(std::string name, AExpr value)
-        : m_Name(std::move(name)),
+DefExpr::DefExpr(TCVar *var, AExpr value)
+        : m_Var(var),
           m_Value(std::move(value)) {}
 
 void DefExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
-    throw std::runtime_error("DefExpr::emitIR not implemented");
+    using namespace llvm;
+
+    // emit a call to tc_var_bind_root with the variable and the value
+    FunctionType *bind_var_fn_type = FunctionType::get(
+            Type::getVoidTy(ctx.m_LLVMContext),
+            {ctx.pointerType(), ctx.pointerType()},
+            false);
+    FunctionCallee bind_var_fn = ctx.m_Module.getOrInsertFunction("tc_var_bind_root", bind_var_fn_type);
+
+    m_Value->emitIR(mode, dst, ctx);
+    Value *llvm_var_ptr = ctx.m_IRBuilder.CreateIntToPtr(
+            ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), reinterpret_cast<uint64_t>(m_Var), false),
+            ctx.pointerType(),
+            "var_ptr");
+    Value *value_to_bind = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), dst, "def_value");
+    ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind});
 }
 
 Object *DefExpr::eval(Runtime &runtime) const {
     Object *res = m_Value->eval(runtime);
-    tc_var_bind_root(runtime.getVar(m_Name), res);
+    tc_var_bind_root(m_Var, res);
     return res;
 }
 
@@ -38,12 +53,13 @@ AExpr DefExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
                 args = tc_list_next(args);
                 init = tc_list_first(args);
             }
-            AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init);
-            // after init_expr analysis - don't allow recursive use of a (technically) uninitialized variable
-            // (it is initialized to nullptr)
+
+            // allow recursive use (uninitialized = always nullptr)
             auto var_name = static_cast<TCSymbol *>(name->m_Data)->m_Value;
-            ctx.m_RuntimeRef.declareVar(var_name);
-            return std::make_unique<DefExpr>(var_name, std::move(init_expr));
+            auto var = ctx.m_RuntimeRef.declareVar(var_name);
+            AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init);
+
+            return std::make_unique<DefExpr>(var, std::move(init_expr));
         }
         default:
             throw std::runtime_error("'def form must contain 2 or 3 items: (def name) or (def name value)");

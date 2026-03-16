@@ -7,7 +7,7 @@ llvm::Value *StringExpr::emitConstantValue(CompilerContext &ctx) const {
     if (!func) {
         // declare the function
         llvm::FunctionType *funcType = llvm::FunctionType::get(
-                ctx.objectPointerType(), // return type: Object*
+                ctx.pointerType(), // return type: Object*
                 {llvm::Type::getInt8PtrTy(ctx.m_LLVMContext)}, // parameter type: char *
                 false // isVarArg
         );

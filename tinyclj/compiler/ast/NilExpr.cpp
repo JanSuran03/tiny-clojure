@@ -5,7 +5,7 @@ void NilExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
         case ExpressionMode::STATEMENT:
             break;
         default:
-            ctx.m_IRBuilder.CreateStore(llvm::ConstantPointerNull::get(ctx.objectPointerType()), dst);
+            ctx.m_IRBuilder.CreateStore(llvm::ConstantPointerNull::get(ctx.pointerType()), dst);
     }
 }
 

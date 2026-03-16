@@ -1,17 +1,22 @@
 #include "NilExpr.h"
 #include "VarExpr.h"
+#include "types/TCVar.h"
 
 void VarExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+    using namespace llvm;
     if (mode != ExpressionMode::STATEMENT) {
-        if (auto obj_ptr = m_Var->m_Root; obj_ptr == nullptr) {
-            NilExpr().emitIR(mode, dst, ctx);
-        } else {
-            auto addr = llvm::ConstantInt::get(
-                    llvm::Type::getInt64Ty(ctx.m_LLVMContext),
-                    static_cast<uint64_t>(reinterpret_cast<uintptr_t>(obj_ptr)));
-            llvm::Constant *llvm_const = llvm::ConstantExpr::getIntToPtr(addr, ctx.objectPointerType());
-            ctx.m_IRBuilder.CreateStore(llvm_const, dst);
-        }
+        FunctionType *get_root_fn_type = FunctionType::get(
+                ctx.pointerType(),
+                {ctx.pointerType()},
+                false);
+        FunctionCallee get_root_fn = ctx.m_Module.getOrInsertFunction("tc_var_get_root", get_root_fn_type);
+        // dereference the Var's root pointer at runtime
+        llvm::Value *llvm_var_ptr = ctx.m_IRBuilder.CreateIntToPtr(
+                ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), reinterpret_cast<uint64_t>(m_Var), false),
+                ctx.pointerType(),
+                "var_ptr");
+        Value *var_value = ctx.m_IRBuilder.CreateCall(get_root_fn, {llvm_var_ptr}, "var_value");
+        ctx.m_IRBuilder.CreateStore(var_value, dst);
     }
 }
 

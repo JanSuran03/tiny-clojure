@@ -15,15 +15,15 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
     FunctionCallee exit_func = ctx.m_Module.getOrInsertFunction("exit", exit_type);
     // call fn getter
     Type *sizeTy = ctx.m_IRBuilder.getIntPtrTy(ctx.m_Module.getDataLayout());
-    Type *objArrayTy = PointerType::get(ctx.objectPointerType(), 0);
-    FunctionType *callfn_getter_type = FunctionType::get(ctx.objectPointerType(),
-                                                         {ctx.objectPointerType()},
+    Type *objArrayTy = PointerType::get(ctx.pointerType(), 0);
+    FunctionType *callfn_getter_type = FunctionType::get(ctx.pointerType(),
+                                                         {ctx.pointerType()},
                                                          false);
     FunctionCallee callfn_getter_func = ctx.m_Module.getOrInsertFunction("tinyclj_object_get_callfn",
                                                                          callfn_getter_type);
 
     llvm::AllocaInst *target_alloca = ctx.m_IRBuilder.CreateAlloca(
-            ctx.objectPointerType(),
+            ctx.pointerType(),
             nullptr,
             "evaled_target");
     ctx.newTmpBasicBlock();
@@ -32,7 +32,7 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
     std::vector<llvm::AllocaInst *> arg_allocas;
     for (const auto &arg: m_InvokeArgs) {
         auto arg_alloca = ctx.m_IRBuilder.CreateAlloca(
-                ctx.objectPointerType(),
+                ctx.pointerType(),
                 nullptr,
                 std::string("evaled_arg_").append(std::to_string(&arg - &*m_InvokeArgs.begin())));
         arg_allocas.emplace_back(arg_alloca);
@@ -48,10 +48,10 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
     // (fn == null) ?
     ctx.m_IRBuilder.CreateBr(check_target_not_null);
     ctx.m_IRBuilder.SetInsertPoint(check_target_not_null);
-    llvm::Value *target_val = ctx.m_IRBuilder.CreateLoad(ctx.objectPointerType(), target_alloca, "target_val");
+    llvm::Value *target_val = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), target_alloca, "target_val");
     Value *target_is_nullptr = ctx.m_IRBuilder.CreateICmpEQ(
             target_val,
-            ConstantPointerNull::get(ctx.objectPointerType()),
+            ConstantPointerNull::get(ctx.pointerType()),
             "target_is_null");
     ctx.m_IRBuilder.CreateCondBr(target_is_nullptr, target_is_null, native_invoke_target);
 
@@ -66,15 +66,15 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
     ctx.m_IRBuilder.SetInsertPoint(native_invoke_target);
 
     Value *argcnt_val = ConstantInt::get(sizeTy, m_InvokeArgs.size());
-    AllocaInst *arg_array = ctx.m_IRBuilder.CreateAlloca(ctx.objectPointerType(), argcnt_val, "arg_array");
+    AllocaInst *arg_array = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), argcnt_val, "arg_array");
 
     for (size_t i = 0; i < m_InvokeArgs.size(); i++) {
         Value *arg_llvm_val = ctx.m_IRBuilder.CreateLoad(
-                ctx.objectPointerType(),
+                ctx.pointerType(),
                 arg_allocas[i],
                 "arg_val_" + std::to_string(i));
         Value *slot = ctx.m_IRBuilder.CreateGEP(
-                ctx.objectPointerType(),
+                ctx.pointerType(),
                 arg_array,
                 ctx.m_IRBuilder.getInt64(i),
                 "arg_slot_" + std::to_string(i));
@@ -85,8 +85,8 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
     Value *native_func_ptr = ctx.m_IRBuilder.CreateCall(callfn_getter_func, {target_val}, "native_func");
 
     FunctionType *callfn_type = FunctionType::get(
-            ctx.objectPointerType(),
-            {ctx.objectPointerType(), sizeTy, objArrayTy}, // this->call(this, argc, argv)
+            ctx.pointerType(),
+            {ctx.pointerType(), sizeTy, objArrayTy}, // this->call(this, argc, argv)
             false);
     // Object *res = native_func_ptr(arg_array, argcnt)
     Value *native_call_result = ctx.m_IRBuilder.CreateCall(
@@ -94,7 +94,9 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
             native_func_ptr,
             {target_val, argcnt_val, arg_array}, // Object *self, size_t argc, Object **argv
             "native_call_result");
-    ctx.m_IRBuilder.CreateStore(native_call_result, dst);
+    if (dst != nullptr) {
+        ctx.m_IRBuilder.CreateStore(native_call_result, dst);
+    }
 }
 
 Object *InvokeExpr::eval(Runtime &runtime) const {

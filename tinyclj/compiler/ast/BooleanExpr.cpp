@@ -7,7 +7,7 @@ llvm::Value *BooleanExpr::emitConstantValue(CompilerContext &ctx) const {
     if (!func) {
         // declare the function
         llvm::FunctionType *funcType = llvm::FunctionType::get(
-                ctx.objectPointerType(), // return type: Object*
+                ctx.pointerType(), // return type: Object*
                 {llvm::Type::getInt8Ty(ctx.m_LLVMContext)}, // parameter type: 8-bit integer
                 false // isVarArg
         );

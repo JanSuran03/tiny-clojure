@@ -10,7 +10,7 @@ void LetExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
     for (const auto &[name, value]: m_Bindings) {
         // allocate space for a 64-bit pointer as every runtime object is a pointer to the Object struct
         llvm::AllocaInst *alloca = ctx.m_IRBuilder.CreateAlloca(
-                ctx.objectPointerType(),
+                ctx.pointerType(),
                 nullptr,
                 name);
         value->emitIR(ExpressionMode::EXPRESSION, alloca, ctx);

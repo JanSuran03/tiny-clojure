@@ -7,7 +7,7 @@ llvm::Value *IntegerExpr::emitConstantValue(CompilerContext &ctx) const {
     if (!func) {
         // declare the function
         llvm::FunctionType *funcType = llvm::FunctionType::get(
-                ctx.objectPointerType(), // return type: Object*
+                ctx.pointerType(), // return type: Object*
                 {llvm::Type::getInt64Ty(ctx.m_LLVMContext)}, // parameter type: 64-bit integer
                 false // isVarArg
         );

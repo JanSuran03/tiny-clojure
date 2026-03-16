@@ -71,7 +71,10 @@ Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
                 std::cout << static_cast<TCDouble *>(a->m_Data)->m_Value;
                 break;
             case ObjectType::STRING:
-                std::cout << '"' << static_cast<TCString *>(a->m_Data)->m_Value << '"';
+                // todo: edn print vs REPL print
+                //   - edn print should escape special characters and wrap in quotes
+                //   - REPL print should be more human-friendly and not escape special characters or wrap in quotes
+                std::cout/* << '"'*/ << static_cast<TCString *>(a->m_Data)->m_Value/* << '"'*/;
                 break;
             case ObjectType::SYMBOL:
                 std::cout << static_cast<TCSymbol *>(a->m_Data)->m_Value;
@@ -104,6 +107,24 @@ Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
         }
     }
     return nullptr;
+}
+
+Object *tinyclj_rt_iszero(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("Cannot add integer with non-numeric type");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr) {
+        return tc_boolean_new(false);
+    }
+    switch (arg->m_Type) {
+        case ObjectType::INTEGER:
+            return tc_boolean_new(static_cast<TCInteger *>(arg->m_Data)->m_Value == 0);
+        case ObjectType::DOUBLE:
+            return tc_boolean_new(static_cast<TCDouble *>(arg->m_Data)->m_Value == 0.0);
+        default:
+            throw std::runtime_error("zero? function requires a numeric argument");
+    }
 }
 
 const Object *tinyclj_vec_to_list(const std::vector<const Object *> &vec) {

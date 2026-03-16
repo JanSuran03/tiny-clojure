@@ -12,9 +12,9 @@ void IfExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext 
     using namespace llvm;
 
     FunctionType *get_objtype_fn_type = FunctionType::get(Type::getInt32Ty(ctx.m_LLVMContext),
-                                                          {ctx.objectPointerType()}, false);
+                                                          {ctx.pointerType()}, false);
     FunctionType *get_bool_value_fn_type = FunctionType::get(Type::getInt8Ty(ctx.m_LLVMContext),
-                                                             {ctx.objectPointerType()}, false);
+                                                             {ctx.pointerType()}, false);
     FunctionCallee get_objtype_fn = ctx.m_Module.getOrInsertFunction("tinyclj_object_get_type", get_objtype_fn_type);
     FunctionCallee get_bool_value_fn = ctx.m_Module.getOrInsertFunction("tc_boolean_valueX", get_bool_value_fn_type);
 
@@ -27,14 +27,14 @@ void IfExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext 
     BasicBlock *check_raw_else_block = BasicBlock::Create(ctx.m_LLVMContext, "check_else", ctx.m_CurrentFunction);
 
     // 1. Evaluate condition
-    AllocaInst *cond_res_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.objectPointerType());
+    AllocaInst *cond_res_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType());
     m_CondExpr->emitIR(ExpressionMode::EXPRESSION, cond_res_alloca, ctx);
 
     // 2. If null => jump to else, otherwise check (bool)->value
     ctx.m_IRBuilder.CreateBr(check_null_block);
     ctx.m_IRBuilder.SetInsertPoint(check_null_block);
-    Value *object = ctx.m_IRBuilder.CreateLoad(ctx.objectPointerType(), cond_res_alloca);
-    Value *cmp_null_res = ctx.m_IRBuilder.CreateICmpEQ(object, ConstantPointerNull::get(ctx.objectPointerType()));
+    Value *object = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), cond_res_alloca);
+    Value *cmp_null_res = ctx.m_IRBuilder.CreateICmpEQ(object, ConstantPointerNull::get(ctx.pointerType()));
     ctx.m_IRBuilder.CreateCondBr(cmp_null_res, else_block, check_is_boolean_else_block);
 
     // 3. Check (bool) cast, if not bool, jump to then directly (truthy)

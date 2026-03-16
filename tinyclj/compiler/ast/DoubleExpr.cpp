@@ -7,7 +7,7 @@ llvm::Value *DoubleExpr::emitConstantValue(CompilerContext &ctx) const {
     if (!func) {
         // declare the function
         llvm::FunctionType *funcType = llvm::FunctionType::get(
-                ctx.objectPointerType(), // return type: Object*
+                ctx.pointerType(), // return type: Object*
                 {llvm::Type::getDoubleTy(ctx.m_LLVMContext)}, // parameter type: double
                 false // isVarArg
         );

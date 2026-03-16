@@ -40,9 +40,9 @@ public:
                     llvm::Module &module,
                     std::atomic<size_t> &idCounter);
 
-    llvm::PointerType *objectPointerType() const;
+    llvm::PointerType *pointerType() const;
 
-    llvm::PointerType *objectPointerArrayType() const;
+    llvm::PointerType *pointerArrayType() const;
 
     // Creates a new basic block and a branch instruction to that block from the current block
     // and sets the IR insertion point to that block.

@@ -18,22 +18,22 @@ CompilerContext::CompilerContext(Runtime &runtimeRef,
 void CompilerContext::declareStdLibFunctions() {
     // todo?
     //m_Module.getOrInsertFunction("tc_integer_valueX", llvm::Type::getInt64Ty(m_LLVMContext),
-    //                             objectPointerType());
+    //                             pointerType());
     //m_Module.getOrInsertFunction("tc_double_valueX", llvm::Type::getDoubleTy(m_LLVMContext),
-    //                             objectPointerType());
+    //                             pointerType());
     //m_Module.getOrInsertFunction("tinyclj_object_get_data", llvm::Type::getInt8PtrTy(m_LLVMContext),
-    //                             objectPointerType());
+    //                             pointerType());
     //m_Module.getOrInsertFunction("tinyclj_object_get_type", llvm::Type::getInt32Ty(m_LLVMContext),
-    //                             objectPointerType());
-    //m_Module.getOrInsertFunction("tinyclj_rt_add", objectPointerType(), objectPointerType());
+    //                             pointerType());
+    //m_Module.getOrInsertFunction("tinyclj_rt_add", objectPointerType(), pointerType());
 }
 
-llvm::PointerType *CompilerContext::objectPointerType() const {
+llvm::PointerType *CompilerContext::pointerType() const {
     return llvm::PointerType::get(m_LLVMContext, 0);
 }
 
-llvm::PointerType *CompilerContext::objectPointerArrayType() const {
-    return llvm::PointerType::get(objectPointerType(), 0);
+llvm::PointerType *CompilerContext::pointerArrayType() const {
+    return llvm::PointerType::get(pointerType(), 0);
 }
 
 void CompilerContext::newTmpBasicBlock() {
