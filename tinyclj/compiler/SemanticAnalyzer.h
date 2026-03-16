@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Expr.h"
+#include "compiler/ast/Expr.h"
 #include "types/Object.h"
 
 namespace SemanticAnalyzer {

@@ -4,7 +4,7 @@
 
 #include "Runtime.h"
 #include "compiler/ast/DefExpr.h"
-#include "compiler/ast/SemanticAnalyzer.h"
+#include "compiler/SemanticAnalyzer.h"
 #include "reader/LispReader.h"
 #include "runtime/rt.h"
 #include "types/TCFunction.h"

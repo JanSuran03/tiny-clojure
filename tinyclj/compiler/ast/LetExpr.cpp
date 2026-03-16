@@ -1,4 +1,4 @@
-#include "ASTUtils.h"
+#include "compiler/CompilerUtils.h"
 #include "LetExpr.h"
 #include "SemanticAnalyzer.h"
 #include "types/TCList.h"
@@ -22,7 +22,7 @@ void LetExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
         }
         ctx.m_VariableMap[name] = alloca;
     }
-    AstUtils::emitBody(m_Body, "let", mode, dst, ctx);
+    CompilerUtils::emitBody(m_Body, "let", mode, dst, ctx);
 
     // restore shadowed variables in the context
     for (const auto &[name, alloca]: shadowed_allocas) {

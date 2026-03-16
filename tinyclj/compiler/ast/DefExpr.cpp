@@ -1,7 +1,8 @@
-#include "DefExpr.h"
-
 #include <utility>
-#include "SemanticAnalyzer.h"
+
+#include "DefExpr.h"
+#include "compiler/CompilerUtils.h"
+#include "compiler/SemanticAnalyzer.h"
 #include "Runtime.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
@@ -21,10 +22,7 @@ void DefExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
     FunctionCallee bind_var_fn = ctx.m_Module.getOrInsertFunction("tc_var_bind_root", bind_var_fn_type);
 
     m_Value->emitIR(mode, dst, ctx);
-    Value *llvm_var_ptr = ctx.m_IRBuilder.CreateIntToPtr(
-            ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), reinterpret_cast<uint64_t>(m_Var), false),
-            ctx.pointerType(),
-            "var_ptr");
+    Value *llvm_var_ptr =  CompilerUtils::emitVarPtr(m_Var, ctx);
     Value *value_to_bind = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), dst, "def_value");
     ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind});
 }

@@ -13,7 +13,7 @@ add_definitions(${LLVM_DEFINITIONS})
 add_library(tinyclj_lib
         tinyclj/Runtime.cpp
         tinyclj/compiler/CompilerContext.cpp
-        tinyclj/compiler/ast/ASTUtils.cpp
+        tinyclj/compiler/CompilerUtils.cpp
         tinyclj/compiler/ast/BodyExpr.cpp
         tinyclj/compiler/ast/BooleanExpr.cpp
         tinyclj/compiler/ast/CapturedBindingExpr.cpp
@@ -33,7 +33,7 @@ add_library(tinyclj_lib
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarExpr.cpp
-        tinyclj/compiler/ast/SemanticAnalyzer.cpp
+        tinyclj/compiler/SemanticAnalyzer.cpp
         tinyclj/reader/BufferedReader.cpp
         tinyclj/reader/LispReader.cpp
         tinyclj/runtime/rt.cpp

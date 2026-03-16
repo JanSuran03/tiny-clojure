@@ -1,10 +1,9 @@
-#include "ASTUtils.h"
+#include "compiler/CompilerUtils.h"
 #include "FunctionExpr.h"
 
 #include <utility>
 #include "Runtime.h"
-#include "SemanticAnalyzer.h"
-#include "types/TCClosure.h"
+#include "compiler/SemanticAnalyzer.h"
 #include "types/TCFunction.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
@@ -209,7 +208,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
         ctx.m_ClosureEnv = closure_env_arg;
     }
 
-    AstUtils::emitBody(m_Body, "fn", ExpressionMode::RETURN, retAlloca, ctx);
+    CompilerUtils::emitBody(m_Body, "fn", ExpressionMode::RETURN, retAlloca, ctx);
 
     // the following should not be needed - the builder is already placed after the last block in the function
     // ctx.m_IRBuilder.CreateBr(exitBlock);

@@ -1,5 +1,5 @@
 #include "IfExpr.h"
-#include "SemanticAnalyzer.h"
+#include "compiler/SemanticAnalyzer.h"
 #include "types/TCBoolean.h"
 #include "types/TCList.h"
 

@@ -1,13 +1,13 @@
-#include "ASTUtils.h"
+#include "compiler/CompilerUtils.h"
 #include "BodyExpr.h"
-#include "SemanticAnalyzer.h"
+#include "compiler/SemanticAnalyzer.h"
 #include "types/TCList.h"
 
 BodyExpr::BodyExpr(std::vector<AExpr> exprs)
         : m_Exprs(std::move(exprs)) {}
 
 void BodyExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
-    AstUtils::emitBody(m_Exprs, "do", mode, dst, ctx);
+    CompilerUtils::emitBody(m_Exprs, "do", mode, dst, ctx);
 }
 
 Object *BodyExpr::eval(Runtime &runtime) const {
