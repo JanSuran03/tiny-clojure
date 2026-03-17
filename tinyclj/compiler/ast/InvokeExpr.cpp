@@ -26,7 +26,7 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
             ctx.pointerType(),
             nullptr,
             "evaled_target");
-    ctx.newTmpBasicBlock();
+    ctx.jumpToTmpBasicBlock();
     m_InvokeTarget->emitIR(ExpressionMode::EXPRESSION, target_alloca, ctx);
 
     std::vector<llvm::AllocaInst *> arg_allocas;
@@ -36,7 +36,7 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
                 nullptr,
                 std::string("evaled_arg_").append(std::to_string(&arg - &*m_InvokeArgs.begin())));
         arg_allocas.emplace_back(arg_alloca);
-        ctx.newTmpBasicBlock();
+        ctx.jumpToTmpBasicBlock();
         arg->emitIR(ExpressionMode::EXPRESSION, arg_alloca, ctx);
     }
 

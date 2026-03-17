@@ -26,7 +26,7 @@ int main() {
     // C++ sources are located in tinyclj/types/*.cpp, compile them to .o files to link them later
     std::string source_dir = "tinyclj/types";
     std::vector<std::string> compiled_files;
-    for (const auto &file : std::filesystem::directory_iterator(source_dir)) {
+    for (const auto &file: std::filesystem::directory_iterator(source_dir)) {
         if (file.path().extension() == ".cpp") {
             std::string full_source_path = file.path().string();
             std::string output_path = compile_cpp(full_source_path);

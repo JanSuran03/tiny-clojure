@@ -36,8 +36,8 @@ llvm::PointerType *CompilerContext::pointerArrayType() const {
     return llvm::PointerType::get(pointerType(), 0);
 }
 
-void CompilerContext::newTmpBasicBlock() {
-    auto block_id = "block__" + std::to_string(m_IdCounter++);
+void CompilerContext::jumpToTmpBasicBlock() {
+    auto block_id = "block__" + std::to_string(nextId());
     llvm::BasicBlock *block = llvm::BasicBlock::Create(m_LLVMContext, block_id, m_CurrentFunction);
     m_IRBuilder.CreateBr(block);
     m_IRBuilder.SetInsertPoint(block);
@@ -51,4 +51,8 @@ llvm::BasicBlock *CompilerContext::createBasicBlock(const std::string &name) {
     return llvm::BasicBlock::Create(m_LLVMContext,
                                     name,
                                     m_CurrentFunction);
+}
+
+bool CompilerContext::currentBlockTerminated() const {
+    return m_IRBuilder.GetInsertBlock()->getTerminator() != nullptr;
 }

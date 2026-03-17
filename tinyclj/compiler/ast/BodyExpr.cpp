@@ -23,8 +23,9 @@ AExpr BodyExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *f
     std::vector<AExpr> exprs;
     for (const Object *lst = tc_list_seq(form); lst; lst = tc_list_next(lst)) {
         const Object *exprForm = tc_list_first(lst);
+        bool is_last = tc_list_next(lst) == nullptr;
         exprs.push_back(SemanticAnalyzer::analyze(
-                tc_list_seq(lst) == nullptr ? mode : ExpressionMode::STATEMENT, // last expr in the 'do block
+                is_last ? mode : ExpressionMode::STATEMENT, // last expr in the 'do block
                 ctx,
                 exprForm));
     }

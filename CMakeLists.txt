@@ -29,10 +29,12 @@ add_library(tinyclj_lib
         tinyclj/compiler/ast/LocalBindingExpr.cpp
         tinyclj/compiler/ast/NilExpr.cpp
         tinyclj/compiler/ast/QuotedExpr.cpp
+        tinyclj/compiler/ast/RecurExpr.cpp
         tinyclj/compiler/ast/ScopedLocalBindingExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarExpr.cpp
+        tinyclj/compiler/LoopBase.cpp
         tinyclj/compiler/SemanticAnalyzer.cpp
         tinyclj/reader/BufferedReader.cpp
         tinyclj/reader/LispReader.cpp

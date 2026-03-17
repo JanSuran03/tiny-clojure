@@ -14,6 +14,7 @@
 #include "compiler/ast/LetExpr.h"
 #include "compiler/ast/NilExpr.h"
 #include "compiler/ast/QuotedExpr.h"
+#include "compiler/ast/RecurExpr.h"
 #include "compiler/ast/ScopedLocalBindingExpr.h"
 #include "compiler/ast/StringExpr.h"
 #include "compiler/ast/VarExpr.h"
@@ -37,6 +38,7 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
         {"quote", QuotedExpr::parse},
         {"let*",  LetExpr::parse},
         {"fn*",   FunctionExpr::parse},
+        {"recur", RecurExpr::parse},
 };
 
 void captureLocalBinding(CompilerContext &ctx, const std::string &name) {

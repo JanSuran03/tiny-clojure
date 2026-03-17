@@ -18,6 +18,13 @@ FunctionExpr::FunctionExpr(std::string name,
           m_Captures(std::move(captures)),
           m_Body(std::move(body)) {}
 
+/** The thunk function that is called at runtime and thus needs to have a consistent signature:
+ * thunk_fn(Object *self, size_t argcnt, Object **argv)
+ * The thunk function checks the argument count, unpacks the arguments from the array, and calls the
+ * internal function with unpacked arguments
+ * In case of a closure, the thunk also needs to retrieve the closure environment pointer from the self argument
+ * and pass it to the internal function as its last argument.
+ */
 void compile_thunk(const std::string &thunk_name,
                    const std::string &fn_name,
                    llvm::Function *internal_fn,
@@ -137,15 +144,18 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
         }
     }
 
+    size_t old_num_recur_args = ctx.m_NumRecurArgs;
+    ctx.m_NumRecurArgs = args.size();
     std::vector<AExpr> body;
     for (; form; form = tc_list_next(form)) {
+        bool is_last = tc_list_next(form) == nullptr;
+        const Object *expr = tc_list_first(form);
         body.push_back(SemanticAnalyzer::analyze(
                 // discard return value of all but the last expression in the function body
-                tc_list_seq(form) == nullptr ? mode : ExpressionMode::STATEMENT,
-                ctx,
-                tc_list_first(form)));
+                is_last ? ExpressionMode::RETURN : ExpressionMode::STATEMENT, ctx, expr));
     }
 
+    ctx.m_NumRecurArgs = old_num_recur_args;
     for (const auto &var: new_scope_vars) {
         ctx.m_LocalBindings.erase(var);
     }
@@ -163,10 +173,11 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     return fn;
 }
 
+/** This compiles the internal function that takes unpacked positional arguments (and closure environment in
+ * case of a closure) and creates a thunk function that has a consistent signature and can be called at runtime:
+ * thunk_fn(Object *self, size_t argcnt, Object **argv)
+ */
 void FunctionExpr::compile(CompilerContext &ctx) const {
-    // the function that is actually exposed to the user - takes Object * as a list of arguments.
-    // checks the list length, then calls the internal function with the unpacked arguments.
-
     std::vector<llvm::Type *> argTypes(m_Args.size(), ctx.pointerType()); // positional arguments
     if (isClosure()) {
         argTypes.emplace_back(ctx.pointerType()); // closure environment
@@ -187,6 +198,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
 
     // allocate space for arguments and store them
     std::unordered_map<std::string, llvm::AllocaInst *> shadowed_allocas;
+    std::vector<llvm::AllocaInst *> loop_variable_storages;
     int arg_index = 0;
     for (size_t i = 0; i < m_Args.size(); i++) {
         llvm::Argument &arg = function->args().begin()[i];
@@ -199,6 +211,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
             shadowed_allocas[arg_name] = nullptr;
         }
         ctx.m_VariableMap[arg_name] = arg_alloca;
+        loop_variable_storages.emplace_back(arg_alloca);
     }
 
     llvm::Argument *prev_closure_env = ctx.m_ClosureEnv;
@@ -208,13 +221,20 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
         ctx.m_ClosureEnv = closure_env_arg;
     }
 
+    // Create a recursion point
+    llvm::BasicBlock *recursion_point = ctx.createBasicBlock("recursion_point");
+    ctx.m_IRBuilder.CreateBr(recursion_point);
+    ctx.m_IRBuilder.SetInsertPoint(recursion_point);
+    ctx.m_LoopLabels.emplace_back(recursion_point, std::move(loop_variable_storages));
+
     CompilerUtils::emitBody(m_Body, "fn", ExpressionMode::RETURN, retAlloca, ctx);
 
-    // the following should not be needed - the builder is already placed after the last block in the function
-    // ctx.m_IRBuilder.CreateBr(exitBlock);
-    // ctx.m_IRBuilder.SetInsertPoint(exitBlock);
-    llvm::Value *retVal = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), retAlloca, "retVal");
-    ctx.m_IRBuilder.CreateRet(retVal);
+    ctx.m_LoopLabels.pop_back();
+
+    if (!ctx.currentBlockTerminated()) {
+        llvm::Value *retVal = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), retAlloca, "retVal");
+        ctx.m_IRBuilder.CreateRet(retVal);
+    }
 
     // restore shadowed variables in the context
     for (const auto &[name, alloca]: shadowed_allocas) {
@@ -287,7 +307,9 @@ void FunctionExpr::emitIR(ExpressionMode _, llvm::AllocaInst *dst, CompilerConte
 
         // create the closure object with the thunk pointer and env struct pointer
         Value *closure_obj = ctx.m_IRBuilder.CreateCall(closure_new_fn, {thunk_fn, env_struct_ptr}, "closure_obj");
-        ctx.m_IRBuilder.CreateStore(closure_obj, dst);
+        if (dst != nullptr) {
+            ctx.m_IRBuilder.CreateStore(closure_obj, dst);
+        }
     } else {
         // create the function object with the thunk pointer
         FunctionType *function_new_fn_type = FunctionType::get(
@@ -297,7 +319,9 @@ void FunctionExpr::emitIR(ExpressionMode _, llvm::AllocaInst *dst, CompilerConte
         FunctionCallee function_new_fn = ctx.m_Module.getOrInsertFunction("tc_function_new", function_new_fn_type);
         Constant *fn_name_const = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Name, "fn_name");
         Value *function_obj = ctx.m_IRBuilder.CreateCall(function_new_fn, {thunk_fn, fn_name_const}, "function_obj");
-        ctx.m_IRBuilder.CreateStore(function_obj, dst);
+        if (dst != nullptr) {
+            ctx.m_IRBuilder.CreateStore(function_obj, dst);
+        }
     }
 }
 

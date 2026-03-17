@@ -55,11 +55,15 @@ void IfExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext 
     // 5. emit then, else and jump to merge at the end
     ctx.m_IRBuilder.SetInsertPoint(then_block);
     m_ThenExpr->emitIR(mode, dst, ctx);
-    ctx.m_IRBuilder.CreateBr(merge_block);
+    if (!ctx.currentBlockTerminated()) {
+        ctx.m_IRBuilder.CreateBr(merge_block);
+    }
 
     ctx.m_IRBuilder.SetInsertPoint(else_block);
     m_ElseExpr->emitIR(mode, dst, ctx);
-    ctx.m_IRBuilder.CreateBr(merge_block);
+    if (!ctx.currentBlockTerminated()) {
+        ctx.m_IRBuilder.CreateBr(merge_block);
+    }
 
     ctx.m_IRBuilder.SetInsertPoint(merge_block);
 }
@@ -80,7 +84,7 @@ AExpr IfExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *for
     if (form == nullptr) {
         throw std::runtime_error("if requires a condition expression");
     }
-    auto condExpr = SemanticAnalyzer::analyze(mode, ctx, tc_list_first(form));
+    auto condExpr = SemanticAnalyzer::analyze(ExpressionMode::EXPRESSION, ctx, tc_list_first(form));
     form = tc_list_next(form);
     if (form == nullptr) {
         throw std::runtime_error("if requires a then expression");

@@ -87,7 +87,11 @@ const Object *tc_list_seq(const Object *list) {
 
 const Object *tc_list_length(const Object *list) {
     if (list == nullptr) {
-        return nullptr;
+        return new Object{
+                .m_Data = new TCInteger{.m_Value = 0},
+                .m_Type = ObjectType::INTEGER,
+                .m_Call = nullptr
+        };
     }
     if (list->m_Type != ObjectType::LIST) {
         throw std::runtime_error("Cannot get length of non-list type");

@@ -14,11 +14,11 @@ void CompilerUtils::emitBody(const std::vector<AExpr> &body,
     auto body_id = bodyPrefix + "__" + std::to_string(ctx.nextId());
 
     for (size_t i = 0; i + 1 < body.size(); i++) {
-        ctx.newTmpBasicBlock();
+        ctx.jumpToTmpBasicBlock();
         body[i]->emitIR(ExpressionMode::STATEMENT, nullptr, ctx);
     }
 
-    ctx.newTmpBasicBlock();
+    ctx.jumpToTmpBasicBlock();
     body.back()->emitIR(mode, dst, ctx);
 }
 

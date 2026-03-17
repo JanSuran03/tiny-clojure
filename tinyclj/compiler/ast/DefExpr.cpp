@@ -21,10 +21,14 @@ void DefExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
             false);
     FunctionCallee bind_var_fn = ctx.m_Module.getOrInsertFunction("tc_var_bind_root", bind_var_fn_type);
 
-    m_Value->emitIR(mode, dst, ctx);
+    llvm::AllocaInst *def_result_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, "def_result");
+    m_Value->emitIR(mode, def_result_alloca, ctx);
     Value *llvm_var_ptr =  CompilerUtils::emitVarPtr(m_Var, ctx);
-    Value *value_to_bind = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), dst, "def_value");
+    Value *value_to_bind = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), def_result_alloca, "def_value");
     ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind});
+    if (dst != nullptr) {
+        ctx.m_IRBuilder.CreateStore(value_to_bind, dst);
+    }
 }
 
 Object *DefExpr::eval(Runtime &runtime) const {

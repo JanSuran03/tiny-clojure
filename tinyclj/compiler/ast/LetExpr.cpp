@@ -1,6 +1,6 @@
 #include "compiler/CompilerUtils.h"
 #include "LetExpr.h"
-#include "SemanticAnalyzer.h"
+#include "compiler/SemanticAnalyzer.h"
 #include "types/TCList.h"
 #include "types/TCInteger.h"
 #include "types/TCSymbol.h"
