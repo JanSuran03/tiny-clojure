@@ -19,20 +19,26 @@ std::string compile_cpp(const std::string &full_source_path) {
     return output_path;
 }
 
-bool test_eval(Runtime &runtime, const std::string &input, const std::string &expected_output) {
+bool test_eval(Runtime &runtime,
+               const std::string &input,
+               const std::string &expected_console_output,
+               const std::string &expected_result_str) {
     std::istringstream iss(input);
-    std::ostringstream oss;
+    std::ostringstream console_oss;
+    std::ostringstream result_oss;
     BufferedReader rdr(iss);
     const Object *obj = LispReader::read(rdr);
 
     auto orig_rdbuf = std::cout.rdbuf();
-    std::cout.rdbuf(oss.rdbuf());
+    // redirect std::cout to capture console output
+    std::cout.rdbuf(console_oss.rdbuf());
     const Object *res = runtime.eval(obj);
+    // redirect std::cout back to capture the result printing output
+    std::cout.rdbuf(result_oss.rdbuf());
     tinyclj_rt_print(res, 1, &res);
-
+    // restore std::cout
     std::cout.rdbuf(orig_rdbuf);
-
-    return oss.str() == expected_output;
+    return console_oss.str() == expected_console_output && result_oss.str() == expected_result_str;
 }
 
 template<typename Fn, typename ErrFn, typename... Args>
@@ -81,50 +87,88 @@ int main() {
     Runtime runtime(compiled_files);
 
     test("test eval",
-         [&runtime](const std::string &input, const std::string &expected_output) {
-             return test_eval(runtime, input, expected_output);
+         [&runtime](const std::string &input,
+                    const std::string &expected_console_output,
+                    const std::string &expected_result_str) {
+             return test_eval(runtime, input, expected_console_output, expected_result_str);
          },
-         [](const std::string &input, const std::string &expected_output) {
-             return "eval '" + input + "' == '" + expected_output + '\'';
+         [](const std::string &input,
+            const std::string &expected_console_output,
+            const std::string &expected_output) {
+             return "eval '" + input
+                    + "' -> '" + expected_output
+                    + "', console output: '" + expected_console_output + "'";
          },
-         std::vector<std::tuple<std::string, std::string>>
-                 {{"67",                          "67"},
-                  {"6.9",                         "6.9"},
-                  {"nil",                         "nil"},
-                  {"\"hello world!\"",            "\"hello world!\""},
-                  {"true",                        "true"},
-                  {"false",                       "false"},
-                  {"(do 1 2)",                    "2"},
-                  {"(do)",                        "nil"},
-                  {"(if true 1 2)",               "1"},
-                  {"(if false 1 2)",              "2"},
-                  {"(if nil 1 2)",                "2"},
-                  {"(if 1 1 2)",                  "1"},
-                  {"(if 0 1 2)",                  "1"},
+         std::vector<std::tuple<std::string, std::string, std::string>>
+                 {{"67",                          "",                                "67"},
+                  {"6.9",                         "",                                "6.9"},
+                  {"nil",                         "",                                "nil"},
+                         // todo: EDN vs REPL printing - this one should be printed as EDN
+                  {"\"hello world!\"",            "",                                "hello world!"},
+                  {"true",                        "",                                "true"},
+                  {"false",                       "",                                "false"},
+                  {"(do 1 2)",                    "",                                "2"},
+                  {"(do)",                        "",                                "nil"},
+                  {"(if true 1 2)",               "",                                "1"},
+                  {"(if false 1 2)",              "",                                "2"},
+                  {"(if nil 1 2)",                "",                                "2"},
+                  {"(if 1 1 2)",                  "",                                "1"},
+                  {"(if 0 1 2)",                  "",                                "1"},
                   {"(let* (a 1"
                    "       b 2)"
-                   "  a)",                        "1"},
-                  {"(builtin_binary_add 1 2)",    "3"},
+                   "  a)",                        "",                                "1"},
+                  {"(builtin_binary_add 1 2)",    "",                                "3"},
                   {"(let* (a 1"
                    "       b 2)"
-                   "  (builtin_binary_add a b))", "3"},
+                   "  (builtin_binary_add a b))", "",                                "3"},
                   {"(let* (+ builtin_binary_add)"
-                   "  (+ 1 2))",                  "3"},
+                   "  (+ 1 2))",                  "",                                "3"},
                   {"(let* (+ builtin_binary_add"
                    "       a 1"
                    "       b 2)"
-                   "  (+ a b))",                  "3"},
+                   "  (+ a b))",                  "",                                "3"},
                   {"((fn* (a)"
                    "   (builtin_binary_add a a))"
-                   " 2)",                         "4"},
+                   " 2)",                         "",                                "4"},
                   {"(let* (+ (fn* (x y)"
                    "           (builtin_binary_add x y)))"
                    "  (+ 1 2))",
-                                                  "3"},
+                                                  "",                                "3"},
                   {"(let* (a 1"
                    "       adder (fn* (b)"
                    "               (builtin_binary_add a b)))"
-                   "  (adder 2))",                "3"}}
+                   "  (adder 2))",                "",                                "3"},
+                  {"(let* (make-adder (fn* (a)"
+                   "                    (fn* (b) (builtin_binary_add a b)))"
+                   "       adder-2 (make-adder 2))"
+                   "  (adder-2 3))",              "",                                "5"},
+                  {"(let* (make-adder (fn* (a)"
+                   "                    (fn* (b) (builtin_binary_add a b)))"
+                   "       make-multi-adder (fn* (a b)"
+                   "                          (let* (adder-a (make-adder a)"
+                   "                                 adder-b (make-adder b))"
+                   "                            (fn* (c)"
+                   "                              (adder-b (adder-a c)))))"
+                   "       adder-2-3 (make-multi-adder 2 3))"
+                   "  (adder-2-3 4))",            "",                                "9"},
+                  {"(do (def countdown"
+                   "      (fn* (x)"
+                   "        (if (builtin_iszero x)"
+                   "          (builtin_unary_print \"Done.\\n\")"
+                   "          (do (builtin_unary_print x)"
+                   "              (builtin_unary_print \"...\\n\")"
+                   "              (countdown (builtin_binary_add x -1))))))"
+                   "    (countdown 3))",          "3...\n2...\n1...\nDone.\n",       "nil"},
+                  {"((fn* (x y)"
+                   "  (if (builtin_iszero x)"
+                   "    (builtin_unary_print \"Done.\\n\")"
+                   "    (do (builtin_unary_print x)"
+                   "        (builtin_unary_print \" \")"
+                   "        (builtin_unary_print y)"
+                   "        (builtin_unary_print \"...\\n\")"
+                   "        (recur (builtin_binary_add x -1)"
+                   "               (builtin_binary_add y 1)))))"
+                   "  3 3)",                      "3 3...\n2 4...\n1 5...\nDone.\n", "nil"}}
 
     );
 }
