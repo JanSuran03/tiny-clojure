@@ -56,7 +56,7 @@ const Object *read_list(BufferedReader &rdr) {
 
         elements.emplace_back(elem);
     }
-    return tinyclj_vec_to_list(elements);
+    return tc_list_from_array(elements.size(), elements.data());
 }
 
 const Object *read_string(BufferedReader &rdr) {

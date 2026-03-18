@@ -103,4 +103,12 @@ const Object *tc_list_length(const Object *list) {
             .m_Call = nullptr
     };
 }
+
+const Object *tc_list_from_array(size_t len, const Object **arr) {
+    const Object *ret = empty_list();
+    for (ssize_t i = ((ssize_t) len) - 1; i >= 0; i--) {
+        ret = tc_list_cons(arr[i], ret);
+    }
+    return ret;
+}
 }

@@ -22,6 +22,8 @@ const Object *tc_list_seq(const Object *list);
 
 const Object *tc_list_length(const Object *list);
 
+const Object *tc_list_from_array(size_t len, const Object **arr);
+
 // todo
 // void tc_list_destroy(TCList *list);
 }

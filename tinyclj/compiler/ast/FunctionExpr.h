@@ -8,6 +8,7 @@ class FunctionExpr : public Expr {
     std::string m_Name;
     std::string m_ThunkName = m_Name + "__thunk";
     std::vector<std::string> m_Args;
+    bool m_IsVariadic;
     Captures m_Captures;
     std::vector<AExpr> m_Body;
 
@@ -21,6 +22,7 @@ public:
 
     FunctionExpr(std::string name,
                  std::vector<std::string> args,
+                 bool isVariadic,
                  Captures captures,
                  std::vector<AExpr> body);
 

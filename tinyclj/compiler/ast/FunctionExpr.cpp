@@ -11,25 +11,34 @@
 
 FunctionExpr::FunctionExpr(std::string name,
                            std::vector<std::string> args,
+                           bool isVariadic,
                            Captures captures,
                            std::vector<AExpr> body)
         : m_Name(std::move(name)),
           m_Args(std::move(args)),
+          m_IsVariadic(isVariadic),
           m_Captures(std::move(captures)),
           m_Body(std::move(body)) {}
+
+// todo: maybe make this a class method?
 
 /** The thunk function that is called at runtime and thus needs to have a consistent signature:
  * thunk_fn(Object *self, size_t argcnt, Object **argv)
  * The thunk function checks the argument count, unpacks the arguments from the array, and calls the
  * internal function with unpacked arguments
+ *
+ * For variadic functions, the thunk needs to pack the extra arguments into a list and pass it as the last
+ * argument to the internal function.
+ *
  * In case of a closure, the thunk also needs to retrieve the closure environment pointer from the self argument
- * and pass it to the internal function as its last argument.
+ * and pass it to the internal function as an extra last argument.
  */
 void compile_thunk(const std::string &thunk_name,
                    const std::string &fn_name,
                    llvm::Function *internal_fn,
                    bool is_closure,
-                   size_t expected_argcnt,
+                   bool is_variadic,
+                   size_t num_args,
                    CompilerContext &ctx) {
     using namespace llvm;
 
@@ -52,6 +61,8 @@ void compile_thunk(const std::string &thunk_name,
                                                 llvm::Function::ExternalLinkage,
                                                 thunk_name,
                                                 ctx.m_Module);
+    llvm::Function *prev_function = ctx.m_CurrentFunction;
+    ctx.m_CurrentFunction = thunk_fn;
     BasicBlock *entry_block = BasicBlock::Create(ctx.m_LLVMContext, "entry", thunk_fn);
     BasicBlock *wrong_argcnt_block = BasicBlock::Create(ctx.m_LLVMContext, "wrong_argcnt", thunk_fn);
     BasicBlock *call_internal_block = BasicBlock::Create(ctx.m_LLVMContext, "thunk_call_internal", thunk_fn);
@@ -62,14 +73,32 @@ void compile_thunk(const std::string &thunk_name,
     Value *self_arg = thunk_fn->getArg(0);
     Value *actual_argcnt = thunk_fn->getArg(1);
     Value *packed_arglist = thunk_fn->getArg(2);
-    Value *expected_argcnt_llvm_val = ConstantInt::get(ctx.m_LLVMContext, APInt(64, expected_argcnt, false));
-    Value *is_argcnt_correct = ctx.m_IRBuilder.CreateICmpEQ(actual_argcnt, expected_argcnt_llvm_val);
-    ctx.m_IRBuilder.CreateCondBr(is_argcnt_correct, call_internal_block, wrong_argcnt_block);
+    Value *expected_argcnt_llvm_val;
+    if (is_variadic) {
+        // The expected argcnt is the number of fixed arguments (before the '&' in the arglist)
+        expected_argcnt_llvm_val = ConstantInt::get(ctx.m_LLVMContext, APInt(64, num_args - 1, false));
+        Value *enough_args = ctx.m_IRBuilder.CreateICmpUGE(actual_argcnt,
+                                                           expected_argcnt_llvm_val,
+                                                           "is_enough_args");
+        ctx.m_IRBuilder.CreateCondBr(enough_args, call_internal_block, wrong_argcnt_block);
+    } else {
+        expected_argcnt_llvm_val = ConstantInt::get(ctx.m_LLVMContext, APInt(64, num_args, false));
+        Value *is_argcnt_correct = ctx.m_IRBuilder.CreateICmpEQ(actual_argcnt,
+                                                                expected_argcnt_llvm_val,
+                                                                "is_correct_argcnt");
+        ctx.m_IRBuilder.CreateCondBr(is_argcnt_correct, call_internal_block, wrong_argcnt_block);
+    }
 
     // wrong argcnt -> print error and exit
     ctx.m_IRBuilder.SetInsertPoint(wrong_argcnt_block);
+    const char *fixed_argcnt_fmt =
+            "Error: Wrong number of arguments (%u) passed to a function %s, expected %ld\n";
+    const char *variadic_fmt =
+            "Error: Wrong number of arguments (%u) passed to a function %s, expected at least %ld\n";
+
     llvm::Value *wrong_argcnt_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(
-            "Error: Wrong number of arguments (%u) passed to a function %s, expected %ld\n");
+            is_variadic ? variadic_fmt : fixed_argcnt_fmt
+    );
     llvm::Value *fn_name_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(fn_name);
     ctx.m_IRBuilder.CreateCall(printf_func, {wrong_argcnt_msg, actual_argcnt, fn_name_msg, expected_argcnt_llvm_val});
     ctx.m_IRBuilder.CreateCall(exit_func, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx.m_LLVMContext), 1)});
@@ -78,7 +107,49 @@ void compile_thunk(const std::string &thunk_name,
     // call the internal function with unpacked arguments
     ctx.m_IRBuilder.SetInsertPoint(call_internal_block);
     std::vector<llvm::Value *> direct_args;
-    for (size_t i = 0; i < expected_argcnt; i++) {
+    for (size_t i = 0; i < num_args; i++) {
+        if (is_variadic && i == num_args - 1) {
+            AllocaInst *varargs_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, "varargs_alloca");
+            // for variadic functions, the last argument is a list of the extra arguments
+            // however, if there are no extra args, the vararg is nil
+            BasicBlock *build_varargs_array_block = ctx.createBasicBlock("build_varargs_array");
+            BasicBlock *varargs_empty_block = ctx.createBasicBlock("varargs_empty");
+            BasicBlock *merge_block = ctx.createBasicBlock("varargs_merge");
+
+            Value *extra_argcnt = ctx.m_IRBuilder.CreateSub(actual_argcnt, expected_argcnt_llvm_val, "extra_argcnt");
+            ctx.m_IRBuilder.CreateCondBr(ctx.m_IRBuilder.CreateICmpEQ(extra_argcnt, ctx.m_IRBuilder.getInt64(0)),
+                                         varargs_empty_block,
+                                         build_varargs_array_block);
+
+            // no extra varargs -> the packed list is nil
+            ctx.m_IRBuilder.SetInsertPoint(varargs_empty_block);
+            Value *nil_val = CompilerUtils::emitObjectPtr(nullptr, ctx);
+            ctx.m_IRBuilder.CreateStore(nil_val, varargs_alloca);
+            ctx.m_IRBuilder.CreateBr(merge_block);
+
+            // otherwise, build the varargs list from the extra arguments in the packed array
+            ctx.m_IRBuilder.SetInsertPoint(build_varargs_array_block);
+            Value *varargs_array_ptr = ctx.m_IRBuilder.CreateGEP(
+                    ctx.pointerType(),
+                    packed_arglist,
+                    expected_argcnt_llvm_val,
+                    "varargs_array_ptr");
+            FunctionType *list_from_array_fn_type = FunctionType::get(ctx.pointerType(),
+                                                                      {argcnt_type, arglist_type}, false);
+            FunctionCallee list_from_array_fn = ctx.m_Module.getOrInsertFunction(
+                    "tc_list_from_array", list_from_array_fn_type);
+            Value *varargs_list = ctx.m_IRBuilder.CreateCall(
+                    list_from_array_fn,
+                    {extra_argcnt, varargs_array_ptr},
+                    "varargs_list");
+            ctx.m_IRBuilder.CreateStore(varargs_list, varargs_alloca);
+            ctx.m_IRBuilder.CreateBr(merge_block);
+
+            ctx.m_IRBuilder.SetInsertPoint(merge_block);
+            Value *varargs_val = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), varargs_alloca, "varargs_val");
+            direct_args.push_back(varargs_val);
+            break;
+        }
         // the thunk receives the arguments as an array of Object *, so we need to load each argument from the array
         // before passing it to the internal function
         Value *slot = ctx.m_IRBuilder.CreateGEP(ctx.pointerType(),
@@ -101,6 +172,7 @@ void compile_thunk(const std::string &thunk_name,
     // finally, call the internal function with the unpacked arguments and return its result
     llvm::Value *result = ctx.m_IRBuilder.CreateCall(internal_fn, direct_args, "thunk_result");
     ctx.m_IRBuilder.CreateRet(result);
+    ctx.m_CurrentFunction = prev_function;
 }
 
 AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
@@ -128,6 +200,12 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
 
     std::vector<std::string> args;
     std::vector<std::string> new_scope_vars;
+    enum class VA_State {
+        NONE,
+        EXPECTING_VARARG_NAME,
+        FOUND_VARARG
+    };
+    VA_State varargs_state = VA_State::NONE;
     for (arglist = tc_list_seq(arglist); arglist; arglist = tc_list_next(arglist)) {
         const Object *arg = tc_list_first(arglist);
         if (tinyclj_object_get_type(arg) != ObjectType::SYMBOL) {
@@ -135,6 +213,17 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
         }
 
         std::string arg_name = tc_symbol_valueX(arg);
+
+        if (arg_name == "&") {
+            if (varargs_state != VA_State::NONE) {
+                throw std::runtime_error("Invalid use of & in argument list");
+            }
+            varargs_state = VA_State::EXPECTING_VARARG_NAME;
+            continue;
+        } else if (varargs_state == VA_State::EXPECTING_VARARG_NAME) {
+            varargs_state = VA_State::FOUND_VARARG;
+        }
+
         currentFrame->m_Locals.emplace(arg_name);
 
         args.emplace_back(arg_name);
@@ -142,6 +231,9 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
             ctx.m_LocalBindings.insert(args.back());
             new_scope_vars.push_back(args.back());
         }
+    }
+    if (varargs_state == VA_State::EXPECTING_VARARG_NAME) {
+        throw std::runtime_error("Expected vararg name after & in argument list");
     }
 
     size_t old_num_recur_args = ctx.m_NumRecurArgs;
@@ -163,6 +255,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     auto fn = std::make_unique<FunctionExpr>(
             tc_symbol_valueX(name),
             std::move(args),
+            varargs_state == VA_State::FOUND_VARARG,
             currentFrame->m_Captures, // todo: std::move
             std::move(body));
 
@@ -245,7 +338,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
         }
     }
 
-    compile_thunk(m_ThunkName, m_Name, function, isClosure(), m_Args.size(), ctx);
+    compile_thunk(m_ThunkName, m_Name, function, isClosure(), m_IsVariadic, m_Args.size(), ctx);
 
     if (isClosure()) {
         ctx.m_ClosureEnv = prev_closure_env;
