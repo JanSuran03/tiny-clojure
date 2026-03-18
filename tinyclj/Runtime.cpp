@@ -53,6 +53,9 @@ Object *Runtime::getVar(const std::string &name) const {
 
 void Runtime::init() {
     auto binary_add = declareVar("builtin_binary_add");
+    auto binary_sub = declareVar("builtin_binary_sub");
+    auto binary_mul = declareVar("builtin_binary_mul");
+    auto binary_div = declareVar("builtin_binary_div");
     auto unary_print = declareVar("builtin_unary_print");
     auto iszero = declareVar("builtin_iszero");
     auto setmacro = declareVar("set-macro!");
@@ -65,6 +68,9 @@ void Runtime::init() {
     auto error = declareVar("error");
 
     tc_var_bind_root(binary_add, tc_function_new(tinyclj_rt_add, "builtin_binary_add"));
+    tc_var_bind_root(binary_sub, tc_function_new(tinyclj_rt_sub, "builtin_binary_sub"));
+    tc_var_bind_root(binary_mul, tc_function_new(tinyclj_rt_mul, "builtin_binary_mul"));
+    tc_var_bind_root(binary_div, tc_function_new(tinyclj_rt_div, "builtin_binary_div"));
     tc_var_bind_root(unary_print, tc_function_new(tinyclj_rt_print, "builtin_unary_print"));
     tc_var_bind_root(iszero, tc_function_new(tinyclj_rt_iszero, "builtin_iszero"));
     tc_var_bind_root(setmacro, tc_function_new(tinyclj_rt_setmacro, "set-macro!"));

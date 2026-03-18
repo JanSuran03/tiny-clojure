@@ -56,6 +56,142 @@ Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **argv) {
     }
 }
 
+Object *tinyclj_rt_sub(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("add function requires exactly 2 arguments");
+    }
+
+    const Object *a = argv[0];
+    const Object *b = argv[1];
+
+    switch (a->m_Type) {
+        case ObjectType::INTEGER:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER: {
+                    return tc_integer_new(
+                            static_cast<TCInteger *>(a->m_Data)->m_Value -
+                            static_cast<TCInteger *>(b->m_Data)->m_Value);
+                }
+                case ObjectType::DOUBLE: {
+                    return tc_double_new(
+                            static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) -
+                            static_cast<TCDouble *>(b->m_Data)->m_Value);
+                }
+                default:
+                    throw std::runtime_error("Cannot subtract integer and non-numeric type");
+            }
+        case ObjectType::DOUBLE:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER: {
+                    return tc_double_new(
+                            static_cast<TCDouble *>(a->m_Data)->m_Value -
+                            static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
+                }
+                case ObjectType::DOUBLE: {
+                    return tc_double_new(
+                            static_cast<TCDouble *>(a->m_Data)->m_Value -
+                            static_cast<TCDouble *>(b->m_Data)->m_Value);
+                }
+                default:
+                    throw std::runtime_error("Cannot subtract double and non-numeric type");
+            }
+        default:
+            throw std::runtime_error("Cannot subtract and non-numeric values");
+    }
+}
+
+Object *tinyclj_rt_mul(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("add function requires exactly 2 arguments");
+    }
+
+    const Object *a = argv[0];
+    const Object *b = argv[1];
+
+    switch (a->m_Type) {
+        case ObjectType::INTEGER:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER: {
+                    return tc_integer_new(
+                            static_cast<TCInteger *>(a->m_Data)->m_Value *
+                            static_cast<TCInteger *>(b->m_Data)->m_Value);
+                }
+                case ObjectType::DOUBLE: {
+                    return tc_double_new(
+                            static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) *
+                            static_cast<TCDouble *>(b->m_Data)->m_Value);
+                }
+                default:
+                    throw std::runtime_error("Cannot multiply integer with non-numeric type");
+            }
+        case ObjectType::DOUBLE:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER: {
+                    return tc_double_new(
+                            static_cast<TCDouble *>(a->m_Data)->m_Value *
+                            static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
+                }
+                case ObjectType::DOUBLE: {
+                    return tc_double_new(
+                            static_cast<TCDouble *>(a->m_Data)->m_Value *
+                            static_cast<TCDouble *>(b->m_Data)->m_Value);
+                }
+                default:
+                    throw std::runtime_error("Cannot multiply double with non-numeric type");
+            }
+        default:
+            throw std::runtime_error("Cannot multiply two non-numeric values");
+    }
+}
+
+Object *tinyclj_rt_div(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("add function requires exactly 2 arguments");
+    }
+
+    const Object *a = argv[0];
+    const Object *b = argv[1];
+
+    switch (a->m_Type) {
+        case ObjectType::INTEGER:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER: {
+                    tc_int_t denom = static_cast<TCInteger *>(b->m_Data)->m_Value;
+                    if (denom == 0) {
+                        throw std::runtime_error("Division by zero");
+                    }
+                    return tc_integer_new(
+                            static_cast<TCInteger *>(a->m_Data)->m_Value /
+                            denom);
+                }
+                case ObjectType::DOUBLE: {
+                    return tc_double_new(
+                            static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) /
+                            static_cast<TCDouble *>(b->m_Data)->m_Value);
+                }
+                default:
+                    throw std::runtime_error("Cannot divide integer by non-numeric type");
+            }
+        case ObjectType::DOUBLE:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER: {
+                    return tc_double_new(
+                            static_cast<TCDouble *>(a->m_Data)->m_Value /
+                            static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
+                }
+                case ObjectType::DOUBLE: {
+                    return tc_double_new(
+                            static_cast<TCDouble *>(a->m_Data)->m_Value /
+                            static_cast<TCDouble *>(b->m_Data)->m_Value);
+                }
+                default:
+                    throw std::runtime_error("Cannot divide double by non-numeric type");
+            }
+        default:
+            throw std::runtime_error("Cannot divide two non-numeric values");
+    }
+}
+
 Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
     const Object *a = argv[0];
     if (a == nullptr) {

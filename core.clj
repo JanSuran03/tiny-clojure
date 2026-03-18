@@ -1,7 +1,8 @@
 (def + builtin_binary_add)
-
+(def - builtin_binary_sub)
+(def * builtin_binary_mul)
+(def / builtin_binary_div)
 (def print builtin_unary_print)
-
 (def zero? builtin_iszero)
 
 (def fn
