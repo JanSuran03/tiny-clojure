@@ -1,15 +1,42 @@
+#include <cstring>
+#include <stdexcept>
+
 #include "TCVar.h"
 
+Object *tc_var_invoke(const Object *self, size_t argc, const Object **argv) {
+    const TCVar *var = static_cast<const TCVar *>(self->m_Data);
+    const Object *root = var->m_Root;
+    if (root == nullptr) {
+        throw std::runtime_error("Cannot invoke unbound var");
+    }
+    return root->m_Call(root, argc, argv);
+}
+
 extern "C" {
-TCVar *tc_var_new() {
-    return new TCVar;
+Object *tc_var_new(const char *name) {
+    TCVar *var = new TCVar{.m_Name = strdup(name)};
+
+    return new Object{
+            .m_Data = var,
+            .m_Type = ObjectType::VAR,
+            .m_Call = tc_var_invoke
+    };
 }
 
-const Object *tc_var_get_root(TCVar *var) {
-    return var->m_Root;
+const Object *tc_var_get_root(Object *var) {
+    return static_cast<const TCVar *>(var->m_Data)->m_Root;
 }
 
-void tc_var_bind_root(TCVar *var, const Object *obj) {
-    var->m_Root = obj;
+void tc_var_bind_root(Object *var, const Object *obj) {
+    static_cast<TCVar *>(var->m_Data)->m_Root = obj;
 }
+
+bool tc_var_is_macroX(const Object *var) {
+    return static_cast<const TCVar *>(var->m_Data)->m_IsMacro;
+}
+
+void tc_var_set_macroX(Object *var, bool is_macro) {
+    static_cast<TCVar *>(var->m_Data)->m_IsMacro = is_macro;
+}
+
 }

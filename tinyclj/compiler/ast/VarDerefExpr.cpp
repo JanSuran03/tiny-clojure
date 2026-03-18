@@ -1,9 +1,9 @@
 #include "NilExpr.h"
-#include "VarExpr.h"
+#include "VarDerefExpr.h"
 #include "compiler/CompilerUtils.h"
 #include "types/TCVar.h"
 
-void VarExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void VarDerefExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
     if (mode != ExpressionMode::STATEMENT) {
         FunctionType *get_root_fn_type = FunctionType::get(
@@ -12,10 +12,14 @@ void VarExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
                 false);
         FunctionCallee get_root_fn = ctx.m_Module.getOrInsertFunction("tc_var_get_root", get_root_fn_type);
         // dereference the Var's root pointer at runtime
-        llvm::Value *llvm_var_ptr = CompilerUtils::emitVarPtr(m_Var, ctx);
+        llvm::Value *llvm_var_ptr = CompilerUtils::emitObjectPtr(m_Var, ctx);
         Value *var_value = ctx.m_IRBuilder.CreateCall(get_root_fn, {llvm_var_ptr}, "var_value");
         ctx.m_IRBuilder.CreateStore(var_value, dst);
     }
 }
 
-VarExpr::VarExpr(TCVar *var) : m_Var(var) {}
+Object *VarDerefExpr::eval(Runtime &runtime) const {
+    return const_cast<Object *>(tc_var_get_root(m_Var));
+}
+
+VarDerefExpr::VarDerefExpr(Object *var) : m_Var(var) {}

@@ -12,7 +12,7 @@
 class Runtime {
     std::unique_ptr<llvm::orc::LLJIT> m_JIT;
     std::atomic<size_t> m_IdCounter = 0;
-    std::unordered_map<std::string, TCVar *> m_GlobalVarStorage;
+    std::unordered_map<std::string, Object *> m_GlobalVarStorage;
 
     static std::unique_ptr<llvm::orc::LLJIT> createJIT();
 
@@ -21,13 +21,21 @@ class Runtime {
 public:
     Runtime(const std::vector<std::string> &objectFiles);
 
-    TCVar *declareVar(const std::string &name);
+    Object *declareVar(const std::string &name);
 
-    TCVar *getVar(const std::string &name) const;
+    Object *getVar(const std::string &name) const;
 
     std::unique_ptr<llvm::orc::LLJIT> &getJIT();
 
     Object *eval(const Object *form);
 
     void repl();
+
+    static const Object *readString(const std::string &input);
+
+    const Object *loadString(const std::string &input);
+
+    const Object *loadStream(std::istream &stream);
+
+    const Object *loadFile(const std::string &filename);
 };

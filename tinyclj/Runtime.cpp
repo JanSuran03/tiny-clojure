@@ -1,4 +1,6 @@
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "llvm/IR/Verifier.h"
 
@@ -33,15 +35,15 @@ std::unique_ptr<llvm::orc::LLJIT> Runtime::createJIT() {
     return jit;
 }
 
-TCVar *Runtime::declareVar(const std::string &name) {
+Object *Runtime::declareVar(const std::string &name) {
     if (auto it = m_GlobalVarStorage.find(name); it != m_GlobalVarStorage.end()) {
         return it->second;
     } else {
-        return m_GlobalVarStorage[name] = tc_var_new();
+        return m_GlobalVarStorage[name] = tc_var_new(name.c_str());
     }
 }
 
-TCVar *Runtime::getVar(const std::string &name) const {
+Object *Runtime::getVar(const std::string &name) const {
     if (auto var = m_GlobalVarStorage.find(name); var != m_GlobalVarStorage.end()) {
         return var->second;
     } else {
@@ -53,9 +55,27 @@ void Runtime::init() {
     auto binary_add = declareVar("builtin_binary_add");
     auto unary_print = declareVar("builtin_unary_print");
     auto iszero = declareVar("builtin_iszero");
+    auto setmacro = declareVar("set-macro!");
+    auto list = declareVar("list");
+    auto cons = declareVar("cons");
+    auto next = declareVar("next");
+    //auto ifnot = declareVar("ifnot");
+    //tc_var_set_macroX(ifnot, true);
     tc_var_bind_root(binary_add, tc_function_new(tinyclj_rt_add, "builtin_binary_add"));
     tc_var_bind_root(unary_print, tc_function_new(tinyclj_rt_print, "builtin_unary_print"));
     tc_var_bind_root(iszero, tc_function_new(tinyclj_rt_iszero, "builtin_iszero"));
+    tc_var_bind_root(setmacro, tc_function_new(tinyclj_rt_setmacro, "set-macro!"));
+    tc_var_bind_root(list, tc_function_new(tinyclj_rt_list, "list"));
+    tc_var_bind_root(cons, tc_function_new(tinyclj_rt_cons, "cons"));
+    tc_var_bind_root(next, tc_function_new(tinyclj_rt_next, "next"));
+    //tc_var_bind_root(ifnot, tc_function_new(macro_ifnot, "ifnot"));
+    //static const std::string core_file = "core.clj";
+    //try {
+    //    loadFile(core_file);
+    //} catch (const std::runtime_error &e) {
+    //    std::cerr << "Warning: Failed to load core.clj: " << e.what() << std::endl;
+    //    throw;
+    //}
 }
 
 Runtime::Runtime(const std::vector<std::string> &objectFiles)
@@ -151,4 +171,34 @@ void Runtime::repl() {
             std::cout << "Runtime error: " << e.what() << std::endl;
         }
     }
+}
+
+const Object *Runtime::loadStream(std::istream &stream) {
+    BufferedReader reader(stream);
+    const Object *form = LispReader::read(reader);
+    const Object *res = nullptr;
+    while (form != LispReader::eof_object()) {
+        res = eval(form);
+        form = LispReader::read(reader);
+    }
+    return res;
+}
+
+const Object *Runtime::readString(const std::string &input) {
+    std::istringstream stream(input);
+    BufferedReader reader(stream);
+    return LispReader::read(reader);
+}
+
+const Object *Runtime::loadString(const std::string &input) {
+    std::istringstream stream(input);
+    return loadStream(stream);
+}
+
+const Object *Runtime::loadFile(const std::string &filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+    return loadStream(file);
 }

@@ -9,6 +9,7 @@
 #include "types/TCList.h"
 #include "types/TCString.h"
 #include "types/TCSymbol.h"
+#include "types/TCVar.h"
 
 extern "C" {
 Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **argv) {
@@ -102,6 +103,12 @@ Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
                           << static_cast<TCFunction *>(a->m_Data)->m_Name
                           << " @" << ((void *) (a->m_Call));
                 break;
+            case ObjectType::CLOSURE:
+                std::cout << "Closure @" << ((void *) (a->m_Call));
+                break;
+            case ObjectType::VAR:
+                std::cout << "#'" << static_cast<TCVar *>(a->m_Data)->m_Name;
+                break;
             default:
                 std::cout << "<object of type " << static_cast<int>(a->m_Type) << ">";
         }
@@ -133,5 +140,35 @@ const Object *tinyclj_vec_to_list(const std::vector<const Object *> &vec) {
         ret = tc_list_cons(vec[i], ret);
     }
     return ret;
+}
+
+Object *tinyclj_rt_setmacro(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("setmacro requires exactly 1 argument");
+    }
+    Object *var_obj = const_cast<Object *>(argv[0]);
+    if (var_obj == nullptr || var_obj->m_Type != ObjectType::VAR) {
+        throw std::runtime_error("setmacro requires a var as argument");
+    }
+    tc_var_set_macroX(var_obj, true);
+    return var_obj;
+}
+
+Object *tinyclj_rt_list(const Object *self, size_t argc, const Object **argv) {
+    return const_cast<Object *>(tinyclj_vec_to_list(std::vector<const Object *>(argv, argv + argc)));
+}
+
+Object *tinyclj_rt_cons(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("cons requires exactly 2 arguments");
+    }
+    return const_cast<Object *>( tc_list_cons(argv[0], argv[1]));
+}
+
+Object *tinyclj_rt_next(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("next requires exactly 1 argument");
+    }
+    return const_cast<Object *>(tc_list_next(argv[0]));
 }
 }

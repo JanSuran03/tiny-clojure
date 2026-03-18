@@ -189,6 +189,13 @@ const Object *read(BufferedReader &rdr, char closingDelimiter) {
         return read_list(rdr);
     } else if (c == '"') {
         return read_string(rdr);
+    } else if (c == ';') {
+        // comment, skip until end of line
+        while (c != '\n' && !rdr.eof()) {
+            rdr.read();
+            c = rdr.peek();
+        }
+        return read(rdr, closingDelimiter); // read the next form after the comment
     } else if (isdigit(c)) {
         return read_number(rdr);
     } else if (c == '\'') {

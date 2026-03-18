@@ -22,10 +22,10 @@ void CompilerUtils::emitBody(const std::vector<AExpr> &body,
     body.back()->emitIR(mode, dst, ctx);
 }
 
-llvm::Value *CompilerUtils::emitVarPtr(TCVar *var, CompilerContext &ctx) {
+llvm::Value *CompilerUtils::emitObjectPtr(Object *obj, CompilerContext &ctx) {
     using namespace llvm;
     return ctx.m_IRBuilder.CreateIntToPtr(
-            ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), reinterpret_cast<uint64_t>(var), false),
+            ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), reinterpret_cast<uint64_t>(obj), false),
             ctx.pointerType(),
             "var_ptr");
 }

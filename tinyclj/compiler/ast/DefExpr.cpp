@@ -7,7 +7,7 @@
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
 
-DefExpr::DefExpr(TCVar *var, AExpr value)
+DefExpr::DefExpr(Object *var, AExpr value)
         : m_Var(var),
           m_Value(std::move(value)) {}
 
@@ -23,7 +23,7 @@ void DefExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
 
     llvm::AllocaInst *def_result_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, "def_result");
     m_Value->emitIR(mode, def_result_alloca, ctx);
-    Value *llvm_var_ptr =  CompilerUtils::emitVarPtr(m_Var, ctx);
+    Value *llvm_var_ptr = CompilerUtils::emitObjectPtr(m_Var, ctx);
     Value *value_to_bind = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), def_result_alloca, "def_value");
     ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind});
     if (dst != nullptr) {

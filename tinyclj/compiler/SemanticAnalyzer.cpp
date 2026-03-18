@@ -17,7 +17,8 @@
 #include "compiler/ast/RecurExpr.h"
 #include "compiler/ast/ScopedLocalBindingExpr.h"
 #include "compiler/ast/StringExpr.h"
-#include "compiler/ast/VarExpr.h"
+#include "compiler/ast/VarDerefExpr.h"
+#include "compiler/ast/VarLiteralExpr.h"
 #include "SemanticAnalyzer.h"
 #include "Runtime.h"
 #include "types/TCBoolean.h"
@@ -27,7 +28,6 @@
 #include "types/TCList.h"
 #include "types/TCString.h"
 #include "types/TCSymbol.h"
-#include "types/TCVar.h"
 
 using AnalyzerFn = AExpr (*)(ExpressionMode mode, CompilerContext &ctx, const Object *form);
 
@@ -39,6 +39,7 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
         {"let*",  LetExpr::parse},
         {"fn*",   FunctionExpr::parse},
         {"recur", RecurExpr::parse},
+        {"var",   VarLiteralExpr::parse}
 };
 
 void captureLocalBinding(CompilerContext &ctx, const std::string &name) {
@@ -71,8 +72,11 @@ AExpr resolveSymbol(CompilerContext &ctx, const Object *form) {
         }
     }
     // Step 2: Try global vars
-    if (TCVar *var = ctx.m_RuntimeRef.getVar(name)) {
-        return std::make_unique<VarExpr>(var);
+    if (Object *var = ctx.m_RuntimeRef.getVar(name)) {
+        if (static_cast<TCVar *>(var->m_Data)->m_IsMacro) {
+            throw std::runtime_error(std::string("Cannot take value of a macro: #'").append(name));
+        }
+        return std::make_unique<VarDerefExpr>(var);
     }
     throw std::runtime_error(std::string("Cannot resolve symbol: ").append(name).append(" in the context"));
 }
@@ -81,7 +85,49 @@ AExpr SemanticAnalyzer::analyze(CompilerContext &ctx, const Object *form) {
     return analyze(ExpressionMode::EXPRESSION, ctx, form);
 }
 
+Object *macroexpand1(CompilerContext &ctx, const Object *form) {
+    if (form == nullptr || form->m_Type != ObjectType::LIST) {
+        return const_cast<Object *>(form);
+    }
+    const Object *head = tc_list_first(form);
+    if (head == nullptr || head->m_Type != ObjectType::SYMBOL) {
+        return const_cast<Object *>(form);
+    }
+    const std::string &sym = tc_symbol_valueX(head);
+    if (Object *var = ctx.m_RuntimeRef.getVar(sym)) {
+        if (static_cast<TCVar *>(var->m_Data)->m_IsMacro) {
+            const Object *arglist = tc_list_next(form);
+            tc_int_t argc = static_cast<TCInteger *>(tc_list_length(arglist)->m_Data)->m_Value;
+            const Object **argv = new const Object *[argc];
+            for (size_t i = 0; i < static_cast<size_t>(argc); i++) {
+                argv[i] = const_cast<Object *>(tc_list_first(arglist));
+                arglist = tc_list_next(arglist);
+            }
+            Object *expanded = (var->m_Call)(var, argc, argv);
+            delete[] argv;
+            return expanded;
+        } else {
+            return const_cast<Object *>(form);
+        }
+    } else {
+        return const_cast<Object *>(form);
+    }
+}
+
+Object *macroexpand(CompilerContext &ctx, const Object *form) {
+    Object *new_form;
+    do {
+        new_form = macroexpand1(ctx, form);
+        if (new_form == form) {
+            break;
+        }
+        form = new_form;
+    } while (true);
+    return const_cast<Object *>(form);
+}
+
 AExpr SemanticAnalyzer::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+    form = macroexpand(ctx, form);
     if (form == nullptr) {
         return std::make_unique<NilExpr>();
     }
@@ -119,6 +165,10 @@ AExpr SemanticAnalyzer::analyze(ExpressionMode mode, CompilerContext &ctx, const
             throw std::runtime_error("Functions are not supported yet");
         case ObjectType::CLOSURE:
             throw std::runtime_error("Closures are not supported yet");
+        case ObjectType::VAR:
+            throw std::runtime_error("Vars are not supported yet");
+        default:
+            throw std::runtime_error("Unknown object type: " + std::to_string(static_cast<int>(form->m_Type)));
     }
     std::unreachable();
 }

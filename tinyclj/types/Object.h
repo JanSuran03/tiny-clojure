@@ -12,6 +12,7 @@ enum class ObjectType {
     SYMBOL,
     FUNCTION,
     CLOSURE,
+    VAR
 };
 
 struct Object;

@@ -4,12 +4,18 @@
 
 struct TCVar {
     const Object *m_Root = nullptr;
+    char *m_Name;
+    bool m_IsMacro = false;
 };
 
 extern "C" {
-TCVar *tc_var_new();
+Object *tc_var_new(const char *name);
 
-const Object *tc_var_get_root(TCVar *var);
+const Object *tc_var_get_root(Object *var);
 
-void tc_var_bind_root(TCVar *var, const Object *obj);
+void tc_var_bind_root(Object *var, const Object *obj);
+
+bool tc_var_is_macroX(const Object *var);
+
+void tc_var_set_macroX(Object *var, bool is_macro);
 }

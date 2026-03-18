@@ -1,8 +1,12 @@
 #include "QuotedExpr.h"
+#include "compiler/CompilerUtils.h"
 #include "types/TCList.h"
 
 void QuotedExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
-    throw std::runtime_error("Cannot emit IR for quoted expression just yet");
+    if (mode != ExpressionMode::STATEMENT) {
+        llvm::Value *llvm_val = CompilerUtils::emitObjectPtr(const_cast<Object *>(m_QuotedValue), ctx);
+        ctx.m_IRBuilder.CreateStore(llvm_val, dst);
+    }
 }
 
 Object *QuotedExpr::eval(Runtime &runtime) const {

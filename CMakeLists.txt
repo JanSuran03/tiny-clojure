@@ -33,7 +33,8 @@ add_library(tinyclj_lib
         tinyclj/compiler/ast/ScopedLocalBindingExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
-        tinyclj/compiler/ast/VarExpr.cpp
+        tinyclj/compiler/ast/VarDerefExpr.cpp
+        tinyclj/compiler/ast/VarLiteralExpr.cpp
         tinyclj/compiler/LoopBase.cpp
         tinyclj/compiler/SemanticAnalyzer.cpp
         tinyclj/reader/BufferedReader.cpp

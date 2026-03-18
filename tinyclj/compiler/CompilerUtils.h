@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "compiler/ast/Expr.h"
-#include "types/TCVar.h"
 
 namespace CompilerUtils {
     void emitBody(const std::vector<AExpr> &body,
@@ -12,6 +11,6 @@ namespace CompilerUtils {
                   llvm::AllocaInst *dst,
                   CompilerContext &ctx);
 
-    /** Emit the pointer to the given Var as an LLVM value. */
-    llvm::Value *emitVarPtr(TCVar *var, CompilerContext &ctx);
+    /** Emits a constant pointer to the given object as an LLVM value. */
+    llvm::Value *emitObjectPtr(Object *obj, CompilerContext &ctx);
 }

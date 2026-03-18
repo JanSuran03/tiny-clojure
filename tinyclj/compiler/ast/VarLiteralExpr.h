@@ -2,15 +2,14 @@
 
 #include "Expr.h"
 
-class DefExpr : public Expr {
+class VarLiteralExpr : public Expr {
     Object *m_Var;
-    AExpr m_Value;
 public:
-    DefExpr(Object *var, AExpr value);
-
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
-    Object *eval(Runtime &runtime) const override;
+    Object * eval(Runtime &runtime) const override;
+
+    VarLiteralExpr(Object *var);
 
     static AExpr parse(ExpressionMode mode, CompilerContext &ctx, const Object *form);
 };
