@@ -59,8 +59,7 @@ void Runtime::init() {
     auto list = declareVar("list");
     auto cons = declareVar("cons");
     auto next = declareVar("next");
-    //auto ifnot = declareVar("ifnot");
-    //tc_var_set_macroX(ifnot, true);
+
     tc_var_bind_root(binary_add, tc_function_new(tinyclj_rt_add, "builtin_binary_add"));
     tc_var_bind_root(unary_print, tc_function_new(tinyclj_rt_print, "builtin_unary_print"));
     tc_var_bind_root(iszero, tc_function_new(tinyclj_rt_iszero, "builtin_iszero"));
@@ -68,14 +67,13 @@ void Runtime::init() {
     tc_var_bind_root(list, tc_function_new(tinyclj_rt_list, "list"));
     tc_var_bind_root(cons, tc_function_new(tinyclj_rt_cons, "cons"));
     tc_var_bind_root(next, tc_function_new(tinyclj_rt_next, "next"));
-    //tc_var_bind_root(ifnot, tc_function_new(macro_ifnot, "ifnot"));
-    //static const std::string core_file = "core.clj";
-    //try {
-    //    loadFile(core_file);
-    //} catch (const std::runtime_error &e) {
-    //    std::cerr << "Warning: Failed to load core.clj: " << e.what() << std::endl;
-    //    throw;
-    //}
+    static const std::string core_file = "core.clj";
+    try {
+        loadFile(core_file);
+    } catch (const std::runtime_error &e) {
+        std::cerr << "Warning: Failed to load core.clj: " << e.what() << std::endl;
+        throw;
+    }
 }
 
 Runtime::Runtime(const std::vector<std::string> &objectFiles)
