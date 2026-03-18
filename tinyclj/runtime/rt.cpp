@@ -171,4 +171,38 @@ Object *tinyclj_rt_next(const Object *self, size_t argc, const Object **argv) {
     }
     return const_cast<Object *>(tc_list_next(argv[0]));
 }
+
+Object *tinyclj_rt_seq(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("seq requires exactly 1 argument");
+    }
+    return const_cast<Object *>(tc_list_seq(argv[0]));
+}
+
+Object *tinyclj_rt_count(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("count requires exactly 1 argument");
+    }
+
+    return const_cast<Object *>(tc_list_length(argv[0]));
+}
+
+Object *tinyclj_rt_first(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("first requires exactly 1 argument");
+    }
+    return const_cast<Object *>(tc_list_first(argv[0]));
+}
+
+Object *tinyclj_rt_error(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("error requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr || arg->m_Type != ObjectType::STRING) {
+        throw std::runtime_error("error requires a string argument");
+    }
+    const char *message = static_cast<TCString *>(arg->m_Data)->m_Value;
+    throw std::runtime_error(message);
+}
 }

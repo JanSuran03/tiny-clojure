@@ -140,7 +140,7 @@ AExpr SemanticAnalyzer::analyze(ExpressionMode mode, CompilerContext &ctx, const
             return std::make_unique<DoubleExpr>(tc_double_valueX(form));
         case ObjectType::LIST: {
             if (tc_list_seq(form) == nullptr) {
-                throw std::runtime_error("Empty lists are not supported yet");
+                return std::make_unique<QuotedExpr>(form);
             }
             const Object *head = tc_list_first(form);
 

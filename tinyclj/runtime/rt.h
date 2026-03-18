@@ -20,4 +20,12 @@ Object *tinyclj_rt_list(const Object *self, size_t argc, const Object **argv);
 Object *tinyclj_rt_cons(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_next(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_seq(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_count(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_first(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_error(const Object *self, size_t argc, const Object **argv);
 }

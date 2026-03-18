@@ -59,6 +59,10 @@ void Runtime::init() {
     auto list = declareVar("list");
     auto cons = declareVar("cons");
     auto next = declareVar("next");
+    auto seq = declareVar("seq");
+    auto count = declareVar("count");
+    auto first = declareVar("first");
+    auto error = declareVar("error");
 
     tc_var_bind_root(binary_add, tc_function_new(tinyclj_rt_add, "builtin_binary_add"));
     tc_var_bind_root(unary_print, tc_function_new(tinyclj_rt_print, "builtin_unary_print"));
@@ -67,6 +71,11 @@ void Runtime::init() {
     tc_var_bind_root(list, tc_function_new(tinyclj_rt_list, "list"));
     tc_var_bind_root(cons, tc_function_new(tinyclj_rt_cons, "cons"));
     tc_var_bind_root(next, tc_function_new(tinyclj_rt_next, "next"));
+    tc_var_bind_root(seq, tc_function_new(tinyclj_rt_seq, "seq"));
+    tc_var_bind_root(count, tc_function_new(tinyclj_rt_count, "count"));
+    tc_var_bind_root(first, tc_function_new(tinyclj_rt_first, "first"));
+    tc_var_bind_root(error, tc_function_new(tinyclj_rt_error, "error"));
+
     static const std::string core_file = "core.clj";
     try {
         loadFile(core_file);

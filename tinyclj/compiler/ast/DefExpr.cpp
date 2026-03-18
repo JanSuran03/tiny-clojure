@@ -27,14 +27,14 @@ void DefExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
     Value *value_to_bind = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), def_result_alloca, "def_value");
     ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind});
     if (dst != nullptr) {
-        ctx.m_IRBuilder.CreateStore(value_to_bind, dst);
+        ctx.m_IRBuilder.CreateStore(llvm_var_ptr, dst);
     }
 }
 
 Object *DefExpr::eval(Runtime &runtime) const {
     Object *res = m_Value->eval(runtime);
     tc_var_bind_root(m_Var, res);
-    return res;
+    return m_Var;
 }
 
 AExpr DefExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
