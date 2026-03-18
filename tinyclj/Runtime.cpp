@@ -51,36 +51,38 @@ Object *Runtime::getVar(const std::string &name) const {
     }
 }
 
-void Runtime::init() {
-    auto binary_add = declareVar("builtin_binary_add");
-    auto binary_sub = declareVar("builtin_binary_sub");
-    auto binary_mul = declareVar("builtin_binary_mul");
-    auto binary_div = declareVar("builtin_binary_div");
-    auto unary_print = declareVar("builtin_unary_print");
-    auto iszero = declareVar("builtin_iszero");
-    auto setmacro = declareVar("set-macro!");
-    auto list = declareVar("list");
-    auto cons = declareVar("cons");
-    auto next = declareVar("next");
-    auto seq = declareVar("seq");
-    auto count = declareVar("count");
-    auto first = declareVar("first");
-    auto error = declareVar("error");
+void Runtime::defn(const std::string &name, CallFn fn) {
+    auto var = declareVar(name);
+    tc_var_bind_root(var, tc_function_new(fn, name.c_str()));
+}
 
-    tc_var_bind_root(binary_add, tc_function_new(tinyclj_rt_add, "builtin_binary_add"));
-    tc_var_bind_root(binary_sub, tc_function_new(tinyclj_rt_sub, "builtin_binary_sub"));
-    tc_var_bind_root(binary_mul, tc_function_new(tinyclj_rt_mul, "builtin_binary_mul"));
-    tc_var_bind_root(binary_div, tc_function_new(tinyclj_rt_div, "builtin_binary_div"));
-    tc_var_bind_root(unary_print, tc_function_new(tinyclj_rt_print, "builtin_unary_print"));
-    tc_var_bind_root(iszero, tc_function_new(tinyclj_rt_iszero, "builtin_iszero"));
-    tc_var_bind_root(setmacro, tc_function_new(tinyclj_rt_setmacro, "set-macro!"));
-    tc_var_bind_root(list, tc_function_new(tinyclj_rt_list, "list"));
-    tc_var_bind_root(cons, tc_function_new(tinyclj_rt_cons, "cons"));
-    tc_var_bind_root(next, tc_function_new(tinyclj_rt_next, "next"));
-    tc_var_bind_root(seq, tc_function_new(tinyclj_rt_seq, "seq"));
-    tc_var_bind_root(count, tc_function_new(tinyclj_rt_count, "count"));
-    tc_var_bind_root(first, tc_function_new(tinyclj_rt_first, "first"));
-    tc_var_bind_root(error, tc_function_new(tinyclj_rt_error, "error"));
+void Runtime::init() {
+    defn("builtin_binary_add", tinyclj_rt_add);
+    defn("builtin_binary_sub", tinyclj_rt_sub);
+    defn("builtin_binary_mul", tinyclj_rt_mul);
+    defn("builtin_binary_div", tinyclj_rt_div);
+    defn("builtin_unary_print", tinyclj_rt_print);
+    defn("builtin_binary_equal", tinyclj_rt_binary_equal);
+    defn("zero?", tinyclj_rt_iszero);
+    defn("set-macro!", tinyclj_rt_setmacro);
+    defn("list", tinyclj_rt_list);
+    defn("cons", tinyclj_rt_cons);
+    defn("next", tinyclj_rt_next);
+    defn("seq", tinyclj_rt_seq);
+    defn("count", tinyclj_rt_count);
+    defn("first", tinyclj_rt_first);
+    defn("error", tinyclj_rt_error);
+    defn("nil?", tinyclj_rt_is_nil);
+    defn("string?", tinyclj_rt_is_string);
+    defn("symbol?", tinyclj_rt_is_symbol);
+    defn("list?", tinyclj_rt_is_list);
+    defn("function?", tinyclj_rt_is_function);
+    defn("integer?", tinyclj_rt_is_integer);
+    defn("double?", tinyclj_rt_is_double);
+    defn("boolean?", tinyclj_rt_is_boolean);
+    defn("var?", tinyclj_rt_is_var);
+    defn("character?", tinyclj_rt_is_character);
+    defn("apply", tinyclj_rt_apply);
 
     static const std::string core_file = "core.clj";
     try {

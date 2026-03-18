@@ -1,3 +1,4 @@
+#include <cstring>
 #include <iostream>
 
 #include "rt.h"
@@ -332,5 +333,172 @@ Object *tinyclj_rt_error(const Object *self, size_t argc, const Object **argv) {
     }
     const char *message = static_cast<TCString *>(arg->m_Data)->m_Value;
     throw std::runtime_error(message);
+}
+
+Object *tinyclj_rt_is_nil(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("nil? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg == nullptr);
+}
+
+Object *tinyclj_rt_is_string(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("string? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::STRING);
+}
+
+Object *tinyclj_rt_is_symbol(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("symbol? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::SYMBOL);
+}
+
+Object *tinyclj_rt_is_list(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("list? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::LIST);
+}
+
+Object *tinyclj_rt_is_function(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("function? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && (arg->m_Type == ObjectType::FUNCTION
+                                             || arg->m_Type == ObjectType::CLOSURE));
+}
+
+Object *tinyclj_rt_is_integer(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("integer? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::INTEGER);
+}
+
+Object *tinyclj_rt_is_double(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("double? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::DOUBLE);
+}
+
+Object *tinyclj_rt_is_boolean(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("boolean? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::BOOLEAN);
+}
+
+Object *tinyclj_rt_is_var(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("var? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::VAR);
+}
+
+Object *tinyclj_rt_is_character(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("character? requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::CHARACTER);
+}
+
+Object *tinyclj_rt_binary_equal(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("binary= requires exactly 2 arguments");
+    }
+    const Object *a = argv[0];
+    const Object *b = argv[1];
+    if (a == b) {
+        return tc_boolean_new(true); // same pointer or both nil
+    }
+    if (a == nullptr || b == nullptr) {
+        return tc_boolean_new(false); // one is nil and the other is not
+    }
+    if (a->m_Type != b->m_Type) {
+        return tc_boolean_new(false);
+    }
+    switch (a->m_Type) {
+        case ObjectType::BOOLEAN:
+            return tc_boolean_new(static_cast<TCBoolean *>(a->m_Data)->m_Value ==
+                                  static_cast<TCBoolean *>(b->m_Data)->m_Value);
+        case ObjectType::INTEGER:
+            return tc_boolean_new(static_cast<TCInteger *>(a->m_Data)->m_Value ==
+                                  static_cast<TCInteger *>(b->m_Data)->m_Value);
+        case ObjectType::DOUBLE:
+            return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value ==
+                                  static_cast<TCDouble *>(b->m_Data)->m_Value);
+        case ObjectType::STRING:
+            return tc_boolean_new(strcmp(static_cast<TCString *>(a->m_Data)->m_Value,
+                                         static_cast<TCString *>(b->m_Data)->m_Value) == 0);
+        case ObjectType::SYMBOL:
+            return tc_boolean_new(strcmp(static_cast<TCSymbol *>(a->m_Data)->m_Value,
+                                         static_cast<TCSymbol *>(b->m_Data)->m_Value) == 0);
+        case ObjectType::CHARACTER:
+            return tc_boolean_new(static_cast<TCChar *>(a->m_Data)->m_Value ==
+                                  static_cast<TCChar *>(b->m_Data)->m_Value);
+        case ObjectType::LIST: {
+            const Object *a_seq = tc_list_seq(a);
+            const Object *b_seq = tc_list_seq(b);
+            if (static_cast<TCList *>(a->m_Data)->m_Length != static_cast<TCList *>(b->m_Data)->m_Length) {
+                return tc_boolean_new(false); // different lengths, can't be equal
+            }
+
+            while (a_seq && b_seq) {
+                const Object *a_first = tc_list_first(a_seq);
+                const Object *b_first = tc_list_first(b_seq);
+                const Object *arglist[2] = {a_first, b_first};
+                Object *elem_equal = tinyclj_rt_binary_equal(nullptr, 2, arglist);
+                if (!static_cast<TCBoolean *>(elem_equal->m_Data)->m_Value) {
+                    return tc_boolean_new(false);
+                }
+                a_seq = tc_list_next(a_seq);
+                b_seq = tc_list_next(b_seq);
+            }
+            return tc_boolean_new(a_seq == nullptr && b_seq == nullptr); // both should be nil at the end
+        }
+        default:
+            return tc_boolean_new(false); // other types could only be equal by pointer identity
+    }
+}
+
+Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **argv) {
+    if (argc < 2) {
+        throw std::runtime_error("apply requires at least 2 arguments");
+    }
+    const Object *fn = argv[0];
+    if (fn == nullptr) {
+        throw std::runtime_error("Cannot apply to nil");
+    }
+    if (fn->m_Call == nullptr) {
+        throw std::runtime_error("Target object is not callable");
+    }
+    const Object *args_list = tc_list_seq(argv[argc - 1]);
+    tc_int_t num_list_args = static_cast<TCInteger *>(tc_list_length(args_list)->m_Data)->m_Value;
+    tc_int_t total_args = argc + num_list_args - 2; // all args except the function and the list of args to apply
+    const Object **call_args = new const Object *[total_args];
+    for (size_t i = 0; i < argc - 2; i++) {
+        call_args[i] = argv[i + 1];
+    }
+    for (size_t i = 0; i < num_list_args; i++) {
+        call_args[argc - 2 + i] = tc_list_first(args_list);
+        args_list = tc_list_next(args_list);
+    }
+    Object *result = fn->m_Call(fn, total_args, call_args);
+    delete[] call_args;
+    return result;
 }
 }

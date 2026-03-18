@@ -171,7 +171,8 @@ const Object *read_symbol(BufferedReader &rdr) {
 }
 
 bool is_symbol_char(char c) {
-    return isalnum((unsigned char) c) || strchr("!$%&*:<=>?_+-", c) != nullptr;
+    // todo: for now, allow '/' in all symbols
+    return isalnum((unsigned char) c) || strchr("!$%&*:<=>?_+-/", c) != nullptr;
 }
 
 const Object *read(BufferedReader &rdr, char closingDelimiter) {

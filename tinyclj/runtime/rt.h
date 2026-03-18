@@ -32,4 +32,28 @@ Object *tinyclj_rt_count(const Object *self, size_t argc, const Object **argv);
 Object *tinyclj_rt_first(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_error(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_nil(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_string(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_symbol(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_list(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_function(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_integer(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_double(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_boolean(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_var(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_is_character(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_binary_equal(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **argv);
 }

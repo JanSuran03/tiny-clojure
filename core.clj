@@ -3,11 +3,11 @@
 (def * builtin_binary_mul)
 (def / builtin_binary_div)
 (def print builtin_unary_print)
-(def zero? builtin_iszero)
+(def = builtin_binary_equal)
 
 (def fn
-  (fn* (args & body)
-    (cons 'fn* (cons args body))))
+  (fn* (& fdecl)
+    (cons 'fn* fdecl)))
 (set-macro! (var fn))
 
 (def defn
@@ -20,6 +20,12 @@
         (cons 'defn (cons name (cons args body)))
         (list 'set-macro! (list 'var name))))
 (set-macro! (var defmacro))
+
+(defmacro let (bindings & body)
+  (cons 'let* (cons bindings body)))
+
+(defn identity (x)
+  x)
 
 (defn not (x)
   (if x

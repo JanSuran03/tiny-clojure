@@ -16,6 +16,8 @@ class Runtime {
 
     static std::unique_ptr<llvm::orc::LLJIT> createJIT();
 
+    void defn(const std::string &name, CallFn fn);
+
     void init();
 
 public:
