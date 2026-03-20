@@ -5,9 +5,9 @@
 #include "types/TCSymbol.h"
 #include "Runtime.h"
 
-void VarLiteralExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void VarLiteralExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
-    if (mode != ExpressionMode::STATEMENT) {
+    if (dst) {
         // emit the Var's pointer as a literal
         Value *var_ptr = CompilerUtils::emitObjectPtr(m_Var, ctx);
         ctx.m_IRBuilder.CreateStore(var_ptr, dst);

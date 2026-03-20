@@ -2,8 +2,8 @@
 #include "compiler/CompilerUtils.h"
 #include "types/TCList.h"
 
-void QuotedExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
-    if (mode != ExpressionMode::STATEMENT) {
+void QuotedExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+    if (dst) {
         llvm::Value *llvm_val = CompilerUtils::emitObjectPtr(const_cast<Object *>(m_QuotedValue), ctx);
         ctx.m_IRBuilder.CreateStore(llvm_val, dst);
     }

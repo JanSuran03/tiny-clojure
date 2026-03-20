@@ -8,7 +8,7 @@ IfExpr::IfExpr(AExpr condExpr, AExpr thenExpr, AExpr elseExpr)
           m_ThenExpr(std::move(thenExpr)),
           m_ElseExpr(std::move(elseExpr)) {}
 
-void IfExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void IfExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
 
     FunctionType *get_objtype_fn_type = FunctionType::get(Type::getInt32Ty(ctx.m_LLVMContext),
@@ -28,7 +28,7 @@ void IfExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext 
 
     // 1. Evaluate condition
     AllocaInst *cond_res_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType());
-    m_CondExpr->emitIR(ExpressionMode::EXPRESSION, cond_res_alloca, ctx);
+    m_CondExpr->emitIR(cond_res_alloca, ctx);
 
     // 2. If null => jump to else, otherwise check (bool)->value
     ctx.m_IRBuilder.CreateBr(check_null_block);
@@ -54,13 +54,13 @@ void IfExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext 
 
     // 5. emit then, else and jump to merge at the end
     ctx.m_IRBuilder.SetInsertPoint(then_block);
-    m_ThenExpr->emitIR(mode, dst, ctx);
+    m_ThenExpr->emitIR(dst, ctx);
     if (!ctx.currentBlockTerminated()) {
         ctx.m_IRBuilder.CreateBr(merge_block);
     }
 
     ctx.m_IRBuilder.SetInsertPoint(else_block);
-    m_ElseExpr->emitIR(mode, dst, ctx);
+    m_ElseExpr->emitIR(dst, ctx);
     if (!ctx.currentBlockTerminated()) {
         ctx.m_IRBuilder.CreateBr(merge_block);
     }

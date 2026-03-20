@@ -3,11 +3,10 @@
 
 void CompilerUtils::emitBody(const std::vector<AExpr> &body,
                              const std::string &bodyPrefix,
-                             ExpressionMode mode,
                              llvm::AllocaInst *dst,
                              CompilerContext &ctx) {
     if (body.empty()) {
-        NilExpr().emitIR(mode, dst, ctx);
+        NilExpr().emitIR(dst, ctx);
         return;
     }
 
@@ -15,11 +14,11 @@ void CompilerUtils::emitBody(const std::vector<AExpr> &body,
 
     for (size_t i = 0; i + 1 < body.size(); i++) {
         ctx.jumpToTmpBasicBlock();
-        body[i]->emitIR(ExpressionMode::STATEMENT, nullptr, ctx);
+        body[i]->emitIR(nullptr, ctx);
     }
 
     ctx.jumpToTmpBasicBlock();
-    body.back()->emitIR(mode, dst, ctx);
+    body.back()->emitIR(dst, ctx);
 }
 
 llvm::Value *CompilerUtils::emitObjectPtr(Object *obj, CompilerContext &ctx) {

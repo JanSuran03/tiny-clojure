@@ -1,7 +1,7 @@
 #include "ConstantExpr.h"
 
-void ConstantExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
-    if (mode != ExpressionMode::STATEMENT) {
+void ConstantExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+    if (dst) {
         llvm::Value *value = emitConstantValue(ctx);
         ctx.m_IRBuilder.CreateStore(value, dst);
     }

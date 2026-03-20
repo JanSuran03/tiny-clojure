@@ -280,7 +280,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
     ctx.m_CurrentFunction = prev_function;
 }
 
-void FunctionExpr::emitIR(ExpressionMode _, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
     // For simple functions (without captures), the compiler needs to emit instructions to create a function object
     // that points to the thunk and store it into dst

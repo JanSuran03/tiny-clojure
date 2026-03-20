@@ -3,7 +3,7 @@
 #include "runtime/rt.h"
 #include "types/TCList.h"
 
-void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void InvokeExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
 
     // printf and exit for error handling in the thunk
@@ -27,7 +27,7 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
             nullptr,
             "evaled_target");
     ctx.jumpToTmpBasicBlock();
-    m_InvokeTarget->emitIR(ExpressionMode::EXPRESSION, target_alloca, ctx);
+    m_InvokeTarget->emitIR(target_alloca, ctx);
 
     std::vector<llvm::AllocaInst *> arg_allocas;
     for (const auto &arg: m_InvokeArgs) {
@@ -37,7 +37,7 @@ void InvokeExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerCont
                 std::string("evaled_arg_").append(std::to_string(&arg - &*m_InvokeArgs.begin())));
         arg_allocas.emplace_back(arg_alloca);
         ctx.jumpToTmpBasicBlock();
-        arg->emitIR(ExpressionMode::EXPRESSION, arg_alloca, ctx);
+        arg->emitIR(arg_alloca, ctx);
     }
 
     llvm::BasicBlock *check_target_not_null = ctx.createBasicBlock("check_target_not_null");

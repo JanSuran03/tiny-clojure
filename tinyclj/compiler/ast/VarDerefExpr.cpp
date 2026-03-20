@@ -3,9 +3,9 @@
 #include "compiler/CompilerUtils.h"
 #include "types/TCVar.h"
 
-void VarDerefExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void VarDerefExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
-    if (mode != ExpressionMode::STATEMENT) {
+    if (dst) {
         FunctionType *get_root_fn_type = FunctionType::get(
                 ctx.pointerType(),
                 {ctx.pointerType()},

@@ -8,7 +8,7 @@ class IfExpr : public Expr {
     AExpr m_ElseExpr;
 
 public:
-    void emitIR(ExpressionMode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
+    void emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
     Object *eval(Runtime &runtime) const override;
 

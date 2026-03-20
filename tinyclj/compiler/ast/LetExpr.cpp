@@ -5,7 +5,7 @@
 #include "types/TCInteger.h"
 #include "types/TCSymbol.h"
 
-void LetExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void LetExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     std::unordered_map<std::string, llvm::AllocaInst *> shadowed_allocas;
     for (const auto &[name, value]: m_Bindings) {
         // allocate space for a 64-bit pointer as every runtime object is a pointer to the Object struct
@@ -13,7 +13,7 @@ void LetExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
                 ctx.pointerType(),
                 nullptr,
                 name);
-        value->emitIR(ExpressionMode::EXPRESSION, alloca, ctx);
+        value->emitIR(alloca, ctx);
         // if the variable is shadowing another variable, save the old alloca to restore it later
         if (auto old_alloca = ctx.m_VariableMap.find(name); old_alloca != ctx.m_VariableMap.end()) {
             shadowed_allocas[name] = old_alloca->second;
@@ -22,7 +22,7 @@ void LetExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext
         }
         ctx.m_VariableMap[name] = alloca;
     }
-    CompilerUtils::emitBody(m_Body, "let", mode, dst, ctx);
+    CompilerUtils::emitBody(m_Body, "let", dst, ctx);
 
     // restore shadowed variables in the context
     for (const auto &[name, alloca]: shadowed_allocas) {

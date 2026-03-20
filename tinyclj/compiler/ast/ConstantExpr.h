@@ -4,7 +4,7 @@
 
 class ConstantExpr : public Expr {
 public:
-    void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const final;
+    void emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const final;
 
     Object *eval(Runtime &runtime) const final;
 

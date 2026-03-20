@@ -6,8 +6,8 @@
 BodyExpr::BodyExpr(std::vector<AExpr> exprs)
         : m_Exprs(std::move(exprs)) {}
 
-void BodyExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
-    CompilerUtils::emitBody(m_Exprs, "do", mode, dst, ctx);
+void BodyExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+    CompilerUtils::emitBody(m_Exprs, "do", dst, ctx);
 }
 
 Object *BodyExpr::eval(Runtime &runtime) const {

@@ -64,7 +64,7 @@ llvm::Function *FunctionOverload::compile(CompilerContext &ctx, const Captures &
     ctx.m_IRBuilder.SetInsertPoint(recursion_point);
     ctx.m_LoopLabels.emplace_back(recursion_point, std::move(loop_variable_storages));
 
-    CompilerUtils::emitBody(m_Body, "fn", ExpressionMode::RETURN, retAlloca, ctx);
+    CompilerUtils::emitBody(m_Body, "fn", retAlloca, ctx);
 
     ctx.m_LoopLabels.pop_back();
 

@@ -7,7 +7,7 @@ class InvokeExpr : public Expr {
     AExpr m_InvokeTarget;
     std::vector<AExpr> m_InvokeArgs;
 public:
-    void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
+    void emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
     Object *eval(Runtime &runtime) const override;
 

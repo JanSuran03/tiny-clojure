@@ -7,7 +7,7 @@ class StringExpr : public ConstantExpr {
 public:
     llvm::Value *emitConstantValue(CompilerContext &ctx) const override;
 
-    Object * evalConstantValue() const override;
+    Object *evalConstantValue() const override;
 
     StringExpr(std::string value);
 };

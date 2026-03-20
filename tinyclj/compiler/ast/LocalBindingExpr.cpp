@@ -1,9 +1,9 @@
 #include "LocalBindingExpr.h"
 #include "Runtime.h"
 
-void LocalBindingExpr::emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void LocalBindingExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
-    if (mode != ExpressionMode::STATEMENT) {
+    if (dst) {
         Value *value = loadValue(ctx);
         ctx.m_IRBuilder.CreateStore(value, dst);
     }

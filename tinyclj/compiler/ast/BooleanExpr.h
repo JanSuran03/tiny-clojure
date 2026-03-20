@@ -7,7 +7,7 @@ class BooleanExpr : public ConstantExpr {
 public:
     llvm::Value *emitConstantValue(CompilerContext &ctx) const override;
 
-    Object * evalConstantValue() const override;
+    Object *evalConstantValue() const override;
 
     BooleanExpr(bool value);
 };

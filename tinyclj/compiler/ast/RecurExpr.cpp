@@ -3,13 +3,13 @@
 #include "types/TCInteger.h"
 #include "types/TCList.h"
 
-void RecurExpr::emitIR(ExpressionMode _, llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void RecurExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     const LoopBase &currentLoop = ctx.m_LoopLabels.back();
     // store recur args into loop variable storages and jump to the loop label
     for (size_t i = 0; i < m_RecurArgs.size(); i++) {
         const AExpr &arg = m_RecurArgs[i];
         llvm::AllocaInst *varStorage = currentLoop.variable_storages[i];
-        arg->emitIR(ExpressionMode::EXPRESSION, varStorage, ctx);
+        arg->emitIR(varStorage, ctx);
     }
     ctx.m_IRBuilder.CreateBr(currentLoop.label);
 }

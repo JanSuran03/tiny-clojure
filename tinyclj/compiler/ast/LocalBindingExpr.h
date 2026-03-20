@@ -9,7 +9,7 @@ protected:
     virtual llvm::Value *loadValue(CompilerContext &ctx) const = 0;
 
 public:
-    void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const final;
+    void emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const final;
 
     LocalBindingExpr(std::string value);
 };
