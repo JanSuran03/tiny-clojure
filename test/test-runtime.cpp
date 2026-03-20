@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <iostream>
+#include <utility>
 
 #include "Runtime.h"
 #include "reader/LispReader.h"
@@ -49,13 +50,13 @@ void test(const std::string &name, Fn test_fn, ErrFn err_fn, const std::vector<s
         try {
             if (std::apply(test_fn, cases[i])) {
                 passed++;
-                std::cout << "Passed test '" << name << "' (" << (i + 1) << "/" << cases.size() << ")" << std::endl;
+                std::cout << "Passed test '" << name << "' (" << (i + 1) << '/' << cases.size() << ')' << std::endl;
             } else {
-                std::cerr << "Failed test '" << name << "' (" << (i + 1) << "/" << cases.size() << "): "
+                std::cerr << "Failed test '" << name << "' (" << (i + 1) << '/' << cases.size() << "): "
                           << std::apply(err_fn, cases[i]) << '\n';
             }
         } catch (const std::exception &e) {
-            std::cerr << "Failed test '" << name << "' (" << (i + 1) << "/" << cases.size() <<
+            std::cerr << "Failed test '" << name << "' (" << (i + 1) << '/' << cases.size() <<
                       ") due to an uncaught exception: "
                       << std::apply(err_fn, cases[i]) << '\n' << e.what() << '\n';
         }
@@ -115,52 +116,53 @@ int main() {
                   {"(if nil 1 2)",       "",                                "2"},
                   {"(if 1 1 2)",         "",                                "1"},
                   {"(if 0 1 2)",         "",                                "1"},
-                  {"(let* (a 1"
-                   "       b 2)"
+                  {"(let (a 1"
+                   "      b 2)"
                    "  a)",               "",                                "1"},
                   {"(+ 1 2)",            "",                                "3"},
                   {"(let (a 1"
                    "      b 2)"
                    "  (+ a b))",         "",                                "3"},
                   {"(let (add +)"
-                   "  (add 1 2))",        "",                                "3"},
+                   "  (add 1 2))",       "",                                "3"},
                   {"(let (add +"
                    "      a 1"
                    "      b 2)"
-                   "  (add a b))",        "",                                "3"},
+                   "  (add a b))",       "",                                "3"},
                   {"((fn (a)"
                    "   (+ a a))"
-                   " 2)",                "",                                "4"},
+                   " 2)",                "",                                "4"
+                  },
                   {"(let (add (fn (x y)"
                    "            (+ x y)))"
                    "  (add 1 2))",
                                          "",                                "3"},
-                  {"(let* (a 1"
-                   "       adder (fn (b)"
+                  {"(let (a 1"
+                   "      adder (fn (b)"
                    "               (+ a b)))"
                    "  (adder 2))",       "",                                "3"},
-                  {"(let* (make-adder (fn (a)"
-                   "                    (fn (b) (+ a b)))"
+                  {"(let (make-adder (fn (a)"
+                   "                   (fn (b) (+ a b)))"
                    "       adder-2 (make-adder 2))"
                    "  (adder-2 3))",     "",                                "5"},
-                  {"(let* (make-adder (fn (a)"
-                   "                    (fn (b) (+ a b)))"
-                   "       make-multi-adder (fn* (a b)"
-                   "                          (let* (adder-a (make-adder a)"
-                   "                                 adder-b (make-adder b))"
-                   "                            (fn* (c)"
-                   "                              (adder-b (adder-a c)))))"
+                  {"(let (make-adder (fn (a)"
+                   "                   (fn (b) (+ a b)))"
+                   "      make-multi-adder (fn (a b)"
+                   "                         (let (adder-a (make-adder a)"
+                   "                               adder-b (make-adder b))"
+                   "                           (fn (c)"
+                   "                             (adder-b (adder-a c)))))"
                    "       adder-2-3 (make-multi-adder 2 3))"
                    "  (adder-2-3 4))",   "",                                "9"},
                   {"(do (def countdown"
-                   "      (fn* (x)"
+                   "      (fn (x)"
                    "        (if (zero? x)"
                    "          (print \"Done.\\n\")"
                    "          (do (print x)"
                    "              (print \"...\\n\")"
                    "              (countdown (- x 1))))))"
                    "    (countdown 3))", "3...\n2...\n1...\nDone.\n",       "nil"},
-                  {"((fn* (x y)"
+                  {"((fn (x y)"
                    "  (if (zero? x)"
                    "    (print \"Done.\\n\")"
                    "    (do (print x)"
