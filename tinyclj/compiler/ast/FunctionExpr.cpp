@@ -5,7 +5,6 @@
 #include "compiler/CompilerUtils.h"
 #include "FunctionExpr.h"
 #include "Runtime.h"
-#include "compiler/SemanticAnalyzer.h"
 #include "runtime/rt.h"
 #include "types/TCFunction.h"
 #include "types/TCList.h"

@@ -1,24 +1,10 @@
-#include <filesystem>
 #include <iostream>
-#include <utility>
+
+#include "llvm/Support/TargetSelect.h"
 
 #include "Runtime.h"
 #include "reader/LispReader.h"
 #include "runtime/rt.h"
-
-const std::string out_dir = "out";
-
-#include "llvm/Support/TargetSelect.h"
-
-std::string compile_cpp(const std::string &full_source_path) {
-    std::string source_dir = full_source_path.substr(0, full_source_path.find_last_of('/'));
-    std::string source_filename = full_source_path.substr(full_source_path.find_last_of('/') + 1);
-    std::string output_dir = std::string(out_dir) + "/" + source_dir;
-    std::string output_path = output_dir + "/" + source_filename + ".o";
-    system(std::string("mkdir -p ").append(output_dir).c_str());
-    system(std::string("clang++ ").append(full_source_path).append(" -c -o ").append(output_path).c_str());
-    return output_path;
-}
 
 bool test_eval(Runtime &runtime,
                const std::string &input,
@@ -50,7 +36,6 @@ void test(const std::string &name, Fn test_fn, ErrFn err_fn, const std::vector<s
         try {
             if (std::apply(test_fn, cases[i])) {
                 passed++;
-                std::cout << "Passed test '" << name << "' (" << (i + 1) << '/' << cases.size() << ')' << std::endl;
             } else {
                 std::cerr << "Failed test '" << name << "' (" << (i + 1) << '/' << cases.size() << "): "
                           << std::apply(err_fn, cases[i]) << '\n';
@@ -71,22 +56,11 @@ void test(const std::string &name, Fn test_fn, ErrFn err_fn, const std::vector<s
 }
 
 int main() {
-    std::string source_dir = std::string(PROJECT_SOURCE_DIR) + "/tinyclj/types";
-    std::vector<std::string> compiled_files;
-    for (const auto &file: std::filesystem::directory_iterator(source_dir)) {
-        if (file.path().extension() == ".cpp") {
-            std::string full_source_path = file.path().string();
-            std::string output_path = compile_cpp(full_source_path);
-            std::cout << "Compiled " << full_source_path << " to " << output_path << std::endl;
-            compiled_files.push_back(output_path);
-        }
-    }
-
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
 
-    Runtime runtime(compiled_files);
+    Runtime runtime;
 
     test("test eval",
          [&runtime](const std::string &input,

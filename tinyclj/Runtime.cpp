@@ -92,19 +92,8 @@ void Runtime::init() {
     }
 }
 
-Runtime::Runtime(const std::vector<std::string> &objectFiles)
+Runtime::Runtime()
         : m_JIT(createJIT()) {
-    for (const auto &objectFile: objectFiles) {
-        auto buffer_or_err = llvm::MemoryBuffer::getFile(objectFile);
-        if (!buffer_or_err) {
-            throw std::runtime_error("Failed to read object file: " + std::to_string(buffer_or_err.getError().value()));
-        }
-
-        if (auto err = m_JIT->addObjectFile(std::move(*buffer_or_err))) {
-            throw std::runtime_error("Failed to add object file to JIT: " + llvm::toString(std::move(err)));
-        }
-    }
-
     init();
 }
 

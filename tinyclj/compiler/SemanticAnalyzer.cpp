@@ -1,5 +1,4 @@
 #include <unordered_map>
-#include <iostream>
 
 #include "compiler/ast/BodyExpr.h"
 #include "compiler/ast/BooleanExpr.h"

@@ -21,7 +21,7 @@ class Runtime {
     void init();
 
 public:
-    Runtime(const std::vector<std::string> &objectFiles);
+    Runtime();
 
     Object *declareVar(const std::string &name);
 
