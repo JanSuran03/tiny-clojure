@@ -63,7 +63,6 @@ void Runtime::init() {
     defn("builtin_binary_div", tinyclj_rt_div);
     defn("builtin_unary_print", tinyclj_rt_print);
     defn("builtin_binary_equal", tinyclj_rt_binary_equal);
-    defn("zero?", tinyclj_rt_iszero);
     defn("set-macro!", tinyclj_rt_setmacro);
     defn("list", tinyclj_rt_list);
     defn("cons", tinyclj_rt_cons);
@@ -84,7 +83,7 @@ void Runtime::init() {
     defn("character?", tinyclj_rt_is_character);
     defn("apply", tinyclj_rt_apply);
 
-    static const std::string core_file = "core.clj";
+    static const std::string core_file = PROJECT_SOURCE_DIR + std::string("/core.clj");
     try {
         loadFile(core_file);
     } catch (const std::runtime_error &e) {

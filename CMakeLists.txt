@@ -22,6 +22,7 @@ add_library(tinyclj_lib
         tinyclj/compiler/ast/DefExpr.cpp
         tinyclj/compiler/ast/DoubleExpr.cpp
         tinyclj/compiler/ast/FunctionExpr.cpp
+        tinyclj/compiler/ast/FunctionOverload.cpp
         tinyclj/compiler/ast/IfExpr.cpp
         tinyclj/compiler/ast/IntegerExpr.cpp
         tinyclj/compiler/ast/InvokeExpr.cpp
@@ -40,7 +41,6 @@ add_library(tinyclj_lib
         tinyclj/reader/BufferedReader.cpp
         tinyclj/reader/LispReader.cpp
         tinyclj/runtime/rt.cpp
-        #tinyclj/types/builtins.cpp
         tinyclj/types/Object.cpp
         tinyclj/types/TCBoolean.cpp
         tinyclj/types/TCChar.cpp
@@ -57,6 +57,10 @@ add_library(tinyclj_lib
 target_include_directories(tinyclj_lib PUBLIC
         ${LLVM_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}/tinyclj)
+
+target_compile_definitions(tinyclj_lib PRIVATE
+        PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+)
 
 llvm_map_components_to_libnames(LLVM_LIBS
         core

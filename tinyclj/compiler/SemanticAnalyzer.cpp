@@ -43,32 +43,28 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
 };
 
 void captureLocalBinding(CompilerContext &ctx, const std::string &name) {
-    for (FunctionFrame *currentFrame = ctx.m_CurrentFunctionFrame;
-         currentFrame;
-         currentFrame = currentFrame->m_ParentFrame) {
-        // resolve local var
-        if (currentFrame->m_Locals.contains(name)) {
+    for (ssize_t i = static_cast<ssize_t>(ctx.m_StackFrameBindings.size()) - 1; i >= 0; i--) {
+        // local var or already captured
+        if (ctx.m_StackFrameBindings[i].contains(name) || ctx.m_CaptureStack[i].contains(name)) {
             return;
         }
-        // already captured var
-        if (auto capture = currentFrame->m_Captures.find(name); capture != currentFrame->m_Captures.end()) {
-            return;
-        }
-        // not captured -> capture recursively
-        currentFrame->m_Captures.emplace(name, currentFrame->m_Captures.size());
+        // capture recursively
+        ctx.m_IsClosureStack[i] = true;
+        ctx.m_CaptureStack[i].emplace(name, ctx.m_CaptureStack[i].size());
     }
 }
 
 AExpr resolveSymbol(CompilerContext &ctx, const Object *form) {
     std::string name = tc_symbol_valueX(form);
-    // Step 1: Try local bindings (locals can override globals)
+    // Step 1: Check, whether the symbol is locally bound in the current frame or any parent frame.
     if (ctx.m_LocalBindings.contains(name)) {
+        // Recursively capture the local binding in all frames between the current frame
+        // and the frame where the local binding is defined
         captureLocalBinding(ctx, name);
-        FunctionFrame *currentFrame = ctx.m_CurrentFunctionFrame;
-        if (currentFrame->m_Locals.contains(name)) {
+        if (ctx.m_StackFrameBindings.back().contains(name)) {
             return std::make_unique<ScopedLocalBindingExpr>(name);
         } else {
-            return std::make_unique<CapturedBindingExpr>(name, currentFrame->m_Captures.at(name));
+            return std::make_unique<CapturedBindingExpr>(name, ctx.m_CaptureStack.back().at(name));
         }
     }
     // Step 2: Try global vars

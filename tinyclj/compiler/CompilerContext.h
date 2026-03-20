@@ -2,18 +2,11 @@
 
 #include <atomic>
 #include <unordered_set>
+#include <vector>
 
 #include "LoopBase.h"
 
 class Runtime;
-
-struct FunctionFrame {
-    std::unordered_map<std::string, int> m_Captures;
-    std::unordered_set<std::string> m_Locals;
-    FunctionFrame *m_ParentFrame;
-
-    FunctionFrame(FunctionFrame *parent);
-};
 
 /**
  * Holds the internal state of the compiler.
@@ -33,7 +26,9 @@ public:
     std::unordered_map<std::string, llvm::AllocaInst *> m_VariableMap;
     llvm::Argument *m_ClosureEnv = nullptr;
     ///// semantic analysis
-    FunctionFrame *m_CurrentFunctionFrame = nullptr;
+    std::vector<std::unordered_map<std::string, int>> m_CaptureStack;
+    std::vector<std::unordered_set<std::string>> m_StackFrameBindings;
+    std::vector<bool> m_IsClosureStack;
     size_t m_NumRecurArgs = 0;
     std::unordered_set<std::string> m_LocalBindings;
 

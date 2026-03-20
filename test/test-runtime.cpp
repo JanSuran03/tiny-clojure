@@ -49,6 +49,7 @@ void test(const std::string &name, Fn test_fn, ErrFn err_fn, const std::vector<s
         try {
             if (std::apply(test_fn, cases[i])) {
                 passed++;
+                std::cout << "Passed test '" << name << "' (" << (i + 1) << "/" << cases.size() << ")" << std::endl;
             } else {
                 std::cerr << "Failed test '" << name << "' (" << (i + 1) << "/" << cases.size() << "): "
                           << std::apply(err_fn, cases[i]) << '\n';
@@ -100,75 +101,75 @@ int main() {
                     + "', console output: '" + expected_console_output + "'";
          },
          std::vector<std::tuple<std::string, std::string, std::string>>
-                 {{"67",                          "",                                "67"},
-                  {"6.9",                         "",                                "6.9"},
-                  {"nil",                         "",                                "nil"},
+                 {{"67",                 "",                                "67"},
+                  {"6.9",                "",                                "6.9"},
+                  {"nil",                "",                                "nil"},
                          // todo: EDN vs REPL printing - this one should be printed as EDN
-                  {"\"hello world!\"",            "",                                "hello world!"},
-                  {"true",                        "",                                "true"},
-                  {"false",                       "",                                "false"},
-                  {"(do 1 2)",                    "",                                "2"},
-                  {"(do)",                        "",                                "nil"},
-                  {"(if true 1 2)",               "",                                "1"},
-                  {"(if false 1 2)",              "",                                "2"},
-                  {"(if nil 1 2)",                "",                                "2"},
-                  {"(if 1 1 2)",                  "",                                "1"},
-                  {"(if 0 1 2)",                  "",                                "1"},
+                  {"\"hello world!\"",   "",                                "hello world!"},
+                  {"true",               "",                                "true"},
+                  {"false",              "",                                "false"},
+                  {"(do 1 2)",           "",                                "2"},
+                  {"(do)",               "",                                "nil"},
+                  {"(if true 1 2)",      "",                                "1"},
+                  {"(if false 1 2)",     "",                                "2"},
+                  {"(if nil 1 2)",       "",                                "2"},
+                  {"(if 1 1 2)",         "",                                "1"},
+                  {"(if 0 1 2)",         "",                                "1"},
                   {"(let* (a 1"
                    "       b 2)"
-                   "  a)",                        "",                                "1"},
-                  {"(builtin_binary_add 1 2)",    "",                                "3"},
+                   "  a)",               "",                                "1"},
+                  {"(+ 1 2)",            "",                                "3"},
+                  {"(let (a 1"
+                   "      b 2)"
+                   "  (+ a b))",         "",                                "3"},
+                  {"(let (add +)"
+                   "  (add 1 2))",        "",                                "3"},
+                  {"(let (add +"
+                   "      a 1"
+                   "      b 2)"
+                   "  (add a b))",        "",                                "3"},
+                  {"((fn (a)"
+                   "   (+ a a))"
+                   " 2)",                "",                                "4"},
+                  {"(let (add (fn (x y)"
+                   "            (+ x y)))"
+                   "  (add 1 2))",
+                                         "",                                "3"},
                   {"(let* (a 1"
-                   "       b 2)"
-                   "  (builtin_binary_add a b))", "",                                "3"},
-                  {"(let* (+ builtin_binary_add)"
-                   "  (+ 1 2))",                  "",                                "3"},
-                  {"(let* (+ builtin_binary_add"
-                   "       a 1"
-                   "       b 2)"
-                   "  (+ a b))",                  "",                                "3"},
-                  {"((fn* (a)"
-                   "   (builtin_binary_add a a))"
-                   " 2)",                         "",                                "4"},
-                  {"(let* (+ (fn* (x y)"
-                   "           (builtin_binary_add x y)))"
-                   "  (+ 1 2))",
-                                                  "",                                "3"},
-                  {"(let* (a 1"
-                   "       adder (fn* (b)"
-                   "               (builtin_binary_add a b)))"
-                   "  (adder 2))",                "",                                "3"},
-                  {"(let* (make-adder (fn* (a)"
-                   "                    (fn* (b) (builtin_binary_add a b)))"
+                   "       adder (fn (b)"
+                   "               (+ a b)))"
+                   "  (adder 2))",       "",                                "3"},
+                  {"(let* (make-adder (fn (a)"
+                   "                    (fn (b) (+ a b)))"
                    "       adder-2 (make-adder 2))"
-                   "  (adder-2 3))",              "",                                "5"},
-                  {"(let* (make-adder (fn* (a)"
-                   "                    (fn* (b) (builtin_binary_add a b)))"
+                   "  (adder-2 3))",     "",                                "5"},
+                  {"(let* (make-adder (fn (a)"
+                   "                    (fn (b) (+ a b)))"
                    "       make-multi-adder (fn* (a b)"
                    "                          (let* (adder-a (make-adder a)"
                    "                                 adder-b (make-adder b))"
                    "                            (fn* (c)"
                    "                              (adder-b (adder-a c)))))"
                    "       adder-2-3 (make-multi-adder 2 3))"
-                   "  (adder-2-3 4))",            "",                                "9"},
+                   "  (adder-2-3 4))",   "",                                "9"},
                   {"(do (def countdown"
                    "      (fn* (x)"
-                   "        (if (builtin_iszero x)"
-                   "          (builtin_unary_print \"Done.\\n\")"
-                   "          (do (builtin_unary_print x)"
-                   "              (builtin_unary_print \"...\\n\")"
-                   "              (countdown (builtin_binary_add x -1))))))"
-                   "    (countdown 3))",          "3...\n2...\n1...\nDone.\n",       "nil"},
+                   "        (if (zero? x)"
+                   "          (print \"Done.\\n\")"
+                   "          (do (print x)"
+                   "              (print \"...\\n\")"
+                   "              (countdown (- x 1))))))"
+                   "    (countdown 3))", "3...\n2...\n1...\nDone.\n",       "nil"},
                   {"((fn* (x y)"
-                   "  (if (builtin_iszero x)"
-                   "    (builtin_unary_print \"Done.\\n\")"
-                   "    (do (builtin_unary_print x)"
-                   "        (builtin_unary_print \" \")"
-                   "        (builtin_unary_print y)"
-                   "        (builtin_unary_print \"...\\n\")"
-                   "        (recur (builtin_binary_add x -1)"
-                   "               (builtin_binary_add y 1)))))"
-                   "  3 3)",                      "3 3...\n2 4...\n1 5...\nDone.\n", "nil"}}
+                   "  (if (zero? x)"
+                   "    (print \"Done.\\n\")"
+                   "    (do (print x)"
+                   "        (print \" \")"
+                   "        (print y)"
+                   "        (print \"...\\n\")"
+                   "        (recur (- x 1)"
+                   "               (+ y 1)))))"
+                   "  3 3)",             "3 3...\n2 4...\n1 5...\nDone.\n", "nil"}}
 
     );
 }

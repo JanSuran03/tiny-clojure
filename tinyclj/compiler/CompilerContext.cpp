@@ -1,7 +1,5 @@
 #include "CompilerContext.h"
 
-FunctionFrame::FunctionFrame(FunctionFrame *parent) : m_ParentFrame(parent) {}
-
 CompilerContext::CompilerContext(Runtime &runtimeRef,
                                  llvm::LLVMContext &llvmContext,
                                  llvm::IRBuilder<> &irBuilder,

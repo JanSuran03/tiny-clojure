@@ -1,30 +1,32 @@
 #pragma once
 
+#include <optional>
+
 #include "Expr.h"
+#include "FunctionOverload.h"
 #include "UnevaluatableExpr.h"
 
 class FunctionExpr : public Expr {
     using Captures = std::unordered_map<std::string, int>;
     std::string m_Name;
-    std::string m_ThunkName = m_Name + "__thunk";
-    std::vector<std::string> m_Args;
-    bool m_IsVariadic;
+    std::string m_StubName = m_Name + "__stub";
+    std::unordered_map<size_t, FunctionOverload> m_Overloads;
+    std::optional<FunctionOverload> m_VariadicOverload;
     Captures m_Captures;
-    std::vector<AExpr> m_Body;
 
     void compile(CompilerContext &ctx) const;
 
     bool isClosure() const;
+
 public:
     void emitIR(ExpressionMode mode, llvm::AllocaInst *dst, CompilerContext &ctx) const override;
 
     Object *eval(Runtime &runtime) const override;
 
     FunctionExpr(std::string name,
-                 std::vector<std::string> args,
-                 bool isVariadic,
-                 Captures captures,
-                 std::vector<AExpr> body);
+                 std::unordered_map<size_t, FunctionOverload> overloads,
+                 std::optional<FunctionOverload> variadic_overload,
+                 Captures captures);
 
     static AExpr parse(ExpressionMode mode, CompilerContext &ctx, const Object *form);
 };

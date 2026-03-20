@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "types/Object.h"
+#include "../types/Object.h"
 
 extern "C" {
 Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **argv);
@@ -14,8 +14,6 @@ Object *tinyclj_rt_mul(const Object *self, size_t argc, const Object **argv);
 Object *tinyclj_rt_div(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv);
-
-Object *tinyclj_rt_iszero(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_setmacro(const Object *self, size_t argc, const Object **argv);
 

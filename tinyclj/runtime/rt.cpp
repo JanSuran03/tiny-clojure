@@ -252,25 +252,6 @@ Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
     }
     return nullptr;
 }
-
-Object *tinyclj_rt_iszero(const Object *self, size_t argc, const Object **argv) {
-    if (argc != 1) {
-        throw std::runtime_error("Cannot add integer with non-numeric type");
-    }
-    const Object *arg = argv[0];
-    if (arg == nullptr) {
-        return tc_boolean_new(false);
-    }
-    switch (arg->m_Type) {
-        case ObjectType::INTEGER:
-            return tc_boolean_new(static_cast<TCInteger *>(arg->m_Data)->m_Value == 0);
-        case ObjectType::DOUBLE:
-            return tc_boolean_new(static_cast<TCDouble *>(arg->m_Data)->m_Value == 0.0);
-        default:
-            throw std::runtime_error("zero? function requires a numeric argument");
-    }
-}
-
 Object *tinyclj_rt_setmacro(const Object *self, size_t argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("setmacro requires exactly 1 argument");
@@ -291,7 +272,7 @@ Object *tinyclj_rt_cons(const Object *self, size_t argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("cons requires exactly 2 arguments");
     }
-    return const_cast<Object *>( tc_list_cons(argv[0], argv[1]));
+    return const_cast<Object *>(tc_list_cons(argv[0], argv[1]));
 }
 
 Object *tinyclj_rt_next(const Object *self, size_t argc, const Object **argv) {

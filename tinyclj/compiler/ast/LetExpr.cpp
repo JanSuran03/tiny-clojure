@@ -68,7 +68,6 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
         }
         // if the variable is shadowed, don't do anything
         if (!ctx.m_LocalBindings.contains(binding_name)) {
-            ctx.m_LocalBindings.insert(binding_name);
             new_scope_bindings.push_back(binding_name);
         }
 
@@ -77,7 +76,8 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
                 ctx,
                 binding_val));
 
-        ctx.m_CurrentFunctionFrame->m_Locals.emplace(binding_name);
+        ctx.m_LocalBindings.insert(binding_name);
+        ctx.m_StackFrameBindings.back().insert(binding_name);
     }
     std::vector<AExpr> body;
     for (; form; form = tc_list_next(form)) {
@@ -88,7 +88,7 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
 
     for (const std::string &binding_name: new_scope_bindings) {
         ctx.m_LocalBindings.erase(binding_name);
-        ctx.m_CurrentFunctionFrame->m_Locals.erase(binding_name);
+        ctx.m_StackFrameBindings.back().erase(binding_name);
     }
 
     return std::make_unique<LetExpr>(std::move(parsed_bindings), std::move(body));

@@ -1,7 +1,7 @@
 #include "TCClosure.h"
 
 extern "C" {
-Object *tc_closure_new(CallFn callThunk, void *env) {
+Object *tc_closure_new(CallFn callThunk, const Object **env) {
     TCClosure *closure = new TCClosure{.m_Env = env};
 
     return new Object{

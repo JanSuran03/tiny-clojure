@@ -1,10 +1,3 @@
-(def + builtin_binary_add)
-(def - builtin_binary_sub)
-(def * builtin_binary_mul)
-(def / builtin_binary_div)
-(def print builtin_unary_print)
-(def = builtin_binary_equal)
-
 (def fn
   (fn* (& fdecl)
     (cons 'fn* fdecl)))
@@ -58,8 +51,60 @@
     (let* (test (first clauses)
            then (if (next clauses)
                     (second clauses)
-                    (error "cond: missing else clause"))
+                    (error "cond requires an even number of forms"))
            more-clauses (next (next clauses)))
       (list 'if test then (cons 'cond more-clauses)))))
 
 (defmacro comment (& body))
+
+(defn +
+  (() 0)
+  ((x) x)
+  ((x y) (builtin_binary_add x y))
+  ((x y & more)
+   (let* (sum1 (builtin_binary_add x y))
+     ; todo: reduce
+     (apply + (cons sum1 more)))))
+
+(defn -
+  (() 0)
+  ((x) (- 0 x))
+  ((x y) (builtin_binary_sub x y))
+  ((x y & more)
+   (let* (diff1 (builtin_binary_sub x y))
+     (apply - (cons diff1 more)))))
+
+(defn *
+  (() 1)
+  ((x) x)
+  ((x y) (builtin_binary_mul x y))
+  ((x y & more)
+   (let* (prod1 (builtin_binary_mul x y))
+     (apply * (cons prod1 more)))))
+
+(defn /
+  (() 1)
+  ((x) (builtin_binary_div 1 x))
+  ((x y) (builtin_binary_div x y))
+  ((x y & more)
+   (let* (quot1 (builtin_binary_div x y))
+     (apply / (cons quot1 more)))))
+
+; todo
+(def print builtin_unary_print)
+
+(defn =
+  ((x) true)
+  ((x y) (builtin_binary_equal x y))
+  ((x y & more)
+   (if (builtin_binary_equal x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (builtin_binary_equal y (first more)))
+     false)))
+
+; todo: = vs == for numbers
+(defn zero? (x)
+  (if (= x 0)
+    true
+    (= x 0.0)))
