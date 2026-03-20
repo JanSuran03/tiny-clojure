@@ -108,3 +108,7 @@
   (if (= x 0)
     true
     (= x 0.0)))
+
+(defn println (x)
+  (print x)
+  (print "\n"))

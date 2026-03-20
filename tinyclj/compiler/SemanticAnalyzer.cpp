@@ -44,12 +44,16 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
 void captureLocalBinding(CompilerContext &ctx, const std::string &name) {
     for (ssize_t i = static_cast<ssize_t>(ctx.m_StackFrameBindings.size()) - 1; i >= 0; i--) {
         // local var or already captured
-        if (ctx.m_StackFrameBindings[i].contains(name) || ctx.m_CaptureStack[i].contains(name)) {
+        if (ctx.m_StackFrameBindings[i].contains(name)) {
             return;
         }
         // capture recursively
-        ctx.m_IsClosureStack[i] = true;
-        ctx.m_CaptureStack[i].emplace(name, ctx.m_CaptureStack[i].size());
+        if (!ctx.m_IsClosureStack[i]) {
+            ctx.m_IsClosureStack[i] = true;
+        }
+        if (!ctx.m_CaptureStack[i].contains(name)) {
+            ctx.m_CaptureStack[i].emplace(name, ctx.m_CaptureStack[i].size());
+        }
     }
 }
 

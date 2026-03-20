@@ -2,7 +2,6 @@
 #include <vector>
 
 #include "LispReader.h"
-#include "runtime/rt.h"
 #include "types/TCBoolean.h"
 #include "types/TCDouble.h"
 #include "types/TCInteger.h"
