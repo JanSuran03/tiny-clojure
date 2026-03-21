@@ -20,8 +20,16 @@ class Runtime {
 
     void init();
 
-public:
     Runtime();
+
+public:
+    Runtime(const Runtime &) = delete;
+
+    Runtime &operator=(const Runtime &) = delete;
+
+    static Runtime &getInstance();
+
+    const std::unordered_map<std::string, Object *> &getGlobalVarStorage() const;
 
     Object *declareVar(const std::string &name);
 

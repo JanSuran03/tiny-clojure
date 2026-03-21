@@ -2,6 +2,8 @@
 #include <iostream>
 
 #include "rt.h"
+#include "Runtime.h"
+#include "compiler/SemanticAnalyzer.h"
 #include "types/TCBoolean.h"
 #include "types/TCChar.h"
 #include "types/TCDouble.h"
@@ -289,6 +291,18 @@ Object *tinyclj_rt_seq(const Object *self, size_t argc, const Object **argv) {
     return const_cast<Object *>(tc_list_seq(argv[0]));
 }
 
+Object *tinyclj_rt_list_STAR(const Object *self, size_t argc, const Object **argv) {
+    if (argc == 0) {
+        throw std::runtime_error("list* requires at least 1 argument");
+    }
+
+    const Object *result = argv[argc - 1];
+    for (ssize_t i = ssize_t(argc) - 2; i >= 0; i--) {
+        result = tc_list_cons(argv[i], result);
+    }
+    return const_cast<Object *>(result);
+}
+
 Object *tinyclj_rt_count(const Object *self, size_t argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("count requires exactly 1 argument");
@@ -456,6 +470,15 @@ Object *tinyclj_rt_binary_equal(const Object *self, size_t argc, const Object **
     }
 }
 
+Object *tinyclj_rt_identical(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("identical? requires exactly 2 arguments");
+    }
+    const Object *a = argv[0];
+    const Object *b = argv[1];
+    return tc_boolean_new(a == b); // identical? is pointer identity
+}
+
 Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **argv) {
     if (argc < 2) {
         throw std::runtime_error("apply requires at least 2 arguments");
@@ -481,5 +504,61 @@ Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **argv) {
     Object *result = fn->m_Call(fn, total_args, call_args);
     delete[] call_args;
     return result;
+}
+
+Object *tinyclj_rt_macroexpand(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("macroexpand requires exactly 1 argument");
+    }
+    const Object *form = argv[0];
+    if (form == nullptr) {
+        return nullptr;
+    }
+
+    Runtime &rt = Runtime::getInstance();
+    return SemanticAnalyzer::macroexpand(rt, form);
+}
+
+Object *tinyclj_rt_macroexpand1(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("macroexpand1 requires exactly 1 argument");
+    }
+    const Object *form = argv[0];
+    if (form == nullptr) {
+        return nullptr;
+    }
+
+    Runtime &rt = Runtime::getInstance();
+    return SemanticAnalyzer::macroexpand1(rt, form);
+}
+
+Object *tinyclj_rt_eval(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("eval requires exactly 1 argument");
+    }
+    const Object *form = argv[0];
+    if (form == nullptr) {
+        return nullptr;
+    }
+
+    Runtime &rt = Runtime::getInstance();
+    return rt.eval(form);
+}
+
+Object *tinyclj_rt_vars(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 0) {
+        throw std::runtime_error("vars requires exactly 0 arguments");
+    }
+
+    Runtime &rt = Runtime::getInstance();
+    const std::unordered_map<std::string, Object *> &vars = rt.getGlobalVarStorage();
+    const Object **var_array = new const Object *[vars.size()];
+    size_t i = 0;
+    for (const auto &entry: vars) {
+        var_array[i++] = entry.second;
+    }
+    auto list = tc_list_from_array(vars.size(), var_array);
+    delete[] var_array;
+    return const_cast<Object *>(list);
 }
 }

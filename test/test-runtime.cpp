@@ -60,7 +60,7 @@ int main() {
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
 
-    Runtime runtime;
+    Runtime &runtime = Runtime::getInstance();
 
     test("test eval",
          [&runtime](const std::string &input,

@@ -25,6 +25,8 @@ Object *tinyclj_rt_next(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_seq(const Object *self, size_t argc, const Object **argv);
 
+Object *tinyclj_rt_list_STAR(const Object *self, size_t argc, const Object **argv);
+
 Object *tinyclj_rt_count(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_first(const Object *self, size_t argc, const Object **argv);
@@ -53,5 +55,17 @@ Object *tinyclj_rt_is_character(const Object *self, size_t argc, const Object **
 
 Object *tinyclj_rt_binary_equal(const Object *self, size_t argc, const Object **argv);
 
+Object *tinyclj_rt_identical(const Object *self, size_t argc, const Object **argv);
+
 Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **argv);
+
+//Object *tinyclj_rt_read(const Object *self, size_t argc, const Object **argv);
+//
+//Object *tinyclj_rt_read_string(const Object *self, size_t argc, const Object **argv);
+// runtime-dependent functions
+Object *tinyclj_rt_macroexpand(const Object *self, size_t argc, const Object **argv);
+Object *tinyclj_rt_macroexpand1(const Object *self, size_t argc, const Object **argv);
+Object *tinyclj_rt_eval(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_vars(const Object *self, size_t argc, const Object **argv);
 }

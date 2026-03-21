@@ -84,7 +84,7 @@ AExpr SemanticAnalyzer::analyze(CompilerContext &ctx, const Object *form) {
     return analyze(ExpressionMode::EXPRESSION, ctx, form);
 }
 
-Object *macroexpand1(CompilerContext &ctx, const Object *form) {
+Object *SemanticAnalyzer::macroexpand1(Runtime &rt, const Object *form) {
     if (form == nullptr || form->m_Type != ObjectType::LIST) {
         return const_cast<Object *>(form);
     }
@@ -93,7 +93,7 @@ Object *macroexpand1(CompilerContext &ctx, const Object *form) {
         return const_cast<Object *>(form);
     }
     const std::string &sym = tc_symbol_valueX(head);
-    if (Object *var = ctx.m_RuntimeRef.getVar(sym)) {
+    if (Object *var = rt.getVar(sym)) {
         if (static_cast<TCVar *>(var->m_Data)->m_IsMacro) {
             const Object *arglist = tc_list_next(form);
             tc_int_t argc = static_cast<TCInteger *>(tc_list_length(arglist)->m_Data)->m_Value;
@@ -113,10 +113,10 @@ Object *macroexpand1(CompilerContext &ctx, const Object *form) {
     }
 }
 
-Object *macroexpand(CompilerContext &ctx, const Object *form) {
+Object *SemanticAnalyzer::macroexpand(Runtime &rt, const Object *form) {
     Object *new_form;
     do {
-        new_form = macroexpand1(ctx, form);
+        new_form = macroexpand1(rt, form);
         if (new_form == form) {
             break;
         }
@@ -126,7 +126,7 @@ Object *macroexpand(CompilerContext &ctx, const Object *form) {
 }
 
 AExpr SemanticAnalyzer::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
-    form = macroexpand(ctx, form);
+    form = macroexpand(ctx.m_RuntimeRef, form);
     if (form == nullptr) {
         return std::make_unique<NilExpr>();
     }

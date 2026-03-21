@@ -35,6 +35,10 @@ std::unique_ptr<llvm::orc::LLJIT> Runtime::createJIT() {
     return jit;
 }
 
+const std::unordered_map<std::string, Object *> &Runtime::getGlobalVarStorage() const {
+    return m_GlobalVarStorage;
+}
+
 Object *Runtime::declareVar(const std::string &name) {
     if (auto it = m_GlobalVarStorage.find(name); it != m_GlobalVarStorage.end()) {
         return it->second;
@@ -64,10 +68,12 @@ void Runtime::init() {
     defn("builtin_unary_print", tinyclj_rt_print);
     defn("builtin_binary_equal", tinyclj_rt_binary_equal);
     defn("set-macro!", tinyclj_rt_setmacro);
+    defn("identical?", tinyclj_rt_identical);
     defn("list", tinyclj_rt_list);
     defn("cons", tinyclj_rt_cons);
     defn("next", tinyclj_rt_next);
     defn("seq", tinyclj_rt_seq);
+    defn("list*", tinyclj_rt_list_STAR);
     defn("count", tinyclj_rt_count);
     defn("first", tinyclj_rt_first);
     defn("error", tinyclj_rt_error);
@@ -82,6 +88,10 @@ void Runtime::init() {
     defn("var?", tinyclj_rt_is_var);
     defn("character?", tinyclj_rt_is_character);
     defn("apply", tinyclj_rt_apply);
+    defn("macroexpand", tinyclj_rt_macroexpand);
+    defn("macroexpand1", tinyclj_rt_macroexpand1);
+    defn("eval", tinyclj_rt_eval);
+    defn("vars", tinyclj_rt_vars);
 
     static const std::string core_file = PROJECT_SOURCE_DIR + std::string("/core.clj");
     try {
@@ -95,6 +105,11 @@ void Runtime::init() {
 Runtime::Runtime()
         : m_JIT(createJIT()) {
     init();
+}
+
+Runtime &Runtime::getInstance() {
+    static Runtime instance;
+    return instance;
 }
 
 std::unique_ptr<llvm::orc::LLJIT> &Runtime::getJIT() {
@@ -153,6 +168,10 @@ Object *Runtime::eval(const Object *form) {
 
 void Runtime::repl() {
     BufferedReader reader(std::cin);
+
+    std::cout << "Welcome to TinyCLJ REPL!" << std::endl
+              << "Type exit or Ctrl+D to quit." << std::endl
+              << "Type (vars) to see all defined vars." << std::endl;
 
     while (true) {
         std::cout << "> " << std::flush;
