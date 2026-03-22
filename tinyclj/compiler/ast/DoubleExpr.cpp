@@ -15,7 +15,6 @@ llvm::Value *DoubleExpr::emitConstantValue(CompilerContext &ctx) const {
     }
     llvm::Value *arg = llvm::ConstantFP::get(ctx.m_LLVMContext, llvm::APFloat(m_Value));
     return ctx.m_IRBuilder.CreateCall(func, {arg});
-    //return llvm::ConstantFP::get(ctx.m_LLVMContext, llvm::APFloat(m_Value));
 }
 
 Object *DoubleExpr::evalConstantValue() const {

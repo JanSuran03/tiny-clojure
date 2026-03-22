@@ -3,7 +3,7 @@
 #include "Object.h"
 
 struct TCSymbol {
-    char *m_Value;
+    char *m_Name;
 };
 
 extern "C" {

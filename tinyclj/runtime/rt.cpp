@@ -14,6 +14,51 @@
 #include "types/TCSymbol.h"
 #include "types/TCVar.h"
 
+std::string unary_to_string(const Object *obj) {
+    if (obj == nullptr) {
+        return "nil";
+    }
+    switch (obj->m_Type) {
+        case ObjectType::BOOLEAN:
+            return static_cast<TCBoolean *>(obj->m_Data)->m_Value ? "true" : "false";
+        case ObjectType::INTEGER:
+            return std::to_string(static_cast<TCInteger *>(obj->m_Data)->m_Value);
+        case ObjectType::DOUBLE:
+            return std::to_string(static_cast<TCDouble *>(obj->m_Data)->m_Value);
+        case ObjectType::STRING:
+            return static_cast<TCString *>(obj->m_Data)->m_Value;
+        case ObjectType::SYMBOL:
+            return static_cast<TCSymbol *>(obj->m_Data)->m_Name;
+        case ObjectType::CHARACTER:
+            return std::string{static_cast<TCChar *>(obj->m_Data)->m_Value};
+        case ObjectType::LIST: {
+            std::string str = "(";
+            bool first = true;
+            for (const Object *s = tc_list_seq(obj); s; s = tc_list_next(s)) {
+                if (first) {
+                    first = false;
+                } else {
+                    str += ' ';
+                }
+                const Object *list_elem = tc_list_first(s);
+                str += unary_to_string(list_elem);
+            }
+            str += ')';
+            return str;
+        }
+        case ObjectType::FUNCTION:
+            return "function '" + std::string(static_cast<const TCFunction *>(obj->m_Data)->m_Name)
+                   + " @" + std::to_string((uintptr_t) obj->m_Call);
+        case ObjectType::CLOSURE:
+            return "closure @" + std::to_string((uintptr_t) obj->m_Call);
+        case ObjectType::VAR:
+            return "#'" + std::string(static_cast<const TCVar *>(obj->m_Data)->m_Name);
+        default:
+            return "<object of type " + std::to_string(static_cast<int>(obj->m_Type)) + ">";
+    }
+}
+
+
 extern "C" {
 Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **argv) {
     if (argc != 2) {
@@ -217,7 +262,7 @@ Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
                 std::cout/* << '"'*/ << static_cast<TCString *>(a->m_Data)->m_Value/* << '"'*/;
                 break;
             case ObjectType::SYMBOL:
-                std::cout << static_cast<TCSymbol *>(a->m_Data)->m_Value;
+                std::cout << static_cast<TCSymbol *>(a->m_Data)->m_Name;
                 break;
             case ObjectType::LIST: {
                 std::cout << '(';
@@ -252,6 +297,8 @@ Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
                 std::cout << "<object of type " << static_cast<int>(a->m_Type) << ">";
         }
     }
+    // todo: remove
+    std::cout << std::flush;
     return nullptr;
 }
 Object *tinyclj_rt_setmacro(const Object *self, size_t argc, const Object **argv) {
@@ -440,8 +487,8 @@ Object *tinyclj_rt_binary_equal(const Object *self, size_t argc, const Object **
             return tc_boolean_new(strcmp(static_cast<TCString *>(a->m_Data)->m_Value,
                                          static_cast<TCString *>(b->m_Data)->m_Value) == 0);
         case ObjectType::SYMBOL:
-            return tc_boolean_new(strcmp(static_cast<TCSymbol *>(a->m_Data)->m_Value,
-                                         static_cast<TCSymbol *>(b->m_Data)->m_Value) == 0);
+            return tc_boolean_new(strcmp(static_cast<TCSymbol *>(a->m_Data)->m_Name,
+                                         static_cast<TCSymbol *>(b->m_Data)->m_Name) == 0);
         case ObjectType::CHARACTER:
             return tc_boolean_new(static_cast<TCChar *>(a->m_Data)->m_Value ==
                                   static_cast<TCChar *>(b->m_Data)->m_Value);
@@ -560,5 +607,105 @@ Object *tinyclj_rt_vars(const Object *self, size_t argc, const Object **argv) {
     auto list = tc_list_from_array(vars.size(), var_array);
     delete[] var_array;
     return const_cast<Object *>(list);
+}
+
+Object *tinyclj_rt_nextID(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 0) {
+        throw std::runtime_error("gensym requires exactly 0 arguments");
+    }
+    Runtime &rt = Runtime::getInstance();
+    size_t id = rt.nextId();
+    return tc_integer_new(tc_int_t(id));
+}
+
+Object *tinyclj_rt_epoch_nanos(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 0) {
+        throw std::runtime_error("systime requires exactly 0 arguments");
+    }
+    auto now = std::chrono::system_clock::now();
+    auto epoch = now.time_since_epoch();
+    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(epoch).count();
+    return tc_integer_new(nanos);
+}
+
+Object *tinyclj_rt_symbol(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("symbol requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr) {
+        throw std::runtime_error("symbol cannot be created from nil");
+    }
+    switch (arg->m_Type) {
+        case ObjectType::SYMBOL:
+            return const_cast<Object *>(arg); // symbol of a symbol is itself
+        case ObjectType::STRING: {
+            const char *name = static_cast<TCString *>(arg->m_Data)->m_Value;
+            return tc_symbol_new(name);
+        }
+        default:
+            throw std::runtime_error("symbol can only be created from a string or a symbol");
+    }
+}
+
+Object *tinyclj_rt_str(const Object *self, size_t argc, const Object **argv) {
+    if (argc == 0) {
+        return tc_string_new("");
+    }
+    std::string result;
+    for (size_t i = 0; i < argc; i++) {
+        const Object *arg = argv[i];
+        result += unary_to_string(arg);
+    }
+    return tc_string_new(result.c_str());
+}
+
+Object *tinyclj_rt_double(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("double requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr) {
+        throw std::runtime_error("Cannot convert nil to double");
+    }
+    switch (arg->m_Type) {
+        case ObjectType::DOUBLE:
+            return const_cast<Object *>(arg); // double of a double is itself
+        case ObjectType::INTEGER: {
+            tc_double_t value = static_cast<tc_double_t>(static_cast<TCInteger *>(arg->m_Data)->m_Value);
+            return tc_double_new(value);
+        }
+        default:
+            throw std::runtime_error("cannot cast argument of type "
+                                     + std::to_string(static_cast<int>(arg->m_Type))
+                                     + " to double");
+    }
+}
+
+Object *tinyclj_rt_long(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("long requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr) {
+        throw std::runtime_error("Cannot convert nil to long");
+    }
+    switch (arg->m_Type) {
+        case ObjectType::INTEGER:
+            return const_cast<Object *>(arg); // long of an integer is itself
+        case ObjectType::DOUBLE: {
+            tc_double_t double_value = static_cast<TCDouble *>(arg->m_Data)->m_Value;
+            if (double_value < static_cast<tc_double_t>(std::numeric_limits<tc_int_t>::min()) ||
+                double_value > static_cast<tc_double_t>(std::numeric_limits<tc_int_t>::max())) {
+                throw std::runtime_error("Double value " + std::to_string(double_value) + " is out of range for long");
+            }
+            tc_int_t value = static_cast<tc_int_t>(double_value);
+            return tc_integer_new(value);
+        }
+        default:
+            throw std::runtime_error("cannot cast argument of type "
+                                     + std::to_string(static_cast<int>(arg->m_Type))
+                                     + " to long");
+    }
 }
 }

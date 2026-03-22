@@ -21,14 +21,6 @@
 (defn identity (x)
   x)
 
-(defn not (x)
-  (if x
-    false
-    true))
-
-(defmacro if-not (test then else)
-  (list 'if test else then))
-
 (defn map (f lst)
   (if (seq lst)
     (cons (f (first lst)) (map f (next lst)))
@@ -44,20 +36,6 @@
 (defn second (lst)
   (first (next lst)))
 
-(defmacro when (test & body)
-  (list 'if test (cons 'do body)))
-
-(defmacro cond (& clauses)
-  (if clauses
-    (let* (test (first clauses)
-           then (if (next clauses)
-                    (second clauses)
-                    (error "cond requires an even number of forms"))
-           more-clauses (next (next clauses)))
-      (list 'if test then (cons 'cond more-clauses)))))
-
-(defmacro comment (& body))
-
 (defn reduce
   ((f coll)
    (let (s (seq coll))
@@ -69,6 +47,42 @@
      (if s
        (recur f (f init (first s)) (next s))
        init))))
+
+(defn concat
+  (() nil)
+  ((s) s)
+  ((s1 s2)
+   (let (s (seq s1))
+     (if s
+       (cons (first s) (concat (next s) s2))
+       s2)))
+  ((s1 s2 & colls)
+   (reduce concat (concat s1 s2) colls)))
+
+(defmacro if-not (test then else)
+  `(if ~test ~else ~then))
+
+(defmacro when (test & body)
+  `(if ~test
+     (do ~@body)))
+
+(defmacro when-not (test & body)
+  `(if ~test
+     nil
+     (do ~@body)))
+
+(defmacro cond (& clauses)
+  (when clauses
+    (let* (test (first clauses)
+           then (if (next clauses)
+                    (second clauses)
+                    (error "cond requires an even number of forms"))
+           more-clauses (next (next clauses)))
+      `(if ~test
+         ~then
+         (cond ~@more-clauses)))))
+
+(defmacro comment (& body))
 
 (defn +
   (() 0)
@@ -116,6 +130,14 @@
        (builtin_binary_equal y (first more)))
      false)))
 
+(defn not (x)
+  (if x
+    false
+    true))
+
+(defn not= (x y)
+  (not (= x y)))
+
 ; todo: = vs == for numbers
 (defn zero? (x)
   (if (= x 0)
@@ -141,19 +163,67 @@
   (cond (string? coll) ""
         (list? coll) ()))
 
-(defn concat
-  (() nil)
-  ((s) s)
-  ((s1 s2)
-   (let (s (seq s1))
-     (if s
-       (cons (first s) (concat (next s) s2))
-       s2)))
-  ((s1 s2 & colls)
-   (reduce concat (concat s1 s2) colls)))
-
 (defn partial
   ((f) f)
   ((f & args)
    (fn (& more-args)
      (apply f (concat args more-args)))))
+
+(defn gensym
+  (() (gensym "G__"))
+  ((prefix)
+   (symbol (str prefix (next-id)))))
+
+(defmacro and
+  (() true)
+  ((x) x)
+  ((x & more)
+   `(let (and# ~x)
+      (if and#
+        (and ~@more)
+        and#))))
+
+(defmacro or
+  (() false)
+  ((x) x)
+  ((x & more)
+   `(let (or# ~x)
+      (if or#
+        or#
+        (or ~@more)))))
+
+(defmacro time (& body)
+  `(let (start# (epoch-nanos)
+         ret# (do ~@body))
+     (println (str "Elapsed: " (/ (double (- (epoch-nanos) start#)) 1000000) " ms"))
+     ret#))
+
+(defmacro if-let
+  ((bindings then)
+   `(if-let ~bindings ~then nil))
+  ((bindings then else)
+   (when (or (not (list? bindings))
+             (not= (count bindings) 2))
+     (error "if-let requires a list of two elements for bindings"))
+   (when-not (symbol? (first bindings))
+     (error "if-let requires a symbol as the first element of bindings"))
+   (let (form (first bindings)
+         tst (second bindings))
+     `(let (temp# ~tst)
+        (if temp#
+          (let (~form temp#)
+            ~then)
+          ~else)))))
+
+(defmacro when-let (bindings & body)
+  (when (or (not (list? bindings))
+            (not= (count bindings) 2))
+    (error "when-let requires a list of two elements for bindings"))
+  (when-not (symbol? (first bindings))
+    (error "when-let requires a symbol as the first element of bindings"))
+  (let (form (first bindings)
+        tst (second bindings))
+    `(let (temp# ~tst)
+       (when temp#
+         (let (~form temp#)
+           ~@body)))))

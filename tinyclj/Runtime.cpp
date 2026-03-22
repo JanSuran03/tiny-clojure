@@ -92,6 +92,12 @@ void Runtime::init() {
     defn("macroexpand1", tinyclj_rt_macroexpand1);
     defn("eval", tinyclj_rt_eval);
     defn("vars", tinyclj_rt_vars);
+    defn("epoch-nanos", tinyclj_rt_epoch_nanos);
+    defn("next-id", tinyclj_rt_nextID);
+    defn("symbol", tinyclj_rt_symbol);
+    defn("str", tinyclj_rt_str);
+    defn("double", tinyclj_rt_double);
+    defn("long", tinyclj_rt_long);
 
     static const std::string core_file = PROJECT_SOURCE_DIR + std::string("/core.clj");
     try {
@@ -103,13 +109,15 @@ void Runtime::init() {
 }
 
 Runtime::Runtime()
-        : m_JIT(createJIT()) {
-    init();
-}
+        : m_JIT(createJIT()) {}
 
 Runtime &Runtime::getInstance() {
     static Runtime instance;
     return instance;
+}
+
+size_t Runtime::nextId() {
+    return m_IdCounter++;
 }
 
 std::unique_ptr<llvm::orc::LLJIT> &Runtime::getJIT() {
@@ -132,7 +140,7 @@ Object *Runtime::eval(const Object *form) {
     //if (form && form->m_Type == ObjectType::LIST) {
     //    const Object *op = tc_list_first(form);
     //    if (op != nullptr) {
-    //        const char *name = static_cast<TCSymbol *>(op->m_Data)->m_Value;
+    //        const char *name = static_cast<TCSymbol *>(op->m_Data)->m_Name;
     //        if (!strcmp(name, "do")) {
     //            Object *res = nullptr;
     //            for (const Object *forms = tc_list_next(form); forms; forms = tc_list_next(forms)) {
@@ -179,10 +187,18 @@ void Runtime::repl() {
         if (form == LispReader::eof_object()
             || (form != nullptr
                 && form->m_Type == ObjectType::SYMBOL
-                && strcmp(static_cast<const TCSymbol *>(form->m_Data)->m_Value, "exit") == 0)) {
+                && strcmp(static_cast<const TCSymbol *>(form->m_Data)->m_Name, "exit") == 0)) {
             std::cout << "Goodbye!" << std::endl;
             break;
         }
+
+        //std::cout << "Form read:" << std::endl;
+        //if (form == nullptr) {
+        //    std::cout << "nil";
+        //} else {
+        //    tinyclj_rt_print(form, 1, &form);
+        //}
+        //std::cout << std::endl;
 
         try {
             const Object *res = eval(form);

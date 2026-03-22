@@ -30,7 +30,7 @@ AExpr VarLiteralExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Obj
     if (name == nullptr || name->m_Type != ObjectType::SYMBOL) {
         throw std::runtime_error("'var form must take a symbol as an argument.");
     }
-    const std::string &var_name = static_cast<TCSymbol *>(name->m_Data)->m_Value;
+    const std::string &var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
     if (Object *var = ctx.m_RuntimeRef.getVar(var_name)) {
         return std::make_unique<VarLiteralExpr>(var);
     } else {

@@ -15,7 +15,6 @@ llvm::Value *BooleanExpr::emitConstantValue(CompilerContext &ctx) const {
     }
     llvm::Value *arg = llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(8, m_Value ? 1 : 0, true));
     return ctx.m_IRBuilder.CreateCall(func, {arg});
-    //return llvm::ConstantInt::get(ctx.m_LLVMContext, llvm::APInt(64, m_Value, true));
 }
 
 Object *BooleanExpr::evalConstantValue() const {

@@ -68,4 +68,16 @@ Object *tinyclj_rt_macroexpand1(const Object *self, size_t argc, const Object **
 Object *tinyclj_rt_eval(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_vars(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_nextID(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_epoch_nanos(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_symbol(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_str(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_double(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_long(const Object *self, size_t argc, const Object **argv);
 }

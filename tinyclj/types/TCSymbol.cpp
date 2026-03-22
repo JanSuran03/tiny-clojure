@@ -4,7 +4,7 @@
 
 extern "C" {
 Object *tc_symbol_new(const char *value) {
-    TCSymbol *symbol = new TCSymbol{.m_Value = strdup(value)};
+    TCSymbol *symbol = new TCSymbol{.m_Name = strdup(value)};
 
     return new Object{
             .m_Data = symbol,
@@ -14,6 +14,6 @@ Object *tc_symbol_new(const char *value) {
 }
 
 const char *tc_symbol_valueX(const Object *obj) {
-    return static_cast<TCSymbol *>(tinyclj_object_get_data(obj))->m_Value;
+    return static_cast<TCSymbol *>(tinyclj_object_get_data(obj))->m_Name;
 }
 }

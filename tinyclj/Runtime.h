@@ -18,16 +18,18 @@ class Runtime {
 
     void defn(const std::string &name, CallFn fn);
 
-    void init();
-
     Runtime();
 
 public:
+    void init();
+
     Runtime(const Runtime &) = delete;
 
     Runtime &operator=(const Runtime &) = delete;
 
     static Runtime &getInstance();
+
+    size_t nextId();
 
     const std::unordered_map<std::string, Object *> &getGlobalVarStorage() const;
 

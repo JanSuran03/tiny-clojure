@@ -72,6 +72,10 @@ const Object *tc_list_next(const Object *obj) {
     return ret;
 }
 
+const Object *tc_list_second(const Object *list) {
+    return tc_list_first(tc_list_next(list));
+}
+
 const Object *tc_list_seq(const Object *list) {
     if (list == nullptr) {
         return nullptr;
@@ -110,5 +114,13 @@ const Object *tc_list_from_array(size_t len, const Object **arr) {
         ret = tc_list_cons(arr[i], ret);
     }
     return ret;
+}
+
+const Object *tc_list_create1(const Object *elem1) {
+    return tc_list_cons(elem1, empty_list());
+}
+
+const Object *tc_list_create2(const Object *elem1, const Object *elem2) {
+    return tc_list_cons(elem1, tc_list_cons(elem2, empty_list()));
 }
 }

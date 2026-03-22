@@ -57,7 +57,7 @@ AExpr DefExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
             }
 
             // allow recursive use (uninitialized = always nullptr)
-            auto var_name = static_cast<TCSymbol *>(name->m_Data)->m_Value;
+            auto var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
             auto var = ctx.m_RuntimeRef.declareVar(var_name);
             AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init);
 

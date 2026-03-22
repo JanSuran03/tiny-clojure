@@ -41,6 +41,12 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
         {"var",   VarLiteralExpr::parse}
 };
 
+bool SemanticAnalyzer::isSpecial(const Object *obj) {
+    return obj
+           && obj->m_Type == ObjectType::SYMBOL
+           && m_SpecialAnalyzers.contains(tc_symbol_valueX(obj));
+}
+
 void captureLocalBinding(CompilerContext &ctx, const std::string &name) {
     for (ssize_t i = static_cast<ssize_t>(ctx.m_StackFrameBindings.size()) - 1; i >= 0; i--) {
         // local var or already captured
@@ -147,8 +153,10 @@ AExpr SemanticAnalyzer::analyze(ExpressionMode mode, CompilerContext &ctx, const
                 throw std::runtime_error("Cannot call nil.");
             }
 
-            if (auto ana_it = m_SpecialAnalyzers.find(tc_symbol_valueX(head)); ana_it != m_SpecialAnalyzers.end()) {
-                return ana_it->second(mode, ctx, form);
+            if (head->m_Type == ObjectType::SYMBOL) {
+                if (auto ana_it = m_SpecialAnalyzers.find(tc_symbol_valueX(head)); ana_it != m_SpecialAnalyzers.end()) {
+                    return ana_it->second(mode, ctx, form);
+                }
             }
 
             // todo: macroexpansion
