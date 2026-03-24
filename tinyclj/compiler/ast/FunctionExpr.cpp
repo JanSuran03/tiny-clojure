@@ -119,8 +119,8 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
 }
 
 /** This compiles the internal function that takes unpacked positional arguments (and closure environment in
- * case of a closure) and creates a thunk function that has a consistent signature and can be called at runtime:
- * thunk_fn(Object *self, size_t argcnt, Object **argv)
+ * case of a closure) and creates a stub function that has a consistent signature and can be called at runtime:
+ * stub_fn(Object *self, size_t argcnt, Object **argv)
  */
 void FunctionExpr::compile(CompilerContext &ctx) const {
     using namespace llvm;
@@ -283,17 +283,17 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
 void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
     // For simple functions (without captures), the compiler needs to emit instructions to create a function object
-    // that points to the thunk and store it into dst
+    // that points to the stub and store it into dst
 
     // For closures, the compiler needs to emit instructions to create an environment struct from the captured
-    // variables, then create a closure object that points to the thunk and store it into dst
+    // variables, then create a closure object that points to the stub and store it into dst
 
-    llvm::Function *thunk_fn = ctx.m_Module.getFunction(m_StubName);
-    if (!thunk_fn) {
-        throw std::runtime_error("Cannot find the thunk function for " + m_Name);
+    llvm::Function *stub_fn = ctx.m_Module.getFunction(m_StubName);
+    if (!stub_fn) {
+        throw std::runtime_error("Cannot find the stub function for " + m_Name);
     }
 
-    // Object *thunk_fn(Object *self, size_t arg, Object **argv)
+    // Object *stub_fn(Object *self, size_t arg, Object **argv)
     FunctionType *call_fn_type = FunctionType::get(
             ctx.pointerType(),
             {ctx.pointerType(), Type::getInt64Ty(ctx.m_LLVMContext), ctx.pointerArrayType()},
@@ -308,9 +308,11 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
                                                                           allocate_env_fn_type);
         FunctionType *closure_new_fn_type = FunctionType::get(
                 ctx.pointerType(),
-                {PointerType::get(call_fn_type, 0), ctx.pointerType()}, // thunk fn ptr, env struct ptr
+                // CallFn callStub, Object **env, size_t numCaptures
+                {PointerType::get(call_fn_type, 0), ctx.pointerType(), Type::getInt64Ty(ctx.m_LLVMContext)},
                 false);
         FunctionCallee closure_new_fn = ctx.m_Module.getOrInsertFunction("tc_closure_new", closure_new_fn_type);
+        Value *num_captures_val = ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), m_Captures.size(), false);
         Value *env_struct_ptr = ctx.m_IRBuilder.CreateCall(
                 allocate_env_fn,
                 {ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), m_Captures.size(), false)},
@@ -331,20 +333,22 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
             }
         }
 
-        // create the closure object with the thunk pointer and env struct pointer
-        Value *closure_obj = ctx.m_IRBuilder.CreateCall(closure_new_fn, {thunk_fn, env_struct_ptr}, "closure_obj");
+        // create the closure object with the stub pointer and env struct pointer
+        Value *closure_obj = ctx.m_IRBuilder.CreateCall(closure_new_fn,
+                                                        {stub_fn, env_struct_ptr, num_captures_val},
+                                                        "closure_obj");
         if (dst != nullptr) {
             ctx.m_IRBuilder.CreateStore(closure_obj, dst);
         }
     } else {
-        // create the function object with the thunk pointer
+        // create the function object with the stub pointer
         FunctionType *function_new_fn_type = FunctionType::get(
                 ctx.pointerType(),
                 {PointerType::get(call_fn_type, 0), Type::getInt8PtrTy(ctx.m_LLVMContext)},
                 false);
         FunctionCallee function_new_fn = ctx.m_Module.getOrInsertFunction("tc_function_new", function_new_fn_type);
         Constant *fn_name_const = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Name, "fn_name");
-        Value *function_obj = ctx.m_IRBuilder.CreateCall(function_new_fn, {thunk_fn, fn_name_const}, "function_obj");
+        Value *function_obj = ctx.m_IRBuilder.CreateCall(function_new_fn, {stub_fn, fn_name_const}, "function_obj");
         if (dst != nullptr) {
             ctx.m_IRBuilder.CreateStore(function_obj, dst);
         }

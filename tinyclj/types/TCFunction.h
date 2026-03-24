@@ -8,5 +8,5 @@ struct TCFunction {
 };
 
 extern "C" {
-Object *tc_function_new(CallFn callThunk, const char *name);
+Object *tc_function_new(CallFn callStub, const char *name);
 }

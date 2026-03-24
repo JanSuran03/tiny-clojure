@@ -1,5 +1,6 @@
 #include <stdexcept>
 
+#include "Runtime.h"
 #include "TCList.h"
 #include "TCInteger.h"
 
@@ -25,11 +26,8 @@ const Object *tc_list_cons(const Object *head, const Object *tail) {
                 .m_Tail = nullptr,
                 .m_Length = 1
         };
-        return new Object{
-                .m_Data = list,
-                .m_Type = ObjectType::LIST,
-                .m_Call = nullptr
-        };
+
+        return Runtime::getInstance().createObject(ObjectType::LIST, list);
     } else if (tail->m_Type != ObjectType::LIST) {
         throw std::runtime_error("Cannot cons to non-list type");
     } else {
@@ -39,11 +37,8 @@ const Object *tc_list_cons(const Object *head, const Object *tail) {
                 .m_Tail = tail,
                 .m_Length = tail_list->m_Length + 1
         };
-        return new Object{
-                .m_Data = list,
-                .m_Type = ObjectType::LIST,
-                .m_Call = nullptr
-        };
+
+        return Runtime::getInstance().createObject(ObjectType::LIST, list);
     }
 }
 
@@ -91,21 +86,18 @@ const Object *tc_list_seq(const Object *list) {
 
 const Object *tc_list_length(const Object *list) {
     if (list == nullptr) {
-        return new Object{
-                .m_Data = new TCInteger{.m_Value = 0},
-                .m_Type = ObjectType::INTEGER,
-                .m_Call = nullptr
-        };
+        TCInteger *zero_data = new TCInteger{.m_Value = 0};
+
+        return Runtime::getInstance().createObject(ObjectType::INTEGER, zero_data);
     }
     if (list->m_Type != ObjectType::LIST) {
         throw std::runtime_error("Cannot get length of non-list type");
     }
     TCList *list_data = static_cast<TCList *>(list->m_Data);
-    return new Object{
-            .m_Data = new TCInteger{.m_Value = list_data->m_Length},
-            .m_Type = ObjectType::INTEGER,
-            .m_Call = nullptr
-    };
+
+    TCInteger *length_data = new TCInteger{.m_Value = list_data->m_Length};
+
+    return Runtime::getInstance().createObject(ObjectType::INTEGER, length_data);
 }
 
 const Object *tc_list_from_array(size_t len, const Object **arr) {

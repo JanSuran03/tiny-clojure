@@ -24,8 +24,11 @@ typedef Object *(*CallFn)(const Object *self,
 struct Object {
     void *m_Data;
     ObjectType m_Type;
-
     CallFn m_Call;
+
+    // GC: mark & sweep
+    bool m_Marked = false;
+    bool m_Static = false; // don't destroy static objects: empty_list etc.
 };
 
 extern "C" {

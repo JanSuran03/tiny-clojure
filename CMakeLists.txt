@@ -10,15 +10,12 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 add_definitions(${LLVM_DEFINITIONS})
 
-FILE(GLOB tinyclj_stdlib_sources CONFIGURE_DEPENDS tinyclj/types/*.cpp)
-add_library(tinyclj_stdlib SHARED ${tinyclj_stdlib_sources})
-target_include_directories(tinyclj_stdlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-# shared lib: exposes tinyclj_stdlib symbols to the LLVM JIT
 add_library(tinyclj_lib SHARED
+        tinyclj/MemoryManager.cpp
         tinyclj/Runtime.cpp
         tinyclj/compiler/CompilerContext.cpp
         tinyclj/compiler/CompilerUtils.cpp
+        #tinyclj/compiler/IRGenContext.cpp
         tinyclj/compiler/ast/BodyExpr.cpp
         tinyclj/compiler/ast/BooleanExpr.cpp
         tinyclj/compiler/ast/CapturedBindingExpr.cpp
@@ -87,7 +84,7 @@ llvm_map_components_to_libnames(LLVM_LIBS
         bitreader
 )
 
-target_link_libraries(tinyclj_lib PUBLIC ${LLVM_LIBS} tinyclj_stdlib)
+target_link_libraries(tinyclj_lib PUBLIC ${LLVM_LIBS})
 
 add_executable(tiny-clojure main.cpp)
 target_link_libraries(tiny-clojure PRIVATE tinyclj_lib)

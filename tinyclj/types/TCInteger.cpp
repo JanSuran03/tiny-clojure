@@ -1,14 +1,11 @@
+#include "Runtime.h"
 #include "TCInteger.h"
 
 extern "C" {
 Object *tc_integer_new(tc_int_t value) {
-    TCInteger *integer = new TCInteger{.m_Value = value};
+    TCInteger *int_data = new TCInteger{.m_Value = value};
 
-    return new Object{
-            .m_Data = integer,
-            .m_Type = ObjectType::INTEGER,
-            .m_Call = nullptr
-    };
+    return Runtime::getInstance().createObject(ObjectType::INTEGER, int_data);
 }
 
 tc_int_t tc_integer_valueX(const Object *obj) {

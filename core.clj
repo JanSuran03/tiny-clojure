@@ -184,7 +184,7 @@
         and#))))
 
 (defmacro or
-  (() false)
+  (() nil)
   ((x) x)
   ((x & more)
    `(let (or# ~x)

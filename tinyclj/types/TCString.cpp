@@ -1,16 +1,13 @@
 #include <cstring>
 
+#include "Runtime.h"
 #include "TCString.h"
 
 extern "C" {
 Object *tc_string_new(const char *value) {
     TCString *str = new TCString{.m_Value = strdup(value)};
 
-    return new Object{
-            .m_Data = str,
-            .m_Type = ObjectType::STRING,
-            .m_Call = nullptr
-    };
+    return Runtime::getInstance().createObject(ObjectType::STRING, str);
 }
 
 const char *tc_string_valueX(const Object *obj) {

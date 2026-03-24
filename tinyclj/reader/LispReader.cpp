@@ -182,25 +182,48 @@ bool is_symbol_char(char c) {
     return isalnum((unsigned char) c) || strchr("!$%&*:<=>?_+-/#", c) != nullptr;
 }
 
-const Object *UNQUOTE = tc_symbol_new("UNQUOTE");
-const Object *UNQUOTE_SPLICING = tc_symbol_new("UNQUOTE-SPLICING");
-const Object *QUOTE = tc_symbol_new("quote");
-const Object *LIST = tc_symbol_new("list");
-const Object *SEQ = tc_symbol_new("seq");
-const Object *CONCAT = tc_symbol_new("concat");
+const Object *sym_unquote() {
+    static const Object *sym = tc_symbol_new("unquote");
+    return sym;
+}
+
+const Object *sym_unquote_splicing() {
+    static const Object *sym = tc_symbol_new("unquote-splicing");
+    return sym;
+}
+
+const Object *sym_quote() {
+    static const Object *sym = tc_symbol_new("quote");
+    return sym;
+}
+
+const Object *sym_list() {
+    static const Object *sym = tc_symbol_new("list");
+    return sym;
+}
+
+const Object *sym_seq() {
+    static const Object *sym = tc_symbol_new("seq");
+    return sym;
+}
+
+const Object *sym_concat() {
+    static const Object *sym = tc_symbol_new("concat");
+    return sym;
+}
 
 bool is_unquote_form(const Object *obj) {
     return obj
            && obj->m_Type == ObjectType::LIST
            && static_cast<TCInteger *>(tc_list_length(obj)->m_Data)->m_Value == 2
-           && tc_list_first(obj) == UNQUOTE;
+           && tc_list_first(obj) == sym_unquote();
 }
 
 bool is_unquote_splicing_form(const Object *obj) {
     return obj
            && obj->m_Type == ObjectType::LIST
            && static_cast<TCInteger *>(tc_list_length(obj)->m_Data)->m_Value == 2
-           && tc_list_first(obj) == UNQUOTE_SPLICING;
+           && tc_list_first(obj) == sym_unquote_splicing();
 }
 
 const Object *read_unquote(BufferedReader &rdr, ReaderEnv &env) {
@@ -210,11 +233,11 @@ const Object *read_unquote(BufferedReader &rdr, ReaderEnv &env) {
         rdr.read(); // consume '@'
         const Object *obj = read(rdr, 0, env);
         // Create the unquote-splicing form: (unquote-splicing obj)
-        return tc_list_create2(UNQUOTE_SPLICING, obj);
+        return tc_list_create2(sym_unquote_splicing(), obj);
     } else {
         const Object *obj = read(rdr, 0, env);
         // Create the unquote form: (unquote obj)
-        return tc_list_create2(UNQUOTE, obj);
+        return tc_list_create2(sym_unquote(), obj);
     }
 }
 
@@ -227,7 +250,7 @@ const Object *process_syntax_quote(const Object *form, ReaderEnv &env) {
 
     if (SemanticAnalyzer::isSpecial(form)) {
         // return the quoted special form: (quote form)
-        return tc_list_create2(QUOTE, form);
+        return tc_list_create2(sym_quote(), form);
     } else if (is_unquote_form(form)) {
         // return the unquoted form: form
         return tc_list_second(form);
@@ -254,12 +277,12 @@ const Object *process_syntax_quote(const Object *form, ReaderEnv &env) {
         } else {
             // todo: fully qualify the symbol (doesn't do anything currently since there aren't any namespaces yet)
         }
-        return tc_list_create2(QUOTE, ret_sym);
+        return tc_list_create2(sym_quote(), ret_sym);
     } else if (form->m_Type == ObjectType::LIST) {
         // recursively expand the list into this form
         const TCList *list = static_cast<const TCList *>(form->m_Data);
         if (list->m_Length == 0) {
-            return tc_list_create1(LIST);
+            return tc_list_create1(sym_list());
         } else {
             // every inner element returns a sequence of forms that need to be concatenated together
             // to allow unquote-splicing:
@@ -267,23 +290,23 @@ const Object *process_syntax_quote(const Object *form, ReaderEnv &env) {
             // - unquote-splicing forms return the inner form directly for splicing
             // nested syntax-quote forms are expanded recursively
             // `(a ~b ~@c d) => (concat (list (quote a)) (list b) c (list (quote d)))
-            std::vector<const Object *> expanded_concat_builder = {CONCAT};
+            std::vector<const Object *> expanded_concat_builder = {sym_concat()};
             for (const Object *l = tc_list_seq(form); l; l = tc_list_next(l)) {
                 const Object *elem = tc_list_first(l);
                 if (is_unquote_form(elem)) {
                     // (unquote elem) => (list elem)
-                    expanded_concat_builder.emplace_back(tc_list_create2(LIST, tc_list_second(elem)));
+                    expanded_concat_builder.emplace_back(tc_list_create2(sym_list(), tc_list_second(elem)));
                 } else if (is_unquote_splicing_form(elem)) {
                     // (unquote-splicing elem) => elem
                     expanded_concat_builder.emplace_back(tc_list_second(elem));
                 } else {
-                    expanded_concat_builder.emplace_back(tc_list_create2(LIST, process_syntax_quote(elem, env)));
+                    expanded_concat_builder.emplace_back(tc_list_create2(sym_list(), process_syntax_quote(elem, env)));
                 }
             }
             const Object *expanded_concat = tc_list_from_array(
                     expanded_concat_builder.size(),
                     expanded_concat_builder.data());
-            return tc_list_create2(SEQ, expanded_concat);
+            return tc_list_create2(sym_seq(), expanded_concat);
         }
     } else {
         // for other types (numbers, strings, etc), return as is
@@ -327,7 +350,7 @@ const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env) {
         rdr.read(); // consume '\''
         const Object *obj = read(rdr, 0, env);
         // Create a list (quote obj)
-        return tc_list_create2(QUOTE, obj);
+        return tc_list_create2(sym_quote(), obj);
     } else if (c == '-') {
         rdr.read(); // consume '-'
         int next_c = rdr.peek();

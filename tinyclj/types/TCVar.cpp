@@ -1,6 +1,7 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "Runtime.h"
 #include "TCVar.h"
 
 Object *tc_var_invoke(const Object *self, size_t argc, const Object **argv) {
@@ -16,11 +17,7 @@ extern "C" {
 Object *tc_var_new(const char *name) {
     TCVar *var = new TCVar{.m_Name = strdup(name)};
 
-    return new Object{
-            .m_Data = var,
-            .m_Type = ObjectType::VAR,
-            .m_Call = tc_var_invoke
-    };
+    return Runtime::getInstance().createObject(ObjectType::VAR, var, tc_var_invoke);
 }
 
 const Object *tc_var_get_root(Object *var) {

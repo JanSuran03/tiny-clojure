@@ -5,14 +5,23 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 
-#include "types/TCVar.h"
+#include "MemoryManager.h"
 #include "compiler/CompilerContext.h"
 #include "types/Object.h"
+#include "types/TCVar.h"
 
 class Runtime {
+    bool m_Initialized = false;
+    bool m_InitInProgress = false;
+
+    void init();
+
+    void ensureInitialized();
+
     std::unique_ptr<llvm::orc::LLJIT> m_JIT;
     std::atomic<size_t> m_IdCounter = 0;
     std::unordered_map<std::string, Object *> m_GlobalVarStorage;
+    MemoryManager m_Heap;
 
     static std::unique_ptr<llvm::orc::LLJIT> createJIT();
 
@@ -21,7 +30,7 @@ class Runtime {
     Runtime();
 
 public:
-    void init();
+    Object *createObject(ObjectType type, void *data, CallFn callFn = nullptr, bool isStatic = false);
 
     Runtime(const Runtime &) = delete;
 

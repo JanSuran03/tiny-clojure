@@ -6,7 +6,7 @@
 void InvokeExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;
 
-    // printf and exit for error handling in the thunk
+    // printf and exit for error handling in the stub
     FunctionType *printf_type = FunctionType::get(Type::getInt32Ty(ctx.m_LLVMContext),
                                                   {Type::getInt8PtrTy(ctx.m_LLVMContext)}, true);
     FunctionCallee printf_func = ctx.m_Module.getOrInsertFunction("printf", printf_type);

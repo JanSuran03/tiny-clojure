@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/TargetSelect.h"
 
 #include "Runtime.h"
 #include "compiler/ast/DefExpr.h"
@@ -13,7 +14,25 @@
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
 
+void Runtime::ensureInitialized() {
+    if (m_Initialized) return;
+
+    if (m_InitInProgress) {
+        // maybe allow this for now?
+        return;
+    }
+
+    m_InitInProgress = true;
+    init();
+    m_InitInProgress = false;
+    m_Initialized = true;
+}
+
 std::unique_ptr<llvm::orc::LLJIT> Runtime::createJIT() {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
     auto create_result = llvm::orc::LLJITBuilder().create();
     if (!create_result) {
         throw std::runtime_error("Failed to create JIT: " + llvm::toString(create_result.takeError()));
@@ -58,6 +77,10 @@ Object *Runtime::getVar(const std::string &name) const {
 void Runtime::defn(const std::string &name, CallFn fn) {
     auto var = declareVar(name);
     tc_var_bind_root(var, tc_function_new(fn, name.c_str()));
+}
+
+Object *Runtime::createObject(ObjectType type, void *data, CallFn callFn, bool isStatic) {
+    return m_Heap.createObject(type, data, callFn, isStatic);
 }
 
 void Runtime::init() {
@@ -113,6 +136,7 @@ Runtime::Runtime()
 
 Runtime &Runtime::getInstance() {
     static Runtime instance;
+    instance.ensureInitialized();
     return instance;
 }
 
@@ -137,7 +161,7 @@ Object *Runtime::eval(const Object *form) {
     // todoL macroexpand
     const Object *new_form = form;
 
-    //if (form && form->m_Type == ObjectType::LIST) {
+    //if (form && form->m_Type == ObjectType::sym_list) {
     //    const Object *op = tc_list_first(form);
     //    if (op != nullptr) {
     //        const char *name = static_cast<TCSymbol *>(op->m_Data)->m_Name;

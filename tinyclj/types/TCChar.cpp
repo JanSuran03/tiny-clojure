@@ -1,14 +1,11 @@
+#include "Runtime.h"
 #include "TCChar.h"
 
 extern "C" {
 Object *tc_char_new(char value) {
-    TCChar *integer = new TCChar{.m_Value = value};
+    TCChar *char_data = new TCChar{.m_Value = value};
 
-    return new Object{
-            .m_Data = integer,
-            .m_Type = ObjectType::CHARACTER,
-            .m_Call = nullptr
-    };
+    return Runtime::getInstance().createObject(ObjectType::CHARACTER, char_data);
 }
 
 char tc_char_valueX(const Object *obj) {
