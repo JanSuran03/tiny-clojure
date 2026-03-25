@@ -1,4 +1,7 @@
+#include <iostream>
+
 #include "MemoryManager.h"
+#include "Runtime.h"
 #include "types/TCBoolean.h"
 #include "types/TCChar.h"
 #include "types/TCClosure.h"
@@ -9,6 +12,7 @@
 #include "types/TCString.h"
 #include "types/TCSymbol.h"
 #include "types/TCVar.h"
+#include "GCFrame.h"
 
 Object *MemoryManager::createObject(ObjectType type, void *data, CallFn callFn, bool isStatic) {
     Object *obj = new Object{
@@ -22,7 +26,63 @@ Object *MemoryManager::createObject(ObjectType type, void *data, CallFn callFn, 
     return obj;
 }
 
-void MemoryManager::mark(Object *obj) {
+void MemoryManager::markRoots(Runtime *rt) {
+    for (auto &[name, var]: rt->getGlobalVarStorage()) {
+        mark(var);
+    }
+    // mark all constant objects
+    for (const Object *obj: rt->getConstantObjects()) {
+        mark(const_cast<Object *>(obj));
+    }
+
+    // protect the current execution frames from collection
+    for (GCRootFrame *frame = rt->m_RootStack; frame; frame = frame->m_Prev) {
+        for (auto root: frame->m_Roots) {
+            mark(root);
+        }
+    }
+}
+
+void MemoryManager::sweep() {
+    size_t newSize = 0;
+    size_t i = 0;
+    for (auto obj: m_Storage) {
+        if (obj->m_Marked) {
+            // keep the marked object - still reachable
+            obj->m_Marked = false;
+            m_Storage[newSize++] = obj;
+        } else {
+            destroyObject(obj);
+        }
+        i++;
+    }
+    std::cout << "GC cycle completed. Collected "
+              << (m_Storage.size() - newSize)
+              << " / " << m_Storage.size() << " objects." << std::endl;
+    m_Storage.resize(newSize);
+}
+
+void MemoryManager::collectGarbage(Runtime *rt) {
+    if (m_GCInProgress) {
+        printf("Debug: GC already in progress, skipping this cycle.\n");
+        fflush(stdout);
+        return;
+    }
+    m_GCInProgress = true;
+
+    markRoots(rt);
+    sweep();
+    m_GCInProgress = false;
+    m_HeapCapacity = m_Storage.size() * 2; // double the capacity for the next cycle to reduce frequency of GC
+}
+
+void MemoryManager::collectGarbageIfNeeded(Runtime *rt) {
+    if (m_Storage.size() >= m_HeapCapacity) {
+        collectGarbage(rt);
+    }
+}
+
+void MemoryManager::mark(const Object *obj) {
     if (obj == nullptr || obj->m_Static || obj->m_Marked) {
         return;
     }
@@ -41,18 +101,21 @@ void MemoryManager::mark(Object *obj) {
             auto *list = static_cast<TCList *>(obj->m_Data);
             mark(const_cast<Object *>(list->m_Head));
             mark(const_cast<Object *>(list->m_Tail));
+            break;
         }
         case ObjectType::VAR: {
             auto *var = static_cast<TCVar *>(obj->m_Data);
             mark(const_cast<Object *>(var->m_Root));
+            break;
         }
 
-        case ObjectType::CLOSURE:
+        case ObjectType::CLOSURE: {
             auto *closure = static_cast<TCClosure *>(obj->m_Data);
             for (size_t i = 0; i < closure->m_NumCaptures; i++) {
                 mark(const_cast<Object *>(closure->m_Env[i]));
             }
             break;
+        }
     }
 }
 
@@ -75,40 +138,35 @@ void MemoryManager::destroyObject(Object *obj) {
             break;
         case ObjectType::STRING: {
             TCString *str = static_cast<TCString *>(obj->m_Data);
-            delete[] str->m_Value; // delete char array
+            // todo: it's pretty sad, this has been created using strdup, so we have to use free here
+            // probably should switch to an implemenation with delete[] and avoid strdup altogether
+            free(str->m_Value);
             delete str; // delete TCString struct
             break;
         }
         case ObjectType::SYMBOL: {
             TCSymbol *sym = static_cast<TCSymbol *>(obj->m_Data);
-            delete[] sym->m_Name;
+            // todo: same issue as with TCString - should switch to delete[] and avoid strdup
+            free(sym->m_Name);
             delete sym;
             break;
         }
         case ObjectType::FUNCTION:
             delete static_cast<TCFunction *>(obj->m_Data);
             break;
-        case ObjectType::LIST: {
-            TCList *list = static_cast<TCList *>(obj->m_Data);
-            // recursively destroy head and tail
-            destroyObject(const_cast<Object *>(list->m_Head));
-            destroyObject(const_cast<Object *>(list->m_Tail));
-            delete list;
+        case ObjectType::LIST:
+            // do NOT destroy the list recursively - only destroy what has been put in the mark
+            // list!!!!!
+            delete static_cast<TCList *>(obj->m_Data);
             break;
-        }
-        case ObjectType::VAR: {
-            TCVar *var = static_cast<TCVar *>(obj->m_Data);
-            // destroy root
-            destroyObject(const_cast<Object *>(var->m_Root));
-            delete var;
+        case ObjectType::VAR:
+            // same as list
+            delete static_cast<TCVar *>(obj->m_Data);
             break;
-        }
         case ObjectType::CLOSURE: {
             TCClosure *closure = static_cast<TCClosure *>(obj->m_Data);
-            // destroy captured variables
-            for (size_t i = 0; i < closure->m_NumCaptures; i++) {
-                destroyObject(const_cast<Object *>(closure->m_Env[i]));
-            }
+            // same as list and var - only destroy the closure struct, not the captured environment
+            // (which should have been marked and will be collected separately if unreachable)
             delete[] closure->m_Env;
             delete closure;
         }

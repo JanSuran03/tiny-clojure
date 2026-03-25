@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "LispReader.h"
-#include "Runtime.h"
+#include "runtime/Runtime.h"
 #include "compiler/SemanticAnalyzer.h"
 #include "types/TCBoolean.h"
 #include "types/TCDouble.h"
@@ -35,12 +35,12 @@ bool is_symbol_char(char c);
 const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env);
 
 const Object *LispReader::eof_object() {
-    static Object eof_obj;
+    static Object eof_obj = Object::createStaticObject(ObjectType::SYMBOL, new TCSymbol{.m_Name = strdup("<EOF>")});
     return &eof_obj;
 }
 
 const Object *delimiter_object() {
-    static Object delim_obj;
+    static Object delim_obj = Object::createStaticObject(ObjectType::SYMBOL, new TCSymbol{.m_Name = strdup("<DELIM>")});
     return &delim_obj;
 }
 
@@ -62,6 +62,7 @@ const Object *read_list(BufferedReader &rdr, ReaderEnv &env) {
 
         elements.emplace_back(elem);
     }
+
     return tc_list_from_array(elements.size(), elements.data());
 }
 
@@ -183,33 +184,45 @@ bool is_symbol_char(char c) {
 }
 
 const Object *sym_unquote() {
-    static const Object *sym = tc_symbol_new("unquote");
-    return sym;
+    static Object sym_obj = Object::createStaticObject(
+            ObjectType::SYMBOL,
+            new TCSymbol{.m_Name = strdup("unquote")});
+    return &sym_obj;
 }
 
 const Object *sym_unquote_splicing() {
-    static const Object *sym = tc_symbol_new("unquote-splicing");
-    return sym;
+    static Object sym_obj = Object::createStaticObject(
+            ObjectType::SYMBOL,
+            new TCSymbol{.m_Name = strdup("unquote-splicing")});
+    return &sym_obj;
 }
 
 const Object *sym_quote() {
-    static const Object *sym = tc_symbol_new("quote");
-    return sym;
+    static Object sym_obj = Object::createStaticObject(
+            ObjectType::SYMBOL,
+            new TCSymbol{.m_Name = strdup("quote")});
+    return &sym_obj;
 }
 
 const Object *sym_list() {
-    static const Object *sym = tc_symbol_new("list");
-    return sym;
+    static Object sym_obj = Object::createStaticObject(
+            ObjectType::SYMBOL,
+            new TCSymbol{.m_Name = strdup("list")});
+    return &sym_obj;
 }
 
 const Object *sym_seq() {
-    static const Object *sym = tc_symbol_new("seq");
-    return sym;
+    static Object sym_obj = Object::createStaticObject(
+            ObjectType::SYMBOL,
+            new TCSymbol{.m_Name = strdup("seq")});
+    return &sym_obj;
 }
 
 const Object *sym_concat() {
-    static const Object *sym = tc_symbol_new("concat");
-    return sym;
+    static Object sym_obj = Object::createStaticObject(
+            ObjectType::SYMBOL,
+            new TCSymbol{.m_Name = strdup("concat")});
+    return &sym_obj;
 }
 
 bool is_unquote_form(const Object *obj) {

@@ -3,7 +3,7 @@
 #include "compiler/CompilerUtils.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
-#include "Runtime.h"
+#include "runtime/Runtime.h"
 
 void VarLiteralExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;

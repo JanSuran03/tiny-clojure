@@ -11,8 +11,6 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 add_definitions(${LLVM_DEFINITIONS})
 
 add_library(tinyclj_lib SHARED
-        tinyclj/MemoryManager.cpp
-        tinyclj/Runtime.cpp
         tinyclj/compiler/CompilerContext.cpp
         tinyclj/compiler/CompilerUtils.cpp
         #tinyclj/compiler/IRGenContext.cpp
@@ -42,7 +40,10 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/SemanticAnalyzer.cpp
         tinyclj/reader/BufferedReader.cpp
         tinyclj/reader/LispReader.cpp
+        tinyclj/runtime/GCFrame.cpp
+        tinyclj/runtime/MemoryManager.cpp
         tinyclj/runtime/rt.cpp
+        tinyclj/runtime/Runtime.cpp
         tinyclj/types/Object.cpp
         tinyclj/types/TCBoolean.cpp
         tinyclj/types/TCChar.cpp

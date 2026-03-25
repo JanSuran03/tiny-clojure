@@ -4,7 +4,7 @@
 
 #include "compiler/CompilerUtils.h"
 #include "FunctionExpr.h"
-#include "Runtime.h"
+#include "runtime/Runtime.h"
 #include "runtime/rt.h"
 #include "types/TCFunction.h"
 #include "types/TCList.h"
@@ -32,13 +32,15 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
 
     // (fn name (args...) body...)
     // or (fn (args...) body...)
-    // todo: make this work consistently: currently not used where it could be
-    const Object *name = tc_list_first(form);
+    // todo: make this actually work - is not used at the moment
+    const Object *name_sym = tc_list_first(form);
+    std::string name;
 
-    if (name != nullptr && name->m_Type == ObjectType::SYMBOL) {
+    if (name_sym != nullptr && name_sym->m_Type == ObjectType::SYMBOL) {
         form = tc_list_next(form); // consume the name if it's present
+        name = tc_symbol_valueX(name_sym);
     } else {
-        name = tc_symbol_new(("fn__" + std::to_string(ctx.nextId())).c_str());
+        name = "fn__" + std::to_string(ctx.nextId());
     }
 
     // (arglist & body) or ((arglist & body) (arglist2 & body2) ...)
@@ -64,8 +66,6 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     // overloads, the capture scope needs to be created before parsing the overloads
     // and the capture scope is the union of the captures from all overloads
     ctx.m_CaptureStack.emplace_back();
-
-    std::string fn_name = tc_symbol_valueX(name);
     // if there exists a variadic overload with m_Args = N (i.e. N-1 fixed args), then there can exist
     // a (non-variadic) overload with m_Args <= N-1 (i.e. m_Args < N)
     std::unordered_map<size_t, FunctionOverload> overloads;
@@ -85,18 +85,18 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
             // check for overloads with more fixed arguments
             for (const auto &[existing_argcnt, existing_overload]: overloads) {
                 if (existing_argcnt > fixed_argcnt) {
-                    throw std::runtime_error(ambiguousOverload(fn_name, fixed_argcnt, existing_argcnt));
+                    throw std::runtime_error(ambiguousOverload(name, fixed_argcnt, existing_argcnt));
                 }
             }
             variadic_overload = std::move(overload);
         } else {
             if (overloads.contains(overload_argcnt)) {
                 throw std::runtime_error("Ambiguous overloads: Multiple overloads with the same number of arguments (" +
-                                         std::to_string(overload_argcnt) + ") are not allowed for function " + fn_name);
+                                         std::to_string(overload_argcnt) + ") are not allowed for function " + name);
             }
             if (variadic_overload.has_value() && overload_argcnt >= variadic_overload.value().m_Args.size()) {
                 throw std::runtime_error(
-                        ambiguousOverload(fn_name, variadic_overload.value().m_Args.size() - 1, overload_argcnt));
+                        ambiguousOverload(name, variadic_overload.value().m_Args.size() - 1, overload_argcnt));
             }
             overloads.emplace(overload_argcnt, std::move(overload));
         }
@@ -108,7 +108,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     auto captures = std::move(ctx.m_CaptureStack.back());
     ctx.m_CaptureStack.pop_back();
 
-    auto fn_expr = std::make_unique<FunctionExpr>(fn_name,
+    auto fn_expr = std::make_unique<FunctionExpr>(name,
                                                   std::move(overloads),
                                                   std::move(variadic_overload),
                                                   std::move(captures));

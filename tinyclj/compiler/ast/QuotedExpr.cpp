@@ -1,5 +1,6 @@
 #include "QuotedExpr.h"
 #include "compiler/CompilerUtils.h"
+#include "runtime/Runtime.h"
 #include "types/TCList.h"
 
 void QuotedExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
@@ -14,7 +15,9 @@ Object *QuotedExpr::eval(Runtime &runtime) const {
     return const_cast<Object *>(m_QuotedValue);
 }
 
-QuotedExpr::QuotedExpr(const Object *quotedValue) : m_QuotedValue(quotedValue) {}
+QuotedExpr::QuotedExpr(const Object *quotedValue) : m_QuotedValue(quotedValue) {
+    Runtime::getInstance().registerConstant(quotedValue);
+}
 
 AExpr QuotedExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
     form = tc_list_next(form);

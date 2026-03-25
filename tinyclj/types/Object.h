@@ -27,8 +27,10 @@ struct Object {
     CallFn m_Call;
 
     // GC: mark & sweep
-    bool m_Marked = false;
+    mutable bool m_Marked = false;
     bool m_Static = false; // don't destroy static objects: empty_list etc.
+
+    static Object createStaticObject(ObjectType type, void *data, CallFn callFn = nullptr);
 };
 
 extern "C" {

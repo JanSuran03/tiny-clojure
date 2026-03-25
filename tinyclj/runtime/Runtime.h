@@ -5,6 +5,7 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 
+#include "GCFrame.h"
 #include "MemoryManager.h"
 #include "compiler/CompilerContext.h"
 #include "types/Object.h"
@@ -21,6 +22,7 @@ class Runtime {
     std::unique_ptr<llvm::orc::LLJIT> m_JIT;
     std::atomic<size_t> m_IdCounter = 0;
     std::unordered_map<std::string, Object *> m_GlobalVarStorage;
+    std::unordered_set<const Object *> m_ConstantObjects;
     MemoryManager m_Heap;
 
     static std::unique_ptr<llvm::orc::LLJIT> createJIT();
@@ -30,6 +32,12 @@ class Runtime {
     Runtime();
 
 public:
+    void registerConstant(const Object *obj);
+
+    const std::unordered_set<const Object *> &getConstantObjects() const;
+
+    GCRootFrame *m_RootStack = nullptr;
+
     Object *createObject(ObjectType type, void *data, CallFn callFn = nullptr, bool isStatic = false);
 
     Runtime(const Runtime &) = delete;
@@ -41,6 +49,8 @@ public:
     size_t nextId();
 
     const std::unordered_map<std::string, Object *> &getGlobalVarStorage() const;
+
+    std::unordered_map<std::string, Object *> &getGlobalVarStorage();
 
     Object *declareVar(const std::string &name);
 

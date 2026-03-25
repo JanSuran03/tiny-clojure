@@ -3,7 +3,7 @@
 #include "DefExpr.h"
 #include "compiler/CompilerUtils.h"
 #include "compiler/SemanticAnalyzer.h"
-#include "Runtime.h"
+#include "runtime/Runtime.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
 

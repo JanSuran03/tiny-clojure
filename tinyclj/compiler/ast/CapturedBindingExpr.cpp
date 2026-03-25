@@ -1,5 +1,5 @@
 #include "CapturedBindingExpr.h"
-#include "Runtime.h"
+#include "runtime/Runtime.h"
 
 llvm::Value *CapturedBindingExpr::loadValue(CompilerContext &ctx) const {
     llvm::Value *slot = ctx.m_IRBuilder.CreateGEP(ctx.pointerArrayType(),

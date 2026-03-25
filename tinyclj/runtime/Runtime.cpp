@@ -11,7 +11,6 @@
 #include "reader/LispReader.h"
 #include "runtime/rt.h"
 #include "types/TCFunction.h"
-#include "types/TCList.h"
 #include "types/TCSymbol.h"
 
 void Runtime::ensureInitialized() {
@@ -54,7 +53,12 @@ std::unique_ptr<llvm::orc::LLJIT> Runtime::createJIT() {
     return jit;
 }
 
+// todo: are both methods needed?
 const std::unordered_map<std::string, Object *> &Runtime::getGlobalVarStorage() const {
+    return m_GlobalVarStorage;
+}
+
+std::unordered_map<std::string, Object *> &Runtime::getGlobalVarStorage() {
     return m_GlobalVarStorage;
 }
 
@@ -158,8 +162,7 @@ Object *Runtime::eval(const Object *form) {
     // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
     // (-> (fn* fn_name [] form))
 
-    // todoL macroexpand
-    const Object *new_form = form;
+    // todo: macroexpand and do some branching
 
     //if (form && form->m_Type == ObjectType::sym_list) {
     //    const Object *op = tc_list_first(form);
@@ -176,10 +179,7 @@ Object *Runtime::eval(const Object *form) {
     //        }
     //    }
     //}
-    new_form = tc_list_cons(tc_symbol_new("fn*"),
-                            tc_list_cons
-                                    (empty_list(),
-                                     tc_list_cons(form, empty_list())));
+    const Object *new_form = tc_list_create3(tc_symbol_new("fn*"), empty_list(), form);
 
     AExpr expr = SemanticAnalyzer::analyze(ctx, new_form);
 
@@ -196,6 +196,14 @@ Object *Runtime::eval(const Object *form) {
 
     const Object *evaled_wrapper_fn = expr->eval(*this);
     return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);
+}
+
+void Runtime::registerConstant(const Object *obj) {
+    m_ConstantObjects.emplace(obj);
+}
+
+const std::unordered_set<const Object *> &Runtime::getConstantObjects() const {
+    return m_ConstantObjects;
 }
 
 void Runtime::repl() {
@@ -216,19 +224,12 @@ void Runtime::repl() {
             break;
         }
 
-        //std::cout << "Form read:" << std::endl;
-        //if (form == nullptr) {
-        //    std::cout << "nil";
-        //} else {
-        //    tinyclj_rt_print(form, 1, &form);
-        //}
-        //std::cout << std::endl;
-
         try {
             const Object *res = eval(form);
             std::cout << "=> ";
             tinyclj_rt_print(res, 1, &res);
             std::cout << std::endl;
+            m_Heap.collectGarbageIfNeeded(this);
         } catch (const std::runtime_error &e) {
             std::cout << "Runtime error: " << e.what() << std::endl;
         }
@@ -237,11 +238,17 @@ void Runtime::repl() {
 
 const Object *Runtime::loadStream(std::istream &stream) {
     BufferedReader reader(stream);
-    const Object *form = LispReader::read(reader);
     const Object *res = nullptr;
-    while (form != LispReader::eof_object()) {
+    while (true) {
+        const Object *form = LispReader::read(reader);
+        if (form == LispReader::eof_object()) {
+            break;
+        }
         res = eval(form);
-        form = LispReader::read(reader);
+        {
+            RootFrameGuard guard(*this, {const_cast<Object *>(res)});
+            m_Heap.collectGarbageIfNeeded(this);
+        }
     }
     return res;
 }

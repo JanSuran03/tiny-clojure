@@ -19,7 +19,7 @@
 #include "compiler/ast/VarDerefExpr.h"
 #include "compiler/ast/VarLiteralExpr.h"
 #include "SemanticAnalyzer.h"
-#include "Runtime.h"
+#include "runtime/Runtime.h"
 #include "types/TCBoolean.h"
 #include "types/TCChar.h"
 #include "types/TCDouble.h"

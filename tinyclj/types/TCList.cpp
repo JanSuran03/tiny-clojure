@@ -1,6 +1,6 @@
 #include <stdexcept>
 
-#include "Runtime.h"
+#include "runtime/Runtime.h"
 #include "TCList.h"
 #include "TCInteger.h"
 
@@ -11,11 +11,7 @@ const Object *empty_list() {
             .m_Tail = nullptr,
             .m_Length = 0
     };
-    static Object emptylist_obj = {
-            .m_Data = &empty,
-            .m_Type = ObjectType::LIST,
-            .m_Call = nullptr
-    };
+    static Object emptylist_obj = Object::createStaticObject(ObjectType::LIST, &empty);
     return &emptylist_obj;
 }
 
@@ -101,6 +97,7 @@ const Object *tc_list_length(const Object *list) {
 }
 
 const Object *tc_list_from_array(size_t len, const Object **arr) {
+    // todo: is this necessary?
     const Object *ret = empty_list();
     for (ssize_t i = ((ssize_t) len) - 1; i >= 0; i--) {
         ret = tc_list_cons(arr[i], ret);
@@ -114,5 +111,9 @@ const Object *tc_list_create1(const Object *elem1) {
 
 const Object *tc_list_create2(const Object *elem1, const Object *elem2) {
     return tc_list_cons(elem1, tc_list_cons(elem2, empty_list()));
+}
+
+const Object *tc_list_create3(const Object *elem1, const Object *elem2, const Object *elem3) {
+    return tc_list_cons(elem1, tc_list_cons(elem2, tc_list_cons(elem3, empty_list())));
 }
 }

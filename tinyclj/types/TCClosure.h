@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Object.h"
-#include "../tcdef.h"
+#include "tcdef.h"
 
 struct TCClosure {
     const Object **m_Env;

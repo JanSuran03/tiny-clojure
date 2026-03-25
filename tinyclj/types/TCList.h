@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Object.h"
-#include "../tcdef.h"
+#include "tcdef.h"
 
 struct TCList {
     const Object *m_Head;
@@ -28,6 +28,7 @@ const Object *tc_list_from_array(size_t len, const Object **arr);
 
 const Object *tc_list_create1(const Object *elem1);
 const Object *tc_list_create2(const Object *elem1, const Object *elem2);
+const Object *tc_list_create3(const Object *elem1, const Object *elem2, const Object *elem3);
 
 // todo
 // void tc_list_destroy(TCList *list);

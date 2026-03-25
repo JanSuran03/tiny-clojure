@@ -1,5 +1,5 @@
 #include "LocalBindingExpr.h"
-#include "Runtime.h"
+#include "runtime/Runtime.h"
 
 void LocalBindingExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     using namespace llvm;

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "../types/Object.h"
+#include "types/Object.h"
 
 extern "C" {
 Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **argv);
