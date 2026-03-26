@@ -27,6 +27,8 @@ std::string ambiguousOverload(const std::string &fn_name, size_t variadic_fixed_
 }
 
 AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+    bool is_eval_wrapper = strcmp(static_cast<const TCSymbol *>(tc_list_first(form)->m_Data)->m_Name,
+                                  "__eval_fn_wrapper") == 0;
     const Object *original_form = form;
     form = tc_list_next(form); // consume 'fn
 
@@ -75,7 +77,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
         if (overload_form == nullptr || overload_form->m_Type != ObjectType::LIST) {
             throw std::runtime_error("fn body must be a list of overloads, each overload is a list");
         }
-        FunctionOverload overload = FunctionOverload::parse(ctx, overload_form);
+        FunctionOverload overload = FunctionOverload::parse(ctx, overload_form, is_eval_wrapper);
         size_t overload_argcnt = overload.m_Args.size();
         if (overload.m_IsVariadic) {
             size_t fixed_argcnt = overload_argcnt - 1;

@@ -19,5 +19,5 @@ public:
                      bool usesClosureEnv,
                      std::vector<AExpr> body);
 
-    static FunctionOverload parse(CompilerContext &ctx, const Object *form);
+    static FunctionOverload parse(CompilerContext &ctx, const Object *form, bool is_eval_wrapper);
 };

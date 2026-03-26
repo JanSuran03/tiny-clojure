@@ -38,6 +38,7 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
         {"let*",  LetExpr::parse},
         {"loop*",  LetExpr::parse},
         {"fn*",   FunctionExpr::parse},
+        {"__eval_fn_wrapper", FunctionExpr::parse},
         {"recur", RecurExpr::parse},
         {"var",   VarLiteralExpr::parse}
 };

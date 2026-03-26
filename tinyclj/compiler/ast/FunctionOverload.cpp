@@ -91,7 +91,7 @@ llvm::Function *FunctionOverload::compile(CompilerContext &ctx, const Captures &
     return function;
 }
 
-FunctionOverload FunctionOverload::parse(CompilerContext &ctx, const Object *form) {
+FunctionOverload FunctionOverload::parse(CompilerContext &ctx, const Object *form, bool is_eval_wrapper) {
     // all overloads share the same set of captured variables - all overloads modify the same one
     // however, each overloads creates its own set of local bindings (i.e. stack frame)
     ctx.m_StackFrameBindings.emplace_back();
@@ -148,17 +148,24 @@ FunctionOverload FunctionOverload::parse(CompilerContext &ctx, const Object *for
     }
 
     size_t old_num_recur_args = ctx.m_NumRecurArgs;
-    ctx.m_NumRecurArgs = args.size();
+    if (!is_eval_wrapper) {
+        ctx.m_NumRecurArgs = args.size();
+    }
     std::vector<AExpr> body;
     for (; form; form = tc_list_next(form)) {
         bool is_last = tc_list_next(form) == nullptr;
+        // disable (recur) in the eval wrapper
+        ExpressionMode last_mode = is_eval_wrapper ? ExpressionMode::EXPR : ExpressionMode::TAIL;
         const Object *expr = tc_list_first(form);
         body.emplace_back(SemanticAnalyzer::analyze(
                 // discard return value of all but the last expression in the function body
-                is_last ? ExpressionMode::TAIL : ExpressionMode::DISCARD, ctx, expr));
+                is_last ? last_mode : ExpressionMode::DISCARD, ctx, expr));
     }
 
-    ctx.m_NumRecurArgs = old_num_recur_args;
+
+    if (!is_eval_wrapper) {
+        ctx.m_NumRecurArgs = old_num_recur_args;
+    }
     for (const auto &var: new_scope_vars) {
         ctx.m_LocalBindings.erase(var);
     }

@@ -181,7 +181,7 @@ Object *Runtime::eval(const Object *form) {
     //        }
     //    }
     //}
-    const Object *new_form = tc_list_create3(tc_symbol_new("fn*"), empty_list(), form);
+    const Object *new_form = tc_list_create3(tc_symbol_new("__eval_fn_wrapper"), empty_list(), form);
 
     AExpr expr = SemanticAnalyzer::analyze(ctx, new_form);
 
