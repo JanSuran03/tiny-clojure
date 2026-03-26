@@ -94,6 +94,8 @@ void Runtime::init() {
     defn("builtin_binary_div", tinyclj_rt_div);
     defn("builtin_unary_print", tinyclj_rt_print);
     defn("builtin_binary_equal", tinyclj_rt_binary_equal);
+    defn("builtin_binary_lt", tinyclj_rt_lt);
+    defn("builtin_binary_lte", tinyclj_rt_lte);
     defn("set-macro!", tinyclj_rt_setmacro);
     defn("identical?", tinyclj_rt_identical);
     defn("list", tinyclj_rt_list);

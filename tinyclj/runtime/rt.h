@@ -80,4 +80,8 @@ Object *tinyclj_rt_str(const Object *self, size_t argc, const Object **argv);
 Object *tinyclj_rt_double(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_long(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_lt(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_lte(const Object *self, size_t argc, const Object **argv);
 }

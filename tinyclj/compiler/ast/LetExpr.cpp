@@ -7,6 +7,7 @@
 
 void LetExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     std::unordered_map<std::string, llvm::AllocaInst *> shadowed_allocas;
+    std::vector<llvm::AllocaInst *> variable_storages;
     for (const auto &[name, value]: m_Bindings) {
         // allocate space for a 64-bit pointer as every runtime object is a pointer to the Object struct
         llvm::AllocaInst *alloca = ctx.m_IRBuilder.CreateAlloca(
@@ -21,8 +22,23 @@ void LetExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
             shadowed_allocas[name] = nullptr;
         }
         ctx.m_VariableMap[name] = alloca;
+        variable_storages.emplace_back(alloca);
     }
-    CompilerUtils::emitBody(m_Body, "let", dst, ctx);
+
+    // create a recursion point if this is a loop expression
+    llvm::BasicBlock *recursion_point = nullptr;
+    if (m_IsLoop) {
+        recursion_point = ctx.createBasicBlock("loop_recursion_point");
+        ctx.m_IRBuilder.CreateBr(recursion_point);
+        ctx.m_IRBuilder.SetInsertPoint(recursion_point);
+        ctx.m_LoopLabels.emplace_back(recursion_point, std::move(variable_storages));
+    }
+
+    CompilerUtils::emitBody(m_Body, m_IsLoop ? "let" : "loop", dst, ctx);
+
+    if (m_IsLoop) {
+        ctx.m_LoopLabels.pop_back();
+    }
 
     // restore shadowed variables in the context
     for (const auto &[name, alloca]: shadowed_allocas) {
@@ -34,12 +50,17 @@ void LetExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     }
 }
 
-LetExpr::LetExpr(std::vector<std::tuple<std::string, AExpr>> bindings, std::vector<AExpr> body)
+LetExpr::LetExpr(std::vector<std::tuple<std::string, AExpr>> bindings,
+                 std::vector<AExpr> body,
+                 bool isLoop)
         : m_Bindings(std::move(bindings)),
-          m_Body(std::move(body)) {}
+          m_Body(std::move(body)),
+          m_IsLoop(isLoop) {}
 
 AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
-    form = tc_list_next(form); // consume 'let*
+    bool is_loop = strcmp(tc_symbol_valueX(tc_list_first(form)), "loop*") == 0;
+    ExpressionMode new_mode = is_loop ? ExpressionMode::TAIL : mode;
+    form = tc_list_next(form); // consume let* / loop*
     const Object *bindings = tc_list_first(form);
     form = tc_list_next(form);
     if (bindings == nullptr || tinyclj_object_get_type(bindings) != ObjectType::LIST) {
@@ -72,7 +93,7 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
         }
 
         parsed_bindings.emplace_back(binding_name, SemanticAnalyzer::analyze(
-                ExpressionMode::EXPRESSION,
+                ExpressionMode::EXPR,
                 ctx,
                 binding_val));
 
@@ -80,10 +101,20 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
         ctx.m_StackFrameBindings.back().insert(binding_name);
     }
     std::vector<AExpr> body;
+
+    size_t old_num_recur_args = ctx.m_NumRecurArgs;
+    if (is_loop) {
+        ctx.m_NumRecurArgs = parsed_bindings.size();
+    }
+
     for (; form; form = tc_list_next(form)) {
-        body.push_back(SemanticAnalyzer::analyze(tc_list_next(form) == nullptr ? mode : ExpressionMode::STATEMENT,
-                                                 ctx,
-                                                 tc_list_first(form)));
+        body.emplace_back(SemanticAnalyzer::analyze(tc_list_next(form) == nullptr ? new_mode : ExpressionMode::DISCARD,
+                                                    ctx,
+                                                    tc_list_first(form)));
+    }
+
+    if (is_loop) {
+        ctx.m_NumRecurArgs = old_num_recur_args;
     }
 
     for (const std::string &binding_name: new_scope_bindings) {
@@ -91,5 +122,7 @@ AExpr LetExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
         ctx.m_StackFrameBindings.back().erase(binding_name);
     }
 
-    return std::make_unique<LetExpr>(std::move(parsed_bindings), std::move(body));
+    return std::make_unique<LetExpr>(std::move(parsed_bindings),
+                                     std::move(body),
+                                     is_loop);
 }

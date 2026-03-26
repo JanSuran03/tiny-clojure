@@ -708,4 +708,82 @@ Object *tinyclj_rt_long(const Object *self, size_t argc, const Object **argv) {
                                      + " to long");
     }
 }
+
+Object *tinyclj_rt_lt(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("builtin < requires exactly 2 arguments");
+    }
+    const Object *a = argv[0];
+    const Object *b = argv[1];
+    if (a == nullptr || b == nullptr) {
+        throw std::runtime_error("Cannot compare nil with <");
+    }
+    switch (a->m_Type) {
+        case ObjectType::INTEGER:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER: {
+                    return tc_boolean_new(static_cast<TCInteger *>(a->m_Data)->m_Value <
+                                          static_cast<TCInteger *>(b->m_Data)->m_Value);
+                }
+                case ObjectType::DOUBLE: {
+                    return tc_boolean_new(static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) <
+                                          static_cast<TCDouble *>(b->m_Data)->m_Value);
+                }
+                default:
+                    throw std::runtime_error("Cannot compare integer with non-numeric type using <");
+            }
+        case ObjectType::DOUBLE:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER:
+                    return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value <
+                                          static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
+                case ObjectType::DOUBLE:
+                    return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value <
+                                          static_cast<TCDouble *>(b->m_Data)->m_Value);
+                default:
+                    throw std::runtime_error("Cannot compare double with non-numeric type using <");
+            }
+        default:
+            throw std::runtime_error("Cannot compare non-numeric types using <");
+    }
+}
+
+Object *tinyclj_rt_lte(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("builtin <= requires exactly 2 arguments");
+    }
+    const Object *a = argv[0];
+    const Object *b = argv[1];
+    if (a == nullptr || b == nullptr) {
+        throw std::runtime_error("Cannot compare nil with <=");
+    }
+    switch (a->m_Type) {
+        case ObjectType::INTEGER:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER: {
+                    return tc_boolean_new(static_cast<TCInteger *>(a->m_Data)->m_Value <=
+                                          static_cast<TCInteger *>(b->m_Data)->m_Value);
+                }
+                case ObjectType::DOUBLE: {
+                    return tc_boolean_new(static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) <=
+                                          static_cast<TCDouble *>(b->m_Data)->m_Value);
+                }
+                default:
+                    throw std::runtime_error("Cannot compare integer with non-numeric type using <=");
+            }
+        case ObjectType::DOUBLE:
+            switch (b->m_Type) {
+                case ObjectType::INTEGER:
+                    return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value <=
+                                          static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
+                case ObjectType::DOUBLE:
+                    return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value <=
+                                          static_cast<TCDouble *>(b->m_Data)->m_Value);
+                default:
+                    throw std::runtime_error("Cannot compare double with non-numeric type using <=");
+            }
+        default:
+            throw std::runtime_error("Cannot compare non-numeric types using <=");
+    }
+}
 }

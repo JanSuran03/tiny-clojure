@@ -25,7 +25,7 @@ AExpr BodyExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *f
         const Object *exprForm = tc_list_first(lst);
         bool is_last = tc_list_next(lst) == nullptr;
         exprs.push_back(SemanticAnalyzer::analyze(
-                is_last ? mode : ExpressionMode::STATEMENT, // last expr in the 'do block
+                is_last ? mode : ExpressionMode::DISCARD, // last expr in the 'do block
                 ctx,
                 exprForm));
     }

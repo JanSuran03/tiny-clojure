@@ -59,7 +59,7 @@ llvm::Function *FunctionOverload::compile(CompilerContext &ctx, const Captures &
     }
 
     // Create a recursion point
-    llvm::BasicBlock *recursion_point = ctx.createBasicBlock("recursion_point");
+    llvm::BasicBlock *recursion_point = ctx.createBasicBlock("fn_recursion_point");
     ctx.m_IRBuilder.CreateBr(recursion_point);
     ctx.m_IRBuilder.SetInsertPoint(recursion_point);
     ctx.m_LoopLabels.emplace_back(recursion_point, std::move(loop_variable_storages));
@@ -155,7 +155,7 @@ FunctionOverload FunctionOverload::parse(CompilerContext &ctx, const Object *for
         const Object *expr = tc_list_first(form);
         body.emplace_back(SemanticAnalyzer::analyze(
                 // discard return value of all but the last expression in the function body
-                is_last ? ExpressionMode::RETURN : ExpressionMode::STATEMENT, ctx, expr));
+                is_last ? ExpressionMode::TAIL : ExpressionMode::DISCARD, ctx, expr));
     }
 
     ctx.m_NumRecurArgs = old_num_recur_args;

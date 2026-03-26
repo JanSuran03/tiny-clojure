@@ -11,12 +11,15 @@
 
 (defn defmacro (name args & body)
   (list 'do
-        (cons 'defn (cons name (cons args body)))
+        (list* 'defn name args body)
         (list 'set-macro! (list 'var name))))
 (set-macro! (var defmacro))
 
 (defmacro let (bindings & body)
-  (cons 'let* (cons bindings body)))
+  (list* 'let* bindings body))
+
+(defmacro loop (bindings & body)
+  (list* 'loop* bindings body))
 
 (defn identity (x)
   x)
@@ -117,8 +120,50 @@
    (let* (quot1 (builtin_binary_div x y))
      (reduce / (cons quot1 more)))))
 
-; todo
-(def print builtin_unary_print)
+(defn <
+  ((x) true)
+  ((x y) (builtin_binary_lt x y))
+  ((x y & more)
+   (if (builtin_binary_lt x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (builtin_binary_lt y (first more)))
+     false)))
+
+(defn <=
+  ((x) true)
+  ((x y) (builtin_binary_lte x y))
+  ((x y & more)
+   (if (builtin_binary_lte x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (builtin_binary_lte y (first more)))
+     false)))
+
+(defn reverse (lst)
+  (reduce cons () lst))
+
+; well... it works, right?
+(defn > (& args)
+  (apply < (reverse args)))
+
+(defn >= (& args)
+  (apply <= (reverse args)))
+
+(defn print
+  (())
+  ((x) (builtin_unary_print x))
+  ((x & more)
+  (builtin_unary_print x)
+   (loop (xs more)
+     (when (seq xs)
+       (builtin_unary_print " ")
+       (builtin_unary_print (first xs))
+       (recur (next xs))))))
+
+(defn println (& args)
+  (apply print args)
+  (builtin_unary_print "\n"))
 
 (defn =
   ((x) true)
@@ -143,10 +188,6 @@
   (if (= x 0)
     true
     (= x 0.0)))
-
-(defn println (x)
-  (print x)
-  (print "\n"))
 
 (defn nil? (x)
   (identical? x nil))
@@ -195,8 +236,17 @@
 (defmacro time (& body)
   `(let (start# (epoch-nanos)
          ret# (do ~@body))
-     (println (str "Elapsed: " (/ (double (- (epoch-nanos) start#)) 1000000) " ms"))
+     (println "Elapsed: " (/ (double (- (epoch-nanos) start#)) 1000000) " ms")
      ret#))
+
+(defmacro dotimes (bindings & body)
+  (let (iter-var (first bindings)
+        n (second bindings))
+    `(let (n# (long ~n))
+       (loop (~iter-var 0)
+         (when (< ~iter-var n#)
+           ~@body
+           (recur (+ ~iter-var 1)))))))
 
 (defmacro if-let
   ((bindings then)
@@ -227,3 +277,23 @@
        (when temp#
          (let (~form temp#)
            ~@body)))))
+
+(defmacro -> (x & forms)
+  (loop (x x forms forms)
+    (if forms
+      (let (form (first forms)
+            threaded (if (list? form)
+                       `(~(first form) ~x ~@(next form))
+                       (list form x)))
+        (recur threaded (next forms)))
+      x)))
+
+(defmacro ->> (x & forms)
+  (loop (x x forms forms)
+    (if forms
+      (let (form (first forms)
+            threaded (if (list? form)
+                       `(~(first form) ~@(next form) ~x)
+                       (list form x)))
+        (recur threaded (next forms)))
+      x)))

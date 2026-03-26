@@ -84,7 +84,7 @@ AExpr IfExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *for
     if (form == nullptr) {
         throw std::runtime_error("if requires a condition expression");
     }
-    auto condExpr = SemanticAnalyzer::analyze(ExpressionMode::EXPRESSION, ctx, tc_list_first(form));
+    auto condExpr = SemanticAnalyzer::analyze(ExpressionMode::EXPR, ctx, tc_list_first(form));
     form = tc_list_next(form);
     if (form == nullptr) {
         throw std::runtime_error("if requires a then expression");

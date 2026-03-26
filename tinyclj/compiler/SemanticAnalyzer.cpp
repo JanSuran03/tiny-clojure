@@ -36,6 +36,7 @@ std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
         {"do",    BodyExpr::parse},
         {"quote", QuotedExpr::parse},
         {"let*",  LetExpr::parse},
+        {"loop*",  LetExpr::parse},
         {"fn*",   FunctionExpr::parse},
         {"recur", RecurExpr::parse},
         {"var",   VarLiteralExpr::parse}
@@ -87,7 +88,7 @@ AExpr resolveSymbol(CompilerContext &ctx, const Object *form) {
 }
 
 AExpr SemanticAnalyzer::analyze(CompilerContext &ctx, const Object *form) {
-    return analyze(ExpressionMode::EXPRESSION, ctx, form);
+    return analyze(ExpressionMode::EXPR, ctx, form);
 }
 
 Object *SemanticAnalyzer::macroexpand1(Runtime &rt, const Object *form) {

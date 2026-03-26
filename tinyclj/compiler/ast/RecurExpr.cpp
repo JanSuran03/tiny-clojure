@@ -17,7 +17,7 @@ void RecurExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
 RecurExpr::RecurExpr(std::vector<AExpr> recurArgs) : m_RecurArgs(std::move(recurArgs)) {}
 
 AExpr RecurExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
-    if (mode != ExpressionMode::RETURN) {
+    if (mode != ExpressionMode::TAIL) {
         throw std::runtime_error("recur can only be used in tail position");
     }
     std::vector<AExpr> recurArgs;
@@ -30,7 +30,7 @@ AExpr RecurExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *
 
     while (form) {
         const Object *arg = tc_list_first(form);
-        recurArgs.push_back(SemanticAnalyzer::analyze(ExpressionMode::EXPRESSION, ctx, arg));
+        recurArgs.push_back(SemanticAnalyzer::analyze(ExpressionMode::EXPR, ctx, arg));
         form = tc_list_next(form);
     }
     return std::make_unique<RecurExpr>(std::move(recurArgs));
