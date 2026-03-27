@@ -279,9 +279,29 @@ Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
                 std::cout << ')';
                 break;
             }
-            case ObjectType::CHARACTER:
-                std::cout << '\\' << static_cast<TCChar *>(a->m_Data)->m_Value;
+            case ObjectType::CHARACTER: {
+                char c = static_cast<TCChar *>(a->m_Data)->m_Value;
+                switch (c) {
+                    case '\n':
+                        std::cout << "\\newline";
+                        break;
+                    case ' ':
+                        std::cout << "\\space";
+                        break;
+                    case '\t':
+                        std::cout << "\\tab";
+                        break;
+                    case '\r':
+                        std::cout << "\\return";
+                        break;
+                    case '\b':
+                        std::cout << "\\backspace";
+                        break;
+                    default:
+                        std::cout << '\\' << c;
+                }
                 break;
+            }
             case ObjectType::FUNCTION:
                 std::cout << "Function '"
                           << static_cast<TCFunction *>(a->m_Data)->m_Name

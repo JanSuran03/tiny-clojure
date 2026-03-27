@@ -177,6 +177,28 @@ const Object *read_symbol(BufferedReader &rdr) {
     }
 }
 
+const Object *read_character(BufferedReader &rdr) {
+    rdr.read(); // consume '\\'
+    std::string token = readToken(rdr);
+    if (token.empty()) {
+        throw std::runtime_error("Error: Expected character literal after '\\'");
+    } else if (token.size() == 1) {
+        return tc_char_new(token[0]);
+    } else if (token == "newline") {
+        return tc_char_new('\n');
+    } else if (token == "space") {
+        return tc_char_new(' ');
+    } else if (token == "tab") {
+        return tc_char_new('\t');
+    } else if (token == "return") {
+        return tc_char_new('\r');
+    } else if (token == "backspace") {
+        return tc_char_new('\b');
+    } else {
+        throw std::runtime_error("Error: Invalid character literal: " + token);
+    }
+}
+
 bool is_symbol_char(char c) {
     // todo: for now, allow '/' in all symbols
     // todo: '#' maybe should not appear as the first character
@@ -373,6 +395,8 @@ const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env) {
         } else {
             return read_symbol(rdr);
         }
+    } else if (c == '\\') {
+        return read_character(rdr);
     } else if (is_symbol_char((char) c)) {
         return read_symbol(rdr);
     } else {

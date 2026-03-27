@@ -7,8 +7,8 @@ llvm::Value *CharExpr::emitConstantValue(CompilerContext &ctx) const {
     if (!func) {
         // declare the function
         llvm::FunctionType *funcType = llvm::FunctionType::get(
-            llvm::Type::getInt8PtrTy(ctx.m_LLVMContext), // return type: i8*
-            {llvm::Type::getInt8Ty(ctx.m_LLVMContext)}, // parameter type: i8
+            ctx.pointerType(), // return type: Object*
+            {llvm::Type::getInt8Ty(ctx.m_LLVMContext)}, // parameter type: i8 (char)
             false // isVarArg
         );
         func = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "tc_char_new", ctx.m_Module);

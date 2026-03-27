@@ -141,7 +141,10 @@
      false)))
 
 (defn reverse (lst)
-  (reduce cons () lst))
+  (reduce (fn (acc x)
+            (cons x acc))
+    ()
+    lst))
 
 ; well... it works, right?
 (defn > (& args)
@@ -157,13 +160,13 @@
   (builtin_unary_print x)
    (loop (xs more)
      (when (seq xs)
-       (builtin_unary_print " ")
+       (builtin_unary_print " ") ; TODO : edn vs string: \space
        (builtin_unary_print (first xs))
        (recur (next xs))))))
 
 (defn println (& args)
   (apply print args)
-  (builtin_unary_print "\n"))
+  (builtin_unary_print "\n")) ; TODO : edn vs string: \newline
 
 (defn =
   ((x) true)
@@ -297,3 +300,10 @@
                        (list form x)))
         (recur threaded (next forms)))
       x)))
+
+; recursively macroexpands all subforms, not just the top-level form
+(defn macroexpand-all (form)
+  (let (expanded (macroexpand form))
+    (if (list? expanded)
+      (map macroexpand-all expanded)
+      expanded)))

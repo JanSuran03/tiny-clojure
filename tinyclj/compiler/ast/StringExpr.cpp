@@ -2,7 +2,7 @@
 #include "types/TCString.h"
 
 llvm::Value *StringExpr::emitConstantValue(CompilerContext &ctx) const {
-    // call a linked function "tc_integer_new" with m_Value
+    // call a linked function "tc_string_new" with m_Value
     llvm::Function *func = ctx.m_Module.getFunction("tc_string_new");
     if (!func) {
         // declare the function

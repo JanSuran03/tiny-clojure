@@ -97,7 +97,6 @@ const Object *tc_list_length(const Object *list) {
 }
 
 const Object *tc_list_from_array(size_t len, const Object **arr) {
-    // todo: is this necessary?
     const Object *ret = empty_list();
     for (ssize_t i = ((ssize_t) len) - 1; i >= 0; i--) {
         ret = tc_list_cons(arr[i], ret);
