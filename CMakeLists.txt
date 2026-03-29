@@ -11,12 +11,15 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 add_definitions(${LLVM_DEFINITIONS})
 
 add_library(tinyclj_lib SHARED
-        tinyclj/compiler/CompilerContext.cpp
+        tinyclj/compiler/AnalyzerContext.cpp
+        tinyclj/compiler/CodegenContext.cpp
         tinyclj/compiler/CompilerUtils.cpp
-        #tinyclj/compiler/IRGenContext.cpp
         tinyclj/compiler/ast/BodyExpr.cpp
         tinyclj/compiler/ast/BooleanExpr.cpp
-        tinyclj/compiler/ast/CapturedBindingExpr.cpp
+        tinyclj/compiler/ast/local-binding/CapturedLocalExpr.cpp
+        tinyclj/compiler/ast/local-binding/FnArgExpr.cpp
+        tinyclj/compiler/ast/local-binding/LocalBindingExpr.cpp
+        tinyclj/compiler/ast/local-binding/LocalVarExpr.cpp
         tinyclj/compiler/ast/CharExpr.cpp
         tinyclj/compiler/ast/ConstantExpr.cpp
         tinyclj/compiler/ast/DefExpr.cpp
@@ -27,11 +30,9 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/ast/IntegerExpr.cpp
         tinyclj/compiler/ast/InvokeExpr.cpp
         tinyclj/compiler/ast/LetExpr.cpp
-        tinyclj/compiler/ast/LocalBindingExpr.cpp
         tinyclj/compiler/ast/NilExpr.cpp
         tinyclj/compiler/ast/QuotedExpr.cpp
         tinyclj/compiler/ast/RecurExpr.cpp
-        tinyclj/compiler/ast/ScopedLocalBindingExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarDerefExpr.cpp

@@ -11,15 +11,15 @@ DefExpr::DefExpr(Object *var, AExpr value)
         : m_Var(var),
           m_Value(std::move(value)) {}
 
-void DefExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void DefExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     using namespace llvm;
 
     // emit a call to tc_var_bind_root with the variable and the value
     FunctionType *bind_var_fn_type = FunctionType::get(
-            Type::getVoidTy(ctx.m_LLVMContext),
+            Type::getVoidTy(*ctx.m_LLVMContext),
             {ctx.pointerType(), ctx.pointerType()},
             false);
-    FunctionCallee bind_var_fn = ctx.m_Module.getOrInsertFunction("tc_var_bind_root", bind_var_fn_type);
+    FunctionCallee bind_var_fn = ctx.m_Module->getOrInsertFunction("tc_var_bind_root", bind_var_fn_type);
 
     llvm::AllocaInst *def_value_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, "def_result");
     m_Value->emitIR(def_value_alloca, ctx);
@@ -37,7 +37,7 @@ Object *DefExpr::eval(Runtime &runtime) const {
     return m_Var;
 }
 
-AExpr DefExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+AExpr DefExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     TCList *list = static_cast<TCList *>(form->m_Data);
 
     // no declaration possible: need form (def name value)
@@ -58,7 +58,7 @@ AExpr DefExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *fo
 
             // allow recursive use (uninitialized = always nullptr)
             auto var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
-            auto var = ctx.m_RuntimeRef.declareVar(var_name);
+            auto var = Runtime::getInstance().declareVar(var_name);
             AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init);
 
             return std::make_unique<DefExpr>(var, std::move(init_expr));

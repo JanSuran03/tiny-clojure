@@ -2,6 +2,8 @@
 #include <optional>
 #include <utility>
 
+#include "local-binding/CapturedLocalExpr.h"
+#include "compiler/CodegenContext.h"
 #include "compiler/CompilerUtils.h"
 #include "FunctionExpr.h"
 #include "runtime/Runtime.h"
@@ -26,7 +28,7 @@ std::string ambiguousOverload(const std::string &fn_name, size_t variadic_fixed_
            std::to_string(other_fixed_argcnt) + " fixed arguments";
 }
 
-AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+AExpr FunctionExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     bool is_eval_wrapper = strcmp(static_cast<const TCSymbol *>(tc_list_first(form)->m_Data)->m_Name,
                                   "__eval_fn_wrapper") == 0;
     const Object *original_form = form;
@@ -42,7 +44,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
         form = tc_list_next(form); // consume the name if it's present
         name = tc_symbol_valueX(name_sym);
     } else {
-        name = "fn__" + std::to_string(ctx.nextId());
+        name = "fn__" + std::to_string(Runtime::getInstance().nextId());
     }
 
     // (arglist & body) or ((arglist & body) (arglist2 & body2) ...)
@@ -67,7 +69,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
     // create a new capture scope for the function - since the environment is shared across
     // overloads, the capture scope needs to be created before parsing the overloads
     // and the capture scope is the union of the captures from all overloads
-    ctx.m_CaptureStack.emplace_back();
+    ctx.m_CapturesMappingStack.emplace_back();
     // if there exists a variadic overload with m_Args = N (i.e. N-1 fixed args), then there can exist
     // a (non-variadic) overload with m_Args <= N-1 (i.e. m_Args < N)
     std::unordered_map<size_t, FunctionOverload> overloads;
@@ -107,15 +109,16 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
         throw std::runtime_error("A function must have at least one overload");
     }
 
-    auto captures = std::move(ctx.m_CaptureStack.back());
-    ctx.m_CaptureStack.pop_back();
+    auto captures = std::move(ctx.m_CapturesMappingStack.back());
+    ctx.m_CapturesMappingStack.pop_back();
 
-    auto fn_expr = std::make_unique<FunctionExpr>(name,
-                                                  std::move(overloads),
-                                                  std::move(variadic_overload),
-                                                  std::move(captures));
+    auto fn_expr = std::make_unique<FunctionExpr>(
+            name,
+            std::move(overloads),
+            std::move(variadic_overload),
+            std::move(captures));
 
-    fn_expr->compile(ctx);
+    fn_expr->compile(ctx.m_CodegenContext);
 
     return fn_expr;
 }
@@ -124,22 +127,22 @@ AExpr FunctionExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Objec
  * case of a closure) and creates a stub function that has a consistent signature and can be called at runtime:
  * stub_fn(Object *self, size_t argcnt, Object **argv)
  */
-void FunctionExpr::compile(CompilerContext &ctx) const {
+void FunctionExpr::compile(CodegenContext &ctx) const {
     using namespace llvm;
 
-    FunctionType *printf_type = FunctionType::get(Type::getInt32Ty(ctx.m_LLVMContext),
-                                                  {Type::getInt8PtrTy(ctx.m_LLVMContext)}, true);
-    FunctionCallee printf_func = ctx.m_Module.getOrInsertFunction("printf", printf_type);
-    FunctionType *exit_type = FunctionType::get(Type::getVoidTy(ctx.m_LLVMContext),
-                                                {Type::getInt32Ty(ctx.m_LLVMContext)}, false);
-    FunctionCallee exit_func = ctx.m_Module.getOrInsertFunction("exit", exit_type);
+    FunctionType *printf_type = FunctionType::get(Type::getInt32Ty(*ctx.m_LLVMContext),
+                                                  {Type::getInt8PtrTy(*ctx.m_LLVMContext)}, true);
+    FunctionCallee printf_func = ctx.m_Module->getOrInsertFunction("printf", printf_type);
+    FunctionType *exit_type = FunctionType::get(Type::getVoidTy(*ctx.m_LLVMContext),
+                                                {Type::getInt32Ty(*ctx.m_LLVMContext)}, false);
+    FunctionCallee exit_func = ctx.m_Module->getOrInsertFunction("exit", exit_type);
     FunctionType *tc_closure_get_envX_type = FunctionType::get(ctx.pointerType(),
                                                                {ctx.pointerType()}, false);
-    FunctionCallee tc_closure_get_envX_func = ctx.m_Module.getOrInsertFunction("tc_closure_get_envX",
-                                                                               tc_closure_get_envX_type);
+    FunctionCallee tc_closure_get_envX_func = ctx.m_Module->getOrInsertFunction("tc_closure_get_envX",
+                                                                                tc_closure_get_envX_type);
 
     auto arglist_type = ctx.pointerArrayType(); // array of Object *
-    auto argcnt_type = Type::getInt64Ty(ctx.m_LLVMContext);
+    auto argcnt_type = Type::getInt64Ty(*ctx.m_LLVMContext);
     auto return_type = ctx.pointerType();
     // the stub type is Object *stub(Object *self, size_t llvm_argcnt, Object **argv)
     FunctionType *stub_type = llvm::FunctionType::get(return_type, {ctx.pointerType(),
@@ -148,7 +151,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
     Function *stub_fn = llvm::Function::Create(stub_type,
                                                llvm::Function::ExternalLinkage,
                                                m_StubName,
-                                               ctx.m_Module);
+                                               *ctx.m_Module);
     Argument *self_arg = stub_fn->getArg(0);
     self_arg->setName("self");
     Argument *argc_arg = stub_fn->getArg(1);
@@ -245,7 +248,7 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
                                                              "extra_arglist_ptr");
         FunctionType *list_from_array_fn_type = FunctionType::get(ctx.pointerType(),
                                                                   {argcnt_type, arglist_type}, false);
-        FunctionCallee list_from_array_fn = ctx.m_Module.getOrInsertFunction(
+        FunctionCallee list_from_array_fn = ctx.m_Module->getOrInsertFunction(
                 "tc_list_from_array", list_from_array_fn_type);
         Value *varargs_list = ctx.m_IRBuilder.CreateCall(
                 list_from_array_fn,
@@ -276,13 +279,13 @@ void FunctionExpr::compile(CompilerContext &ctx) const {
     Value *wrong_argcnt_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(wrong_argcnt_fmt);
     Value *fn_name_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Name);
     ctx.m_IRBuilder.CreateCall(printf_func, {wrong_argcnt_msg, argc_arg, fn_name_msg});
-    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(ctx.m_LLVMContext), 1)});
+    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
     ctx.m_IRBuilder.CreateUnreachable();
 
     ctx.m_CurrentFunction = prev_function;
 }
 
-void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void FunctionExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     using namespace llvm;
     // For simple functions (without captures), the compiler needs to emit instructions to create a function object
     // that points to the stub and store it into dst
@@ -290,7 +293,7 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     // For closures, the compiler needs to emit instructions to create an environment struct from the captured
     // variables, then create a closure object that points to the stub and store it into dst
 
-    llvm::Function *stub_fn = ctx.m_Module.getFunction(m_StubName);
+    llvm::Function *stub_fn = ctx.m_Module->getFunction(m_StubName);
     if (!stub_fn) {
         throw std::runtime_error("Cannot find the stub function for " + m_Name);
     }
@@ -298,29 +301,29 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     // Object *stub_fn(Object *self, size_t arg, Object **argv)
     FunctionType *call_fn_type = FunctionType::get(
             ctx.pointerType(),
-            {ctx.pointerType(), Type::getInt64Ty(ctx.m_LLVMContext), ctx.pointerArrayType()},
+            {ctx.pointerType(), Type::getInt64Ty(*ctx.m_LLVMContext), ctx.pointerArrayType()},
             false);
 
     if (isClosure()) {
         // allocate the closure environment struct on the heap (the env struct is an array of Object *)
         FunctionType *allocate_env_fn_type = FunctionType::get(
                 ctx.pointerType(),
-                {Type::getInt64Ty(ctx.m_LLVMContext)}, false);
-        FunctionCallee allocate_env_fn = ctx.m_Module.getOrInsertFunction("tc_closure_allocate_env",
-                                                                          allocate_env_fn_type);
+                {Type::getInt64Ty(*ctx.m_LLVMContext)}, false);
+        FunctionCallee allocate_env_fn = ctx.m_Module->getOrInsertFunction("tc_closure_allocate_env",
+                                                                           allocate_env_fn_type);
         FunctionType *closure_new_fn_type = FunctionType::get(
                 ctx.pointerType(),
                 // CallFn callStub, Object **env, size_t numCaptures
-                {PointerType::get(call_fn_type, 0), ctx.pointerType(), Type::getInt64Ty(ctx.m_LLVMContext)},
+                {PointerType::get(call_fn_type, 0), ctx.pointerType(), Type::getInt64Ty(*ctx.m_LLVMContext)},
                 false);
-        FunctionCallee closure_new_fn = ctx.m_Module.getOrInsertFunction("tc_closure_new", closure_new_fn_type);
-        Value *num_captures_val = ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), m_Captures.size(), false);
+        FunctionCallee closure_new_fn = ctx.m_Module->getOrInsertFunction("tc_closure_new", closure_new_fn_type);
+        Value *num_captures_val = ConstantInt::get(Type::getInt64Ty(*ctx.m_LLVMContext), m_Captures.size(), false);
         Value *env_struct_ptr = ctx.m_IRBuilder.CreateCall(
                 allocate_env_fn,
-                {ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), m_Captures.size(), false)},
+                {ConstantInt::get(Type::getInt64Ty(*ctx.m_LLVMContext), m_Captures.size(), false)},
                 "closure_env");
         // store captured variables into the env struct
-        for (const auto &[var_name, index]: m_Captures) {
+        for (const auto &[var_name, captured_local_expr]: m_Captures) {
             if (auto it = ctx.m_VariableMap.find(var_name); it != ctx.m_VariableMap.end()) {
                 AllocaInst *captured_var_alloca = it->second;
                 Value *captured_var_value = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(),
@@ -329,7 +332,9 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
                 Value *env_slot_ptr = ctx.m_IRBuilder.CreateGEP(
                         ctx.pointerType(),
                         env_struct_ptr,
-                        ConstantInt::get(Type::getInt64Ty(ctx.m_LLVMContext), index, false),
+                        ConstantInt::get(Type::getInt64Ty(*ctx.m_LLVMContext),
+                                         captured_local_expr.getClosureEnvIndex(),
+                                         false),
                         var_name + "_env_slot_ptr");
                 ctx.m_IRBuilder.CreateStore(captured_var_value, env_slot_ptr);
             }
@@ -346,9 +351,9 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
         // create the function object with the stub pointer
         FunctionType *function_new_fn_type = FunctionType::get(
                 ctx.pointerType(),
-                {PointerType::get(call_fn_type, 0), Type::getInt8PtrTy(ctx.m_LLVMContext)},
+                {PointerType::get(call_fn_type, 0), Type::getInt8PtrTy(*ctx.m_LLVMContext)},
                 false);
-        FunctionCallee function_new_fn = ctx.m_Module.getOrInsertFunction("tc_function_new", function_new_fn_type);
+        FunctionCallee function_new_fn = ctx.m_Module->getOrInsertFunction("tc_function_new", function_new_fn_type);
         Constant *fn_name_const = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Name, "fn_name");
         Value *function_obj = ctx.m_IRBuilder.CreateCall(function_new_fn, {stub_fn, fn_name_const}, "function_obj");
         if (dst != nullptr) {

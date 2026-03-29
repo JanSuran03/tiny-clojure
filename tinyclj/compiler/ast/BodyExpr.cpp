@@ -6,7 +6,7 @@
 BodyExpr::BodyExpr(std::vector<AExpr> exprs)
         : m_Exprs(std::move(exprs)) {}
 
-void BodyExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void BodyExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     CompilerUtils::emitBody(m_Exprs, "do", dst, ctx);
 }
 
@@ -18,7 +18,7 @@ Object *BodyExpr::eval(Runtime &runtime) const {
     return result;
 }
 
-AExpr BodyExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+AExpr BodyExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     form = tc_list_next(form); // consume 'do
     std::vector<AExpr> exprs;
     for (const Object *lst = tc_list_seq(form); lst; lst = tc_list_next(lst)) {

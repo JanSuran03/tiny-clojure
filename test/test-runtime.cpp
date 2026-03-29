@@ -61,7 +61,6 @@ int main() {
     llvm::InitializeNativeTargetAsmParser();
 
     Runtime &runtime = Runtime::getInstance();
-    runtime.init();
 
     test("test eval",
          [&runtime](const std::string &input,

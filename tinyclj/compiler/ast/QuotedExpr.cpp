@@ -3,7 +3,7 @@
 #include "runtime/Runtime.h"
 #include "types/TCList.h"
 
-void QuotedExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void QuotedExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     if (dst) {
         llvm::Value *llvm_val = CompilerUtils::emitObjectPtr(const_cast<Object *>(m_QuotedValue), ctx);
         ctx.m_IRBuilder.CreateStore(llvm_val, dst);
@@ -19,7 +19,7 @@ QuotedExpr::QuotedExpr(const Object *quotedValue) : m_QuotedValue(quotedValue) {
     Runtime::getInstance().registerConstant(quotedValue);
 }
 
-AExpr QuotedExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+AExpr QuotedExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     form = tc_list_next(form);
     if (!form) {
         throw std::runtime_error("quote requires an argument");

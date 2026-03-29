@@ -8,8 +8,8 @@ namespace CompilerUtils {
     void emitBody(const std::vector<AExpr> &body,
                   const std::string &bodyPrefix,
                   llvm::AllocaInst *dst,
-                  CompilerContext &ctx);
+                  CodegenContext &ctx);
 
     /** Emits a constant pointer to the given object as an LLVM value. */
-    llvm::Value *emitObjectPtr(Object *obj, CompilerContext &ctx);
+    llvm::Value *emitObjectPtr(Object *obj, CodegenContext &ctx);
 }

@@ -3,23 +3,23 @@
 #include "runtime/rt.h"
 #include "types/TCList.h"
 
-void InvokeExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void InvokeExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     using namespace llvm;
 
     // printf and exit for error handling in the stub
-    FunctionType *printf_type = FunctionType::get(Type::getInt32Ty(ctx.m_LLVMContext),
-                                                  {Type::getInt8PtrTy(ctx.m_LLVMContext)}, true);
-    FunctionCallee printf_func = ctx.m_Module.getOrInsertFunction("printf", printf_type);
-    FunctionType *exit_type = FunctionType::get(Type::getVoidTy(ctx.m_LLVMContext),
-                                                {Type::getInt32Ty(ctx.m_LLVMContext)}, false);
-    FunctionCallee exit_func = ctx.m_Module.getOrInsertFunction("exit", exit_type);
+    FunctionType *printf_type = FunctionType::get(Type::getInt32Ty(*ctx.m_LLVMContext),
+                                                  {Type::getInt8PtrTy(*ctx.m_LLVMContext)}, true);
+    FunctionCallee printf_func = ctx.m_Module->getOrInsertFunction("printf", printf_type);
+    FunctionType *exit_type = FunctionType::get(Type::getVoidTy(*ctx.m_LLVMContext),
+                                                {Type::getInt32Ty(*ctx.m_LLVMContext)}, false);
+    FunctionCallee exit_func = ctx.m_Module->getOrInsertFunction("exit", exit_type);
     // call fn getter
-    Type *sizeTy = ctx.m_IRBuilder.getIntPtrTy(ctx.m_Module.getDataLayout());
+    Type *sizeTy = ctx.m_IRBuilder.getIntPtrTy(ctx.m_Module->getDataLayout());
     Type *objArrayTy = PointerType::get(ctx.pointerType(), 0);
     FunctionType *callfn_getter_type = FunctionType::get(ctx.pointerType(),
                                                          {ctx.pointerType()},
                                                          false);
-    FunctionCallee callfn_getter_func = ctx.m_Module.getOrInsertFunction("tinyclj_object_get_callfn",
+    FunctionCallee callfn_getter_func = ctx.m_Module->getOrInsertFunction("tinyclj_object_get_callfn",
                                                                          callfn_getter_type);
 
     llvm::AllocaInst *target_alloca = ctx.m_IRBuilder.CreateAlloca(
@@ -60,7 +60,7 @@ void InvokeExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     ctx.m_IRBuilder.SetInsertPoint(target_is_null);
     Value *nullptr_msg = ctx.m_IRBuilder.CreateGlobalStringPtr("Error: Attempted to call `nil` at runtime.\n");
     ctx.m_IRBuilder.CreateCall(printf_func, {nullptr_msg});
-    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(ctx.m_LLVMContext), 1)});
+    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
     ctx.m_IRBuilder.CreateUnreachable();
 
     // fn != null => check whether fn is invokable
@@ -78,7 +78,7 @@ void InvokeExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
     Value *not_callable_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(
             "Error: Attempted to call a non-callable object at runtime.\n");
     ctx.m_IRBuilder.CreateCall(printf_func, {not_callable_msg});
-    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(ctx.m_LLVMContext), 1)});
+    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
     ctx.m_IRBuilder.CreateUnreachable();
 
     // invoke the native function pointer
@@ -134,7 +134,7 @@ InvokeExpr::InvokeExpr(AExpr invokeTarget,
         : m_InvokeTarget(std::move(invokeTarget)),
           m_InvokeArgs(std::move(invokeArgs)) {}
 
-AExpr InvokeExpr::parse(ExpressionMode _, CompilerContext &ctx, const Object *form) {
+AExpr InvokeExpr::parse(ExpressionMode _, AnalyzerContext &ctx, const Object *form) {
     AExpr invokeTarget = SemanticAnalyzer::analyze(ctx, tc_list_first(form));
     std::vector<AExpr> invokeArgs;
     for (const Object *args = tc_list_next(form); args; args = tc_list_next(args)) {

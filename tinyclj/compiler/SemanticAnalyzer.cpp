@@ -2,7 +2,7 @@
 
 #include "compiler/ast/BodyExpr.h"
 #include "compiler/ast/BooleanExpr.h"
-#include "compiler/ast/CapturedBindingExpr.h"
+#include "compiler/ast/local-binding/CapturedLocalExpr.h"
 #include "compiler/ast/CharExpr.h"
 #include "compiler/ast/DefExpr.h"
 #include "compiler/ast/DoubleExpr.h"
@@ -14,7 +14,6 @@
 #include "compiler/ast/NilExpr.h"
 #include "compiler/ast/QuotedExpr.h"
 #include "compiler/ast/RecurExpr.h"
-#include "compiler/ast/ScopedLocalBindingExpr.h"
 #include "compiler/ast/StringExpr.h"
 #include "compiler/ast/VarDerefExpr.h"
 #include "compiler/ast/VarLiteralExpr.h"
@@ -28,19 +27,19 @@
 #include "types/TCString.h"
 #include "types/TCSymbol.h"
 
-using AnalyzerFn = AExpr (*)(ExpressionMode mode, CompilerContext &ctx, const Object *form);
+using AnalyzerFn = AExpr (*)(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 
 std::unordered_map<std::string, AnalyzerFn> m_SpecialAnalyzers = {
-        {"def",   DefExpr::parse},
-        {"if",    IfExpr::parse},
-        {"do",    BodyExpr::parse},
-        {"quote", QuotedExpr::parse},
-        {"let*",  LetExpr::parse},
-        {"loop*",  LetExpr::parse},
-        {"fn*",   FunctionExpr::parse},
+        {"def",               DefExpr::parse},
+        {"if",                IfExpr::parse},
+        {"do",                BodyExpr::parse},
+        {"quote",             QuotedExpr::parse},
+        {"let*",              LetExpr::parse},
+        {"loop*",             LetExpr::parse},
+        {"fn*",               FunctionExpr::parse},
         {"__eval_fn_wrapper", FunctionExpr::parse},
-        {"recur", RecurExpr::parse},
-        {"var",   VarLiteralExpr::parse}
+        {"recur",             RecurExpr::parse},
+        {"var",               VarLiteralExpr::parse}
 };
 
 bool SemanticAnalyzer::isSpecial(const Object *obj) {
@@ -49,37 +48,50 @@ bool SemanticAnalyzer::isSpecial(const Object *obj) {
            && m_SpecialAnalyzers.contains(tc_symbol_valueX(obj));
 }
 
-void captureLocalBinding(CompilerContext &ctx, const std::string &name) {
+void captureLocalBinding(AnalyzerContext &ctx, const std::string &name) {
     for (ssize_t i = static_cast<ssize_t>(ctx.m_StackFrameBindings.size()) - 1; i >= 0; i--) {
-        // local var or already captured
-        if (ctx.m_StackFrameBindings[i].contains(name)) {
+        auto &currentFrameBindings = ctx.m_StackFrameBindings[i];
+        auto &currentFrameCapturesMapping = ctx.m_CapturesMappingStack[i];
+        // local var -> return
+        if (currentFrameBindings.contains(name)) {
             return;
         }
-        // capture recursively
-        if (!ctx.m_IsClosureStack[i]) {
-            ctx.m_IsClosureStack[i] = true;
+
+        // Mark the current frame (function overload) as using the capture environment, which means that the parent
+        // function stub needs to pass the environment struct to the function overload at runtime
+        if (!ctx.m_CaptureUsedStack[i]) {
+            ctx.m_CaptureUsedStack[i] = true;
         }
-        if (!ctx.m_CaptureStack[i].contains(name)) {
-            ctx.m_CaptureStack[i].emplace(name, ctx.m_CaptureStack[i].size());
+
+        // capture if not already captured
+        if (!currentFrameCapturesMapping.contains(name)) {
+            // Assign a slot for the captured variable in the current frame's capture mapping
+            unsigned closureEnvIndex = static_cast<unsigned>(currentFrameCapturesMapping.size());
+            currentFrameCapturesMapping.emplace(name, CapturedLocalExpr(name, closureEnvIndex));
+        } else {
+            // already captured -> do nothing
+            return;
         }
     }
 }
 
-AExpr resolveSymbol(CompilerContext &ctx, const Object *form) {
+AExpr resolveSymbol(AnalyzerContext &ctx, const Object *form) {
     std::string name = tc_symbol_valueX(form);
-    // Step 1: Check, whether the symbol is locally bound in the current frame or any parent frame.
-    if (ctx.m_LocalBindings.contains(name)) {
+    // Step 1: Check, whether the symbol is locally bound in the scope
+    if (ctx.m_ScopeBindings.contains(name)) {
         // Recursively capture the local binding in all frames between the current frame
         // and the frame where the local binding is defined
         captureLocalBinding(ctx, name);
-        if (ctx.m_StackFrameBindings.back().contains(name)) {
-            return std::make_unique<ScopedLocalBindingExpr>(name);
+        if (auto local = ctx.currentStackFrameBindings().find(name); local != ctx.currentStackFrameBindings().end()) {
+            // Available as a local variable in the current frame -> resolve as a local variable (or a fn arg)
+            return local->second->clone();
         } else {
-            return std::make_unique<CapturedBindingExpr>(name, ctx.m_CaptureStack.back().at(name));
+            // Available as a captured variable in the current frame -> resolve as a captured variable
+            return ctx.currentCapturesMappings().at(name).clone();
         }
     }
     // Step 2: Try global vars
-    if (Object *var = ctx.m_RuntimeRef.getVar(name)) {
+    if (Object *var = Runtime::getInstance().getVar(name)) {
         if (static_cast<TCVar *>(var->m_Data)->m_IsMacro) {
             throw std::runtime_error(std::string("Cannot take value of a macro: #'").append(name));
         }
@@ -88,7 +100,7 @@ AExpr resolveSymbol(CompilerContext &ctx, const Object *form) {
     throw std::runtime_error(std::string("Cannot resolve symbol: ").append(name).append(" in the context"));
 }
 
-AExpr SemanticAnalyzer::analyze(CompilerContext &ctx, const Object *form) {
+AExpr SemanticAnalyzer::analyze(AnalyzerContext &ctx, const Object *form) {
     return analyze(ExpressionMode::EXPR, ctx, form);
 }
 
@@ -133,8 +145,8 @@ Object *SemanticAnalyzer::macroexpand(Runtime &rt, const Object *form) {
     return const_cast<Object *>(form);
 }
 
-AExpr SemanticAnalyzer::analyze(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
-    form = macroexpand(ctx.m_RuntimeRef, form);
+AExpr SemanticAnalyzer::analyze(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
+    form = macroexpand(Runtime::getInstance(), form);
     if (form == nullptr) {
         return std::make_unique<NilExpr>();
     }

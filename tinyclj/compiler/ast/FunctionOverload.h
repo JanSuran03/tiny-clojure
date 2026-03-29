@@ -1,23 +1,25 @@
 #pragma once
 
 #include "UnevaluatableExpr.h"
+#include "compiler/AnalyzerContext.h"
+#include "local-binding/FnArgExpr.h"
 
 class FunctionOverload {
-    using Captures = std::unordered_map<std::string, int>;
-    std::vector<std::string> m_Args;
+    std::vector<FnArgExpr> m_Args;
     bool m_IsVariadic;
     bool m_UsesClosureEnv;
+    Captures m_Captures;
     std::vector<AExpr> m_Body;
 
-    llvm::Function *compile(CompilerContext &ctx, const Captures &captures) const;
+    llvm::Function *compile(CodegenContext &ctx, const Captures &captures) const;
 
 public:
     friend class FunctionExpr;
 
-    FunctionOverload(std::vector<std::string> args,
+    FunctionOverload(std::vector<FnArgExpr> args,
                      bool isVariadic,
                      bool usesClosureEnv,
                      std::vector<AExpr> body);
 
-    static FunctionOverload parse(CompilerContext &ctx, const Object *form, bool is_eval_wrapper);
+    static FunctionOverload parse(AnalyzerContext &ctx, const Object *form, bool is_eval_wrapper);
 };

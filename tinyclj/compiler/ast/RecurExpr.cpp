@@ -3,7 +3,7 @@
 #include "types/TCInteger.h"
 #include "types/TCList.h"
 
-void RecurExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void RecurExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     const LoopBase &currentLoop = ctx.m_LoopLabels.back();
     // store recur args into loop variable storages and jump to the loop label
     for (size_t i = 0; i < m_RecurArgs.size(); i++) {
@@ -16,16 +16,17 @@ void RecurExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
 
 RecurExpr::RecurExpr(std::vector<AExpr> recurArgs) : m_RecurArgs(std::move(recurArgs)) {}
 
-AExpr RecurExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+AExpr RecurExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     if (mode != ExpressionMode::TAIL) {
         throw std::runtime_error("recur can only be used in tail position");
     }
+    size_t currentRecurArgCount = ctx.currentRecurArgCount();
     std::vector<AExpr> recurArgs;
     form = tc_list_next(form); // skip 'recur symbol
     tc_int_t len = static_cast<TCInteger *>(tc_list_length(form)->m_Data)->m_Value;
-    if (len != ctx.m_NumRecurArgs) {
+    if (len != currentRecurArgCount) {
         throw std::runtime_error("recur arguments count mismatch - expected "
-                                 + std::to_string(ctx.m_NumRecurArgs) + " but got " + std::to_string(len));
+                                 + std::to_string(currentRecurArgCount) + " but got " + std::to_string(len));
     }
 
     while (form) {

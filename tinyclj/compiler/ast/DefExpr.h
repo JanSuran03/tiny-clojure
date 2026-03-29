@@ -1,5 +1,6 @@
 #pragma once
 
+#include "compiler/AnalyzerContext.h"
 #include "Expr.h"
 
 class DefExpr : public Expr {
@@ -8,9 +9,9 @@ class DefExpr : public Expr {
 public:
     DefExpr(Object *var, AExpr value);
 
-    void emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const override;
+    void emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const override;
 
     Object *eval(Runtime &runtime) const override;
 
-    static AExpr parse(ExpressionMode mode, CompilerContext &ctx, const Object *form);
+    static AExpr parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 };

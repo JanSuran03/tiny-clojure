@@ -1,6 +1,6 @@
 #include "ConstantExpr.h"
 
-void ConstantExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void ConstantExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     if (dst) {
         llvm::Value *value = emitConstantValue(ctx);
         ctx.m_IRBuilder.CreateStore(value, dst);

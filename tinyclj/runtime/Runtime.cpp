@@ -6,7 +6,8 @@
 #include "llvm/Support/TargetSelect.h"
 
 #include "Runtime.h"
-#include "compiler/ast/DefExpr.h"
+#include "compiler/ast/local-binding/CapturedLocalExpr.h"
+#include "compiler/AnalyzerContext.h"
 #include "compiler/SemanticAnalyzer.h"
 #include "reader/LispReader.h"
 #include "runtime/rt.h"
@@ -159,8 +160,6 @@ Object *Runtime::eval(const Object *form) {
     std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("eval_module", *llvm_ctx);
     llvm::IRBuilder<> builder(*llvm_ctx);
 
-    CompilerContext ctx(*this, *llvm_ctx, builder, *module, m_IdCounter);
-
     // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
     // (-> (fn* fn_name [] form))
 
@@ -183,18 +182,10 @@ Object *Runtime::eval(const Object *form) {
     //}
     const Object *new_form = tc_list_create3(tc_symbol_new("__eval_fn_wrapper"), empty_list(), form);
 
-    AExpr expr = SemanticAnalyzer::analyze(ctx, new_form);
+    AnalyzerContext analyzer_ctx;
 
-    if (llvm::verifyModule(ctx.m_Module, &llvm::errs())) {
-        ctx.m_Module.dump();
-        throw std::runtime_error("Module verification failed");
-    }
-
-    llvm::orc::ThreadSafeModule tsm(std::move(module), std::move(llvm_ctx));
-
-    if (auto err = m_JIT->addIRModule(std::move(tsm))) {
-        throw std::runtime_error("Failed to add module to JIT: " + llvm::toString(std::move(err)));
-    }
+    AExpr expr = SemanticAnalyzer::analyze(analyzer_ctx, new_form);
+    analyzer_ctx.m_CodegenContext.linkModule();
 
     const Object *evaled_wrapper_fn = expr->eval(*this);
     return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);

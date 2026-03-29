@@ -5,7 +5,7 @@
 #include "types/TCSymbol.h"
 #include "runtime/Runtime.h"
 
-void VarLiteralExpr::emitIR(llvm::AllocaInst *dst, CompilerContext &ctx) const {
+void VarLiteralExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     using namespace llvm;
     if (dst) {
         // emit the Var's pointer as a literal
@@ -20,7 +20,7 @@ Object *VarLiteralExpr::eval(Runtime &runtime) const {
 
 VarLiteralExpr::VarLiteralExpr(Object *var) : m_Var(var) {}
 
-AExpr VarLiteralExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Object *form) {
+AExpr VarLiteralExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     TCList *list = static_cast<TCList *>(form->m_Data);
     if (list->m_Length != 2) {
         throw std::runtime_error("'var form must be of the form (var name).");
@@ -31,7 +31,7 @@ AExpr VarLiteralExpr::parse(ExpressionMode mode, CompilerContext &ctx, const Obj
         throw std::runtime_error("'var form must take a symbol as an argument.");
     }
     const std::string &var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
-    if (Object *var = ctx.m_RuntimeRef.getVar(var_name)) {
+    if (Object *var = Runtime::getInstance().getVar(var_name)) {
         return std::make_unique<VarLiteralExpr>(var);
     } else {
         throw std::runtime_error(std::string("Cannot resolve var: ").append(var_name).append(" in the context"));
