@@ -1,15 +1,21 @@
 #pragma once
 
-#include "LocalBindingExpr.h"
+#include "BindingExpr.h"
 
-class CapturedLocalExpr : public LocalBindingExpr {
+class CapturedLocalExpr : public BindingExpr {
     unsigned m_ClosureEnvIndex;
+    // for storing the original binding expression into env[m_ClosureEnvIndex] at runtime when the variable is captured
+    std::shared_ptr<BindingExpr> origin;
 public:
     llvm::Value *loadValue(CodegenContext &ctx) const override;
 
-    CapturedLocalExpr(std::string value, unsigned closureEnvIndex);
+    CapturedLocalExpr(std::string value,
+                      unsigned closureEnvIndex,
+                      std::shared_ptr<BindingExpr> origin);
 
     AExpr clone() const override;
 
     unsigned getClosureEnvIndex() const;
+
+    const std::shared_ptr<BindingExpr> &getOrigin() const;
 };

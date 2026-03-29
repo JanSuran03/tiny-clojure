@@ -11,14 +11,20 @@ llvm::Value *CapturedLocalExpr::loadValue(CodegenContext &ctx) const {
 }
 
 CapturedLocalExpr::CapturedLocalExpr(std::string value,
-                                     unsigned closureEnvIndex)
-        : LocalBindingExpr(std::move(value)),
-          m_ClosureEnvIndex(closureEnvIndex) {}
+                                     unsigned closureEnvIndex,
+                                     std::shared_ptr<BindingExpr> origin)
+        : BindingExpr(std::move(value)),
+          m_ClosureEnvIndex(closureEnvIndex),
+          origin(std::move(origin)) {}
 
 AExpr CapturedLocalExpr::clone() const {
-    return std::make_unique<CapturedLocalExpr>(m_Name, m_ClosureEnvIndex);
+    return std::make_unique<CapturedLocalExpr>(m_Name, m_ClosureEnvIndex, origin);
 }
 
 unsigned int CapturedLocalExpr::getClosureEnvIndex() const {
     return m_ClosureEnvIndex;
+}
+
+const std::shared_ptr<BindingExpr> &CapturedLocalExpr::getOrigin() const {
+    return origin;
 }

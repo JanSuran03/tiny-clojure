@@ -6,7 +6,7 @@ std::unordered_map<std::string, CapturedLocalExpr> &AnalyzerContext::currentCapt
     return m_CapturesMappingStack.back();
 }
 
-std::unordered_map<std::string, std::shared_ptr<LocalBindingExpr>> &AnalyzerContext::currentStackFrameBindings() {
+std::unordered_map<std::string, std::shared_ptr<BindingExpr>> &AnalyzerContext::currentStackFrameBindings() {
     return m_StackFrameBindings.back();
 }
 

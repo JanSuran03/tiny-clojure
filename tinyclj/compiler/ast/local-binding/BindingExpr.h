@@ -2,16 +2,15 @@
 
 #include "compiler/ast/UnevaluatableExpr.h"
 
-class LocalBindingExpr : public UnevaluatableExpr {
+class BindingExpr : public UnevaluatableExpr {
 protected:
     std::string m_Name;
-
+public:
     virtual llvm::Value *loadValue(CodegenContext &ctx) const = 0;
 
-public:
     void emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const final;
 
-    LocalBindingExpr(std::string name);
+    BindingExpr(std::string name);
 
     const std::string &name() const;
 

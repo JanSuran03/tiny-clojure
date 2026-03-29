@@ -324,20 +324,16 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
                 "closure_env");
         // store captured variables into the env struct
         for (const auto &[var_name, captured_local_expr]: m_Captures) {
-            if (auto it = ctx.m_VariableMap.find(var_name); it != ctx.m_VariableMap.end()) {
-                AllocaInst *captured_var_alloca = it->second;
-                Value *captured_var_value = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(),
-                                                                       captured_var_alloca,
-                                                                       var_name + "_captured");
-                Value *env_slot_ptr = ctx.m_IRBuilder.CreateGEP(
-                        ctx.pointerType(),
-                        env_struct_ptr,
-                        ConstantInt::get(Type::getInt64Ty(*ctx.m_LLVMContext),
-                                         captured_local_expr.getClosureEnvIndex(),
-                                         false),
-                        var_name + "_env_slot_ptr");
-                ctx.m_IRBuilder.CreateStore(captured_var_value, env_slot_ptr);
-            }
+            auto &origin = captured_local_expr.getOrigin();
+            Value *captured_var_value = origin->loadValue(ctx);
+            Value *env_slot_ptr = ctx.m_IRBuilder.CreateGEP(
+                    ctx.pointerType(),
+                    env_struct_ptr,
+                    ConstantInt::get(Type::getInt64Ty(*ctx.m_LLVMContext),
+                                     captured_local_expr.getClosureEnvIndex(),
+                                     false),
+                    var_name + "_env_slot_ptr");
+            ctx.m_IRBuilder.CreateStore(captured_var_value, env_slot_ptr);
         }
 
         // create the closure object with the stub pointer and env struct pointer

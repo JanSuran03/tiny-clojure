@@ -1,8 +1,8 @@
 #pragma once
 
-#include "LocalBindingExpr.h"
+#include "BindingExpr.h"
 
-class FnArgExpr : public LocalBindingExpr {
+class FnArgExpr : public BindingExpr {
     unsigned m_FunctionDepth;
     unsigned m_ArgIndex;
 public:

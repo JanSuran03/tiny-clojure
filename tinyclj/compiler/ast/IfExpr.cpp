@@ -3,10 +3,14 @@
 #include "types/TCBoolean.h"
 #include "types/TCList.h"
 
-IfExpr::IfExpr(AExpr condExpr, AExpr thenExpr, AExpr elseExpr)
+IfExpr::IfExpr(AExpr condExpr,
+               AExpr thenExpr,
+               AExpr elseExpr,
+               LocalVarExpr condLocalVar)
         : m_CondExpr(std::move(condExpr)),
           m_ThenExpr(std::move(thenExpr)),
-          m_ElseExpr(std::move(elseExpr)) {}
+          m_ElseExpr(std::move(elseExpr)),
+          m_CondLocalVar(std::move(condLocalVar)) {}
 
 void IfExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     using namespace llvm;
@@ -27,7 +31,7 @@ void IfExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     BasicBlock *check_raw_else_block = BasicBlock::Create(*ctx.m_LLVMContext, "check_else", ctx.m_CurrentFunction);
 
     // 1. Evaluate condition
-    AllocaInst *cond_res_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType());
+    AllocaInst *cond_res_alloca = ctx.m_CurrentFunctionLocalAllocas[m_CondLocalVar.getLocalIndex()];
     m_CondExpr->emitIR(cond_res_alloca, ctx);
 
     // 2. If null => jump to else, otherwise check (bool)->value
@@ -80,10 +84,18 @@ Object *IfExpr::eval(Runtime &runtime) const {
 
 AExpr IfExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     form = tc_list_next(form); // consume 'if
-    // TODO: Check the list length instead of checking one by one
+    // TODO: Check the list length instead == 2 instead of checking after each subexpression is parsed
     if (form == nullptr) {
         throw std::runtime_error("if requires a condition expression");
     }
+    // register the condition result as a local variable
+    // otherwise, in case of looping/tail recursion using recur, the variable would be
+    // allocated on the stack multiple times which could even result in stack overflow
+    // TODO: consider using Phi nopes to avoid this shitty solution
+    LocalVarExpr condLocalVar("if_cond_result",
+                              ctx.functionDepth(),
+                              ctx.currentLocalCount()++);
+
     auto condExpr = SemanticAnalyzer::analyze(ExpressionMode::EXPR, ctx, tc_list_first(form));
     form = tc_list_next(form);
     if (form == nullptr) {
@@ -92,5 +104,8 @@ AExpr IfExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *for
     auto thenExpr = SemanticAnalyzer::analyze(mode, ctx, tc_list_first(form));
     form = tc_list_next(form);
     AExpr elseExpr = SemanticAnalyzer::analyze(mode, ctx, tc_list_first(form));
-    return std::make_unique<IfExpr>(std::move(condExpr), std::move(thenExpr), std::move(elseExpr));
+    return std::make_unique<IfExpr>(std::move(condExpr),
+                                    std::move(thenExpr),
+                                    std::move(elseExpr),
+                                    condLocalVar);
 }

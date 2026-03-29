@@ -48,13 +48,53 @@ bool SemanticAnalyzer::isSpecial(const Object *obj) {
            && m_SpecialAnalyzers.contains(tc_symbol_valueX(obj));
 }
 
+// Returns the local binding for the captured variable, which can be used to resolve the variable
+// reference in the current frame, which is needed to load the variable value at runtime and copy
+// it into the closure environment when the variable is captured.
+std::shared_ptr<BindingExpr> captureLocalBindingRec(AnalyzerContext &ctx, const std::string &name, ssize_t frame_index) {
+    auto &currentFrameBindings = ctx.m_StackFrameBindings[frame_index];
+    auto &currentFrameCapturesMapping = ctx.m_CapturesMappingStack[frame_index];
+    if (frame_index == 0) {
+        return currentFrameBindings.at(name);
+    }
+    // already a local var -> nothing to do
+    if (auto binding = currentFrameBindings.find(name); binding != currentFrameBindings.end()) {
+        return binding->second;
+    }
+
+    // Mark the current frame (function overload) as using the capture environment, which means that the parent
+    // function stub needs to pass the environment struct to the function overload at runtime
+    if (!ctx.m_CaptureUsedStack[frame_index]) {
+        ctx.m_CaptureUsedStack[frame_index] = true;
+    }
+
+    // capture if not already captured
+    if (!currentFrameCapturesMapping.contains(name)) {
+        auto parent_binding = captureLocalBindingRec(ctx, name, frame_index - 1);
+        // Assign a slot for the captured variable in the current frame's capture mapping
+        unsigned closureEnvIndex = static_cast<unsigned>(currentFrameCapturesMapping.size());
+        currentFrameCapturesMapping.emplace(name, CapturedLocalExpr(name,
+                                                                    closureEnvIndex,
+                                                                    parent_binding));
+        return std::make_shared<CapturedLocalExpr>(
+                currentFrameCapturesMapping.at(name)
+        );
+    } else {
+        // already captured -> do nothing
+        return std::make_shared<CapturedLocalExpr>(
+                currentFrameCapturesMapping.at(name)
+        );
+    }
+}
+
 void captureLocalBinding(AnalyzerContext &ctx, const std::string &name) {
-    for (ssize_t i = static_cast<ssize_t>(ctx.m_StackFrameBindings.size()) - 1; i >= 0; i--) {
+    captureLocalBindingRec(ctx, name, static_cast<ssize_t>(ctx.m_StackFrameBindings.size()) - 1);
+    /*for (ssize_t i = static_cast<ssize_t>(ctx.m_StackFrameBindings.size()) - 1; i >= 0; i--) {
         auto &currentFrameBindings = ctx.m_StackFrameBindings[i];
         auto &currentFrameCapturesMapping = ctx.m_CapturesMappingStack[i];
-        // local var -> return
-        if (currentFrameBindings.contains(name)) {
-            return;
+        // already a local var -> nothing to do
+        if (auto binding = currentFrameBindings.find(name); binding != currentFrameBindings.end()) {
+            return binding->second;
         }
 
         // Mark the current frame (function overload) as using the capture environment, which means that the parent
@@ -65,14 +105,19 @@ void captureLocalBinding(AnalyzerContext &ctx, const std::string &name) {
 
         // capture if not already captured
         if (!currentFrameCapturesMapping.contains(name)) {
+            auto parent_binding = captureLocalBinding(ctx, name);
             // Assign a slot for the captured variable in the current frame's capture mapping
             unsigned closureEnvIndex = static_cast<unsigned>(currentFrameCapturesMapping.size());
-            currentFrameCapturesMapping.emplace(name, CapturedLocalExpr(name, closureEnvIndex));
+            currentFrameCapturesMapping.emplace(name, CapturedLocalExpr(name,
+                                                                        closureEnvIndex,
+                                                                        parent_binding));
         } else {
             // already captured -> do nothing
-            return;
+            return std::make_shared<CapturedLocalExpr>(
+                    currentFrameCapturesMapping.at(name)
+            );
         }
-    }
+    }*/
 }
 
 AExpr resolveSymbol(AnalyzerContext &ctx, const Object *form) {

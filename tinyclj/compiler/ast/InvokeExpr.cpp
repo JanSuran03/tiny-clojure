@@ -20,21 +20,17 @@ void InvokeExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
                                                          {ctx.pointerType()},
                                                          false);
     FunctionCallee callfn_getter_func = ctx.m_Module->getOrInsertFunction("tinyclj_object_get_callfn",
-                                                                         callfn_getter_type);
+                                                                          callfn_getter_type);
 
-    llvm::AllocaInst *target_alloca = ctx.m_IRBuilder.CreateAlloca(
-            ctx.pointerType(),
-            nullptr,
-            "evaled_target");
+    llvm::AllocaInst *target_alloca = ctx.m_CurrentFunctionLocalAllocas[m_TargetResLocalVar.getLocalIndex()];
     ctx.jumpToTmpBasicBlock();
     m_InvokeTarget->emitIR(target_alloca, ctx);
 
     std::vector<llvm::AllocaInst *> arg_allocas;
-    for (const auto &arg: m_InvokeArgs) {
-        auto arg_alloca = ctx.m_IRBuilder.CreateAlloca(
-                ctx.pointerType(),
-                nullptr,
-                std::string("evaled_arg_").append(std::to_string(&arg - &*m_InvokeArgs.begin())));
+    for (size_t i = 0; i < m_InvokeArgs.size(); i++) {
+        const auto &arg = m_InvokeArgs[i];
+        const auto &arg_local_var = m_InvokeArgsLocalsVars[i];
+        auto arg_alloca = ctx.m_CurrentFunctionLocalAllocas[arg_local_var.getLocalIndex()];
         arg_allocas.emplace_back(arg_alloca);
         ctx.jumpToTmpBasicBlock();
         arg->emitIR(arg_alloca, ctx);
@@ -85,7 +81,15 @@ void InvokeExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     ctx.m_IRBuilder.SetInsertPoint(native_invoke_target);
 
     Value *argcnt_val = ConstantInt::get(sizeTy, m_InvokeArgs.size());
-    AllocaInst *arg_array = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), argcnt_val, "arg_array");
+
+    AllocaInst *arg_array;
+    {
+        // for now, an ugly hack to allocate at the function start
+        auto function = ctx.m_CurrentFunction;
+        llvm::IRBuilder<> entry_block_alloca_builder(&function->getEntryBlock(),
+                                                     function->getEntryBlock().begin());
+        arg_array = entry_block_alloca_builder.CreateAlloca(ctx.pointerType(), argcnt_val, "arg_array");
+    }
 
     for (size_t i = 0; i < m_InvokeArgs.size(); i++) {
         Value *arg_llvm_val = ctx.m_IRBuilder.CreateLoad(
@@ -130,15 +134,40 @@ Object *InvokeExpr::eval(Runtime &runtime) const {
 }
 
 InvokeExpr::InvokeExpr(AExpr invokeTarget,
-                       std::vector<AExpr> invokeArgs)
+                       std::vector<AExpr> invokeArgs,
+                       LocalVarExpr targetResLocalVar,
+                       std::vector<LocalVarExpr> invokeArgsLocalVars,
+                       NativeInvokeArgArray packedArgArrayLocalVar)
         : m_InvokeTarget(std::move(invokeTarget)),
-          m_InvokeArgs(std::move(invokeArgs)) {}
+          m_InvokeArgs(std::move(invokeArgs)),
+          m_TargetResLocalVar(std::move(targetResLocalVar)),
+          m_InvokeArgsLocalsVars(std::move(invokeArgsLocalVars)),
+          m_PackedArgArrayLocalVar(packedArgArrayLocalVar) {}
 
 AExpr InvokeExpr::parse(ExpressionMode _, AnalyzerContext &ctx, const Object *form) {
     AExpr invokeTarget = SemanticAnalyzer::analyze(ctx, tc_list_first(form));
+    LocalVarExpr target_res_local_var("invoke_target_result",
+                                      ctx.functionDepth(),
+                                      ctx.currentLocalCount()++);
+
     std::vector<AExpr> invokeArgs;
+    std::vector<LocalVarExpr> invoke_args_locals_vars;
+    unsigned i = 0;
     for (const Object *args = tc_list_next(form); args; args = tc_list_next(args)) {
         invokeArgs.emplace_back(SemanticAnalyzer::analyze(ctx, tc_list_first(args)));
+        invoke_args_locals_vars.emplace_back("invoke_target_arg_" + std::to_string(i++),
+                                             ctx.functionDepth(),
+                                             ctx.currentLocalCount()++);
     }
-    return std::make_unique<InvokeExpr>(std::move(invokeTarget), std::move(invokeArgs));
+    NativeInvokeArgArray packed_arg_array_local_vars{
+            .m_FunctionLocalsOffset = ctx.currentLocalCount(),
+            .m_Length = static_cast<unsigned>(invokeArgs.size())
+    };
+    ctx.currentLocalCount() += invokeArgs.size(); // reserve local vars for the packed arg array
+
+    return std::make_unique<InvokeExpr>(std::move(invokeTarget),
+                                        std::move(invokeArgs),
+                                        std::move(target_res_local_var),
+                                        std::move(invoke_args_locals_vars),
+                                        packed_arg_array_local_vars);
 }

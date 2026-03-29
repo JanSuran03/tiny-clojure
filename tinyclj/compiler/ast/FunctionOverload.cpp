@@ -8,10 +8,12 @@
 #include "types/TCSymbol.h"
 
 FunctionOverload::FunctionOverload(std::vector<FnArgExpr> args,
+                                   unsigned numLocals,
                                    bool isVariadic,
                                    bool usesClosureEnv,
                                    std::vector<AExpr> body)
         : m_Args(std::move(args)),
+          m_NumLocals(numLocals),
           m_IsVariadic(isVariadic),
           m_UsesClosureEnv(usesClosureEnv),
           m_Body(std::move(body)) {}
@@ -31,9 +33,25 @@ llvm::Function *FunctionOverload::compile(CodegenContext &ctx, const Captures &c
                                                       *ctx.m_Module);
     llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(*ctx.m_LLVMContext, "entry", function);
 
+    ctx.m_IRBuilder.SetInsertPoint(entryBlock);
+
+    // allocate space for local variables
+    std::vector<llvm::AllocaInst *> local_allocas;
+    for (const auto &m_Arg: m_Args) {
+        llvm::AllocaInst *alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, m_Arg.name());
+        local_allocas.push_back(alloca);
+    }
+    for (unsigned i = 0; i < m_NumLocals; i++) {
+        llvm::AllocaInst *alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(),
+                                                                nullptr,
+                                                                "local_" + std::to_string(i));
+        local_allocas.push_back(alloca);
+    }
+
     llvm::Function *prev_function = ctx.m_CurrentFunction;
     ctx.m_CurrentFunction = function;
-    ctx.m_IRBuilder.SetInsertPoint(entryBlock);
+    std::vector<llvm::AllocaInst *> prev_function_local_allocas = std::move(ctx.m_CurrentFunctionLocalAllocas);
+    ctx.m_CurrentFunctionLocalAllocas = std::move(local_allocas);
 
     // allocate space for the return value
     llvm::AllocaInst *retAlloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, "retval");
@@ -91,13 +109,14 @@ llvm::Function *FunctionOverload::compile(CodegenContext &ctx, const Captures &c
         ctx.m_ClosureEnv = prev_closure_env;
     }
 
+    ctx.m_CurrentFunctionLocalAllocas = std::move(prev_function_local_allocas);
     ctx.m_CurrentFunction = prev_function;
 
     return function;
 }
 
 FunctionOverload FunctionOverload::parse(AnalyzerContext &ctx, const Object *form, bool is_eval_wrapper) {
-    std::unordered_map<std::string, std::shared_ptr<LocalBindingExpr>> bindings_shadowed_in_fn;
+    std::unordered_map<std::string, std::shared_ptr<BindingExpr>> bindings_shadowed_in_fn;
     std::unordered_set<std::string> new_scope_bindings;
     ctx.m_CaptureUsedStack.emplace_back(false);
     ctx.m_StackFrameBindings.emplace_back();
@@ -193,11 +212,13 @@ FunctionOverload FunctionOverload::parse(AnalyzerContext &ctx, const Object *for
 
     bool capture_used = ctx.m_CaptureUsedStack.back();
 
+    unsigned num_locals = ctx.m_NumLocalsStack.back();
     ctx.m_NumLocalsStack.pop_back();
     ctx.m_StackFrameBindings.pop_back();
     ctx.m_CaptureUsedStack.pop_back();
 
     return FunctionOverload(std::move(args),
+                            num_locals,
                             varargs_state == VA_State::FOUND_VARARG,
                             capture_used,
                             std::move(body));

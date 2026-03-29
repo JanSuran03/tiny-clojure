@@ -14,7 +14,7 @@ llvm::Value *FnArgExpr::loadValue(CodegenContext &ctx) const {
 FnArgExpr::FnArgExpr(std::string value,
                      unsigned functionDepth,
                      unsigned localIndex)
-        : LocalBindingExpr(std::move(value)),
+        : BindingExpr(std::move(value)),
           m_FunctionDepth(functionDepth),
           m_ArgIndex(localIndex) {}
 

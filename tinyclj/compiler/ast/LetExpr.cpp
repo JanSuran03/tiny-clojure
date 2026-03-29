@@ -1,4 +1,4 @@
-#include "compiler/ast/local-binding/LocalBindingExpr.h"
+#include "compiler/ast/local-binding/BindingExpr.h"
 #include "LetExpr.h"
 #include "compiler/ast/local-binding/LocalVarExpr.h"
 #include "compiler/CompilerUtils.h"
@@ -8,32 +8,22 @@
 #include "types/TCSymbol.h"
 
 void LetExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
-    std::unordered_map<std::string, llvm::AllocaInst *> shadowed_allocas;
-    std::vector<llvm::AllocaInst *> variable_storages;
-    for (const auto &[name, value]: m_Bindings) {
-        // allocate space for a 64-bit pointer as every runtime object is a pointer to the Object struct
-        llvm::AllocaInst *alloca = ctx.m_IRBuilder.CreateAlloca(
-                ctx.pointerType(),
-                nullptr,
-                name);
-        value->emitIR(alloca, ctx);
-        // if the variable is shadowing another variable, save the old alloca to restore it later
-        if (auto old_alloca = ctx.m_VariableMap.find(name); old_alloca != ctx.m_VariableMap.end()) {
-            shadowed_allocas[name] = old_alloca->second;
-        } else {
-            shadowed_allocas[name] = nullptr;
-        }
-        ctx.m_VariableMap[name] = alloca;
-        variable_storages.emplace_back(alloca);
+    for (const auto &[binding, var]: m_Bindings) {
+        llvm::AllocaInst *alloca = ctx.m_CurrentFunctionLocalAllocas[binding->getLocalIndex()];
+        var->emitIR(alloca, ctx);
     }
 
     // create a recursion point if this is a loop expression
-    llvm::BasicBlock *recursion_point = nullptr;
     if (m_IsLoop) {
-        recursion_point = ctx.createBasicBlock("loop_recursion_point");
+        std::vector<llvm::AllocaInst *> recur_var_storages;
+        for (const auto &[binding, _]: m_Bindings) {
+            recur_var_storages.emplace_back(ctx.m_CurrentFunctionLocalAllocas[binding->getLocalIndex()]);
+        }
+
+        llvm::BasicBlock *recursion_point = ctx.createBasicBlock("loop_recursion_point");
+        ctx.m_LoopLabels.emplace_back(recursion_point, std::move(recur_var_storages));
         ctx.m_IRBuilder.CreateBr(recursion_point);
         ctx.m_IRBuilder.SetInsertPoint(recursion_point);
-        ctx.m_LoopLabels.emplace_back(recursion_point, std::move(variable_storages));
     }
 
     CompilerUtils::emitBody(m_Body, m_IsLoop ? "let" : "loop", dst, ctx);
@@ -41,18 +31,9 @@ void LetExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     if (m_IsLoop) {
         ctx.m_LoopLabels.pop_back();
     }
-
-    // restore shadowed variables in the context
-    for (const auto &[name, alloca]: shadowed_allocas) {
-        if (alloca) {
-            ctx.m_VariableMap[name] = alloca;
-        } else {
-            ctx.m_VariableMap.erase(name);
-        }
-    }
 }
 
-LetExpr::LetExpr(std::vector<std::tuple<std::string, AExpr>> bindings,
+LetExpr::LetExpr(std::vector<std::pair<std::shared_ptr<LocalVarExpr>, AExpr>> bindings,
                  std::vector<AExpr> body,
                  bool isLoop)
         : m_Bindings(std::move(bindings)),
@@ -77,11 +58,11 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
     // Bindings shadowed in the let bindings that need to be restored after the let expression's scope ends.
     // To allow multiple bindings that shadow the same variable, we cannot store the old bindings in a vector,
     // we need a map.
-    std::unordered_map<std::string, std::shared_ptr<LocalBindingExpr>> bindings_shadowed_in_let;
+    std::unordered_map<std::string, std::shared_ptr<BindingExpr>> bindings_shadowed_in_let;
     // bindings introduced in the let expression that do not shadow any existing bindings
     std::unordered_set<std::string> new_scope_bindings;
 
-    std::vector<std::tuple<std::string, AExpr>> parsed_bindings;
+    std::vector<std::pair<std::shared_ptr<LocalVarExpr>, AExpr>> parsed_bindings;
     for (bindings = tc_list_seq(bindings); bindings;) {
         const Object *binding_sym = tc_list_first(bindings);
         std::string binding_name = tc_symbol_valueX(binding_sym);
@@ -108,15 +89,16 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
             }
         }
 
-        parsed_bindings.emplace_back(binding_name, SemanticAnalyzer::analyze(
-                ExpressionMode::EXPR,
-                ctx,
-                binding_val));
-
-        std::shared_ptr<LocalBindingExpr> local_binding_expr = std::make_shared<LocalVarExpr>(
+        std::shared_ptr<LocalVarExpr> local_binding_expr = std::make_shared<LocalVarExpr>(
                 binding_name,
                 ctx.functionDepth(),
                 ctx.currentLocalCount()++);
+
+        parsed_bindings.emplace_back(local_binding_expr, SemanticAnalyzer::analyze(
+                ExpressionMode::EXPR,
+                ctx,
+                binding_val));
+        // todo: unify value vs shared ptr vs unique ptr
         ctx.currentStackFrameBindings().emplace(binding_name, local_binding_expr);
         ctx.m_ScopeBindings.emplace(binding_name, local_binding_expr);
     }

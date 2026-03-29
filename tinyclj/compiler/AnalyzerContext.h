@@ -13,7 +13,7 @@
 
 class FunctionOverload;
 
-class LocalBindingExpr;
+class BindingExpr;
 
 class CapturedLocalExpr;
 
@@ -27,19 +27,19 @@ struct AnalyzerContext {
     /// might use captures, but the current function overload might not need the environment struct.
     std::vector<bool> m_CaptureUsedStack;
     /// A mapping of name -> local variable binding for each stack frame.
-    std::vector<std::unordered_map<std::string, std::shared_ptr<LocalBindingExpr>>> m_StackFrameBindings;
+    std::vector<std::unordered_map<std::string, std::shared_ptr<BindingExpr>>> m_StackFrameBindings;
     /// A set of the count of recur arguments for each recur frame.
     std::vector<size_t> m_NumRecurArgsStack;
     /// A set of the count of local variables for each function frame.
     std::vector<unsigned> m_NumLocalsStack;
     /// A mapping of local variable name to the binding in the current stack frame.
-    std::unordered_map<std::string, std::shared_ptr<LocalBindingExpr>> m_ScopeBindings;
+    std::unordered_map<std::string, std::shared_ptr<BindingExpr>> m_ScopeBindings;
 
     AnalyzerContext() = default;
 
     std::unordered_map<std::string, CapturedLocalExpr> &currentCapturesMappings();
 
-    std::unordered_map<std::string, std::shared_ptr<LocalBindingExpr>> &currentStackFrameBindings();
+    std::unordered_map<std::string, std::shared_ptr<BindingExpr>> &currentStackFrameBindings();
 
     size_t &currentRecurArgCount();
 

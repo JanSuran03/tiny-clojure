@@ -18,7 +18,7 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/ast/BooleanExpr.cpp
         tinyclj/compiler/ast/local-binding/CapturedLocalExpr.cpp
         tinyclj/compiler/ast/local-binding/FnArgExpr.cpp
-        tinyclj/compiler/ast/local-binding/LocalBindingExpr.cpp
+        tinyclj/compiler/ast/local-binding/BindingExpr.cpp
         tinyclj/compiler/ast/local-binding/LocalVarExpr.cpp
         tinyclj/compiler/ast/CharExpr.cpp
         tinyclj/compiler/ast/ConstantExpr.cpp

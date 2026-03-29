@@ -113,7 +113,7 @@ int main() {
                                          "",                                "3"},
                   {"(let (a 1"
                    "      adder (fn (b)"
-                   "               (+ a b)))"
+                   "              (+ a b)))"
                    "  (adder 2))",       "",                                "3"},
                   {"(let (make-adder (fn (a)"
                    "                   (fn (b) (+ a b)))"

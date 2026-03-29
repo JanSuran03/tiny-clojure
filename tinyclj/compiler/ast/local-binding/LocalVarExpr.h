@@ -1,9 +1,9 @@
 #pragma once
 
 #include "compiler/ast/FunctionOverload.h"
-#include "LocalBindingExpr.h"
+#include "BindingExpr.h"
 
-class LocalVarExpr : public LocalBindingExpr {
+class LocalVarExpr : public BindingExpr {
     unsigned m_FunctionDepth;
     unsigned m_LocalIndex;
 public:
@@ -14,4 +14,6 @@ public:
                  unsigned localIndex);
 
     AExpr clone() const override;
+
+    unsigned getLocalIndex() const;
 };

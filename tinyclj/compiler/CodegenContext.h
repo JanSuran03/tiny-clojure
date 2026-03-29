@@ -12,6 +12,7 @@ struct CodegenContext {
     std::unique_ptr<llvm::Module> m_Module;
     std::vector<LoopBase> m_LoopLabels;
     llvm::Function *m_CurrentFunction = nullptr;
+    std::vector<llvm::AllocaInst *> m_CurrentFunctionLocalAllocas;
     std::unordered_map<std::string, llvm::AllocaInst *> m_VariableMap;
     llvm::Argument *m_ClosureEnv = nullptr;
 
@@ -29,8 +30,6 @@ struct CodegenContext {
     bool currentBlockTerminated() const;
 
     CodegenContext();
-
-    llvm::IntegerType *getSizeType();
 
     void linkModule();
 };

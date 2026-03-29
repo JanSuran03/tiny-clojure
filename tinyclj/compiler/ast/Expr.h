@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "compiler/CodegenContext.h"
-#include "compiler/CompilerContext.h"
 #include "compiler/ExpressionMode.h"
 #include "types/Object.h"
 

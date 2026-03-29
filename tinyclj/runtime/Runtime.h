@@ -1,13 +1,13 @@
 #pragma once
 
 #include <atomic>
+#include <unordered_set>
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 
 #include "GCFrame.h"
 #include "MemoryManager.h"
-#include "compiler/CompilerContext.h"
 #include "types/Object.h"
 #include "types/TCVar.h"
 

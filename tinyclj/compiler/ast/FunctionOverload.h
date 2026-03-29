@@ -6,6 +6,7 @@
 
 class FunctionOverload {
     std::vector<FnArgExpr> m_Args;
+    unsigned m_NumLocals;
     bool m_IsVariadic;
     bool m_UsesClosureEnv;
     Captures m_Captures;
@@ -17,6 +18,7 @@ public:
     friend class FunctionExpr;
 
     FunctionOverload(std::vector<FnArgExpr> args,
+                     unsigned numLocals,
                      bool isVariadic,
                      bool usesClosureEnv,
                      std::vector<AExpr> body);
