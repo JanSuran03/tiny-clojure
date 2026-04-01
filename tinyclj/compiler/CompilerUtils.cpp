@@ -2,24 +2,18 @@
 #include "compiler/ast/NilExpr.h"
 #include "runtime/Runtime.h"
 
-void CompilerUtils::emitBody(const std::vector<AExpr> &body,
-                             const std::string &bodyPrefix,
-                             llvm::AllocaInst *dst,
-                             CodegenContext &ctx) {
+EmitResult CompilerUtils::emitBody(const std::vector<AExpr> &body,
+                                   const std::string &bodyPrefix,
+                                   CodegenContext &ctx) {
     if (body.empty()) {
-        NilExpr().emitIR(dst, ctx);
-        return;
+        return NilExpr().emitIR(ctx);
     }
 
-    auto body_id = bodyPrefix + "__" + std::to_string(Runtime::getInstance().nextId());
-
-    for (size_t i = 0; i + 1 < body.size(); i++) {
-        ctx.jumpToTmpBasicBlock();
-        body[i]->emitIR(nullptr, ctx);
+    EmitResult result;
+    for (const auto &i: body) {
+        result = i->emitIR(ctx);
     }
-
-    ctx.jumpToTmpBasicBlock();
-    body.back()->emitIR(dst, ctx);
+    return result;
 }
 
 llvm::Value *CompilerUtils::emitObjectPtr(Object *obj, CodegenContext &ctx) {

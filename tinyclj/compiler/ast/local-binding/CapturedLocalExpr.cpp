@@ -1,7 +1,9 @@
 #include "CapturedLocalExpr.h"
 #include "runtime/Runtime.h"
 
-llvm::Value *CapturedLocalExpr::loadValue(CodegenContext &ctx) const {
+EmitResult CapturedLocalExpr::emitIR(CodegenContext &ctx) const {
+    // todo: Could load directly as well. We have to add the closure env to the codegen context before
+    // todo: overload args are loaded (since they can shadow captured variables).
     llvm::Value *slot = ctx.m_IRBuilder.CreateGEP(ctx.pointerArrayType(),
                                                   ctx.m_ClosureEnv,
                                                   llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx.m_LLVMContext),

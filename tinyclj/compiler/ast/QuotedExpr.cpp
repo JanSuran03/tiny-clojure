@@ -3,15 +3,12 @@
 #include "runtime/Runtime.h"
 #include "types/TCList.h"
 
-void QuotedExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
-    if (dst) {
-        llvm::Value *llvm_val = CompilerUtils::emitObjectPtr(const_cast<Object *>(m_QuotedValue), ctx);
-        ctx.m_IRBuilder.CreateStore(llvm_val, dst);
-    }
+EmitResult QuotedExpr::emitIR(CodegenContext &ctx) const {
+    return CompilerUtils::emitObjectPtr(const_cast<Object *>(m_QuotedValue), ctx);
 }
 
-Object *QuotedExpr::eval(Runtime &runtime) const {
-    // todo: this hurts, rewrite this!!!
+Object *QuotedExpr::eval() const {
+    // todo: const_cast (BIG SAD FACE) :(((((
     return const_cast<Object *>(m_QuotedValue);
 }
 

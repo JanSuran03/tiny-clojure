@@ -1,11 +1,9 @@
 #include "NilExpr.h"
 
-void NilExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
-    if (dst) {
-        ctx.m_IRBuilder.CreateStore(llvm::ConstantPointerNull::get(ctx.pointerType()), dst);
-    }
+EmitResult NilExpr::emitIR(CodegenContext &ctx) const {
+    return llvm::ConstantPointerNull::get(ctx.pointerType());
 }
 
-Object *NilExpr::eval(Runtime &runtime) const {
+Object *NilExpr::eval() const {
     return nullptr;
 }

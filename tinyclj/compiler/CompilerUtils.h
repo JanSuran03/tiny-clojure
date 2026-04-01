@@ -5,10 +5,9 @@
 #include "compiler/ast/Expr.h"
 
 namespace CompilerUtils {
-    void emitBody(const std::vector<AExpr> &body,
-                  const std::string &bodyPrefix,
-                  llvm::AllocaInst *dst,
-                  CodegenContext &ctx);
+    EmitResult emitBody(const std::vector<AExpr> &body,
+                        const std::string &bodyPrefix,
+                        CodegenContext &ctx);
 
     /** Emits a constant pointer to the given object as an LLVM value. */
     llvm::Value *emitObjectPtr(Object *obj, CodegenContext &ctx);

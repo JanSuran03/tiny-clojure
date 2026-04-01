@@ -14,10 +14,10 @@ size_t &AnalyzerContext::currentRecurArgCount() {
     return m_NumRecurArgsStack.back();
 }
 
-unsigned &AnalyzerContext::currentLocalCount() {
-    return m_NumLocalsStack.back();
+std::vector<unsigned int> &AnalyzerContext::currentInvokeArgCounts() {
+    return m_InvokeArgCountsStack.back();
 }
 
 unsigned int AnalyzerContext::functionDepth() const {
-    return m_NumLocalsStack.size() - 1;
+    return m_InvokeArgCountsStack.size() - 1;
 }

@@ -3,15 +3,27 @@
 #include "types/TCInteger.h"
 #include "types/TCList.h"
 
-void RecurExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
-    const LoopBase &currentLoop = ctx.m_LoopLabels.back();
-    // store recur args into loop variable storages and jump to the loop label
-    for (size_t i = 0; i < m_RecurArgs.size(); i++) {
-        const AExpr &arg = m_RecurArgs[i];
-        llvm::AllocaInst *varStorage = currentLoop.variable_storages[i];
-        arg->emitIR(varStorage, ctx);
+EmitResult RecurExpr::emitIR(CodegenContext &ctx) const {
+    using namespace llvm;
+
+    std::vector<EmitResult> evaled_recur_args;
+    for (const auto &arg: m_RecurArgs) {
+        evaled_recur_args.emplace_back(arg->emitIR(ctx));
     }
-    ctx.m_IRBuilder.CreateBr(currentLoop.label);
+
+    auto &current_loop = ctx.m_LoopLabels.back();
+    BasicBlock *current_block = ctx.m_IRBuilder.GetInsertBlock();
+
+    for (size_t i = 0; i < evaled_recur_args.size(); i++) {
+        const EmitResult &arg_res = evaled_recur_args[i];
+        PHINode *phi_node = current_loop.m_PhiNodes[i];
+        phi_node->addIncoming(arg_res.value(), current_block);
+    }
+
+    ctx.m_IRBuilder.CreateBr(current_loop.m_Label);
+    // The recur expression itself does not produce a value (if transfers control-flow instead),
+    // so returning std::nullopt is appropriate here
+    return std::nullopt;
 }
 
 RecurExpr::RecurExpr(std::vector<AExpr> recurArgs) : m_RecurArgs(std::move(recurArgs)) {}

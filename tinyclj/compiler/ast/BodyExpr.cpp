@@ -6,14 +6,14 @@
 BodyExpr::BodyExpr(std::vector<AExpr> exprs)
         : m_Exprs(std::move(exprs)) {}
 
-void BodyExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
-    CompilerUtils::emitBody(m_Exprs, "do", dst, ctx);
+EmitResult BodyExpr::emitIR(CodegenContext &ctx) const {
+    return CompilerUtils::emitBody(m_Exprs, "do", ctx);
 }
 
-Object *BodyExpr::eval(Runtime &runtime) const {
+Object *BodyExpr::eval() const {
     Object *result = nullptr;
     for (const auto &expr: m_Exprs) {
-        result = expr->eval(runtime);
+        result = expr->eval();
     }
     return result;
 }

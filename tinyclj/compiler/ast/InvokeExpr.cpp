@@ -3,7 +3,7 @@
 #include "runtime/rt.h"
 #include "types/TCList.h"
 
-void InvokeExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
+EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
     using namespace llvm;
 
     // printf and exit for error handling in the stub
@@ -22,18 +22,13 @@ void InvokeExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     FunctionCallee callfn_getter_func = ctx.m_Module->getOrInsertFunction("tinyclj_object_get_callfn",
                                                                           callfn_getter_type);
 
-    llvm::AllocaInst *target_alloca = ctx.m_CurrentFunctionLocalAllocas[m_TargetResLocalVar.getLocalIndex()];
     ctx.jumpToTmpBasicBlock();
-    m_InvokeTarget->emitIR(target_alloca, ctx);
+    Value *evaled_target = m_InvokeTarget->emitIR(ctx).value();
 
-    std::vector<llvm::AllocaInst *> arg_allocas;
+    std::vector<EmitResult> evaled_args;
     for (size_t i = 0; i < m_InvokeArgs.size(); i++) {
         const auto &arg = m_InvokeArgs[i];
-        const auto &arg_local_var = m_InvokeArgsLocalsVars[i];
-        auto arg_alloca = ctx.m_CurrentFunctionLocalAllocas[arg_local_var.getLocalIndex()];
-        arg_allocas.emplace_back(arg_alloca);
-        ctx.jumpToTmpBasicBlock();
-        arg->emitIR(arg_alloca, ctx);
+        evaled_args.emplace_back(arg->emitIR(ctx));
     }
 
     BasicBlock *check_target_not_null = ctx.createBasicBlock("check_target_not_null");
@@ -45,9 +40,8 @@ void InvokeExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     // (fn == null) ?
     ctx.m_IRBuilder.CreateBr(check_target_not_null);
     ctx.m_IRBuilder.SetInsertPoint(check_target_not_null);
-    Value *target_val = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), target_alloca, "target_val");
     Value *target_is_nullptr = ctx.m_IRBuilder.CreateICmpEQ(
-            target_val,
+            evaled_target,
             ConstantPointerNull::get(ctx.pointerType()),
             "target_is_null");
     ctx.m_IRBuilder.CreateCondBr(target_is_nullptr, target_is_null, check_target_invokable);
@@ -61,15 +55,15 @@ void InvokeExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
 
     // fn != null => check whether fn is invokable
     ctx.m_IRBuilder.SetInsertPoint(check_target_invokable);
-    // native_func_ptr = target.m_CallFn
-    Value *native_func_ptr = ctx.m_IRBuilder.CreateCall(callfn_getter_func, {target_val}, "native_func");
+    // native_func_ptr = evaled_target.m_CallFn
+    Value *native_func_ptr = ctx.m_IRBuilder.CreateCall(callfn_getter_func, {evaled_target}, "native_func");
     Value *native_func_is_nullptr = ctx.m_IRBuilder.CreateICmpEQ(
             native_func_ptr,
             ConstantPointerNull::get(ctx.pointerType()),
             "native_func_is_null");
     ctx.m_IRBuilder.CreateCondBr(native_func_is_nullptr, target_not_invokable, native_invoke_target);
 
-    // target.m_CallFn == null => print error and exit
+    // evaled_target.m_CallFn == null => print error and exit
     ctx.m_IRBuilder.SetInsertPoint(target_not_invokable);
     Value *not_callable_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(
             "Error: Attempted to call a non-callable object at runtime.\n");
@@ -80,49 +74,35 @@ void InvokeExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
     // invoke the native function pointer
     ctx.m_IRBuilder.SetInsertPoint(native_invoke_target);
 
-    Value *argcnt_val = ConstantInt::get(sizeTy, m_InvokeArgs.size());
+    Value *argc_val = ConstantInt::get(sizeTy, m_InvokeArgs.size());
 
-    AllocaInst *arg_array;
-    {
-        // for now, an ugly hack to allocate at the function start
-        auto function = ctx.m_CurrentFunction;
-        llvm::IRBuilder<> entry_block_alloca_builder(&function->getEntryBlock(),
-                                                     function->getEntryBlock().begin());
-        arg_array = entry_block_alloca_builder.CreateAlloca(ctx.pointerType(), argcnt_val, "arg_array");
-    }
+    AllocaInst *argv = ctx.currentInvokeArgvAllocas()[m_InvokeIndex];
 
     for (size_t i = 0; i < m_InvokeArgs.size(); i++) {
-        Value *arg_llvm_val = ctx.m_IRBuilder.CreateLoad(
-                ctx.pointerType(),
-                arg_allocas[i],
-                "arg_val_" + std::to_string(i));
         Value *slot = ctx.m_IRBuilder.CreateGEP(
                 ctx.pointerType(),
-                arg_array,
-                ctx.m_IRBuilder.getInt64(i),
-                "arg_slot_" + std::to_string(i));
-        ctx.m_IRBuilder.CreateStore(arg_llvm_val, slot);
+                argv,
+                ConstantInt::get(sizeTy, i),
+                "invoke_" + std::to_string(m_InvokeIndex)+ "_arg_slot_" + std::to_string(i));
+        ctx.m_IRBuilder.CreateStore(evaled_args[i].value(), slot);
     }
 
     FunctionType *callfn_type = FunctionType::get(
             ctx.pointerType(),
             {ctx.pointerType(), sizeTy, objArrayTy}, // this->call(this, argc, argv)
             false);
-    Value *native_call_result = ctx.m_IRBuilder.CreateCall(
+    return ctx.m_IRBuilder.CreateCall(
             callfn_type,
             native_func_ptr,
-            {target_val, argcnt_val, arg_array}, // Object *self, size_t argc, Object **argv
-            "native_call_result");
-    if (dst != nullptr) {
-        ctx.m_IRBuilder.CreateStore(native_call_result, dst);
-    }
+            {evaled_target, argc_val, argv},
+            "invoke_" + std::to_string(m_InvokeIndex) + "_result");
 }
 
-Object *InvokeExpr::eval(Runtime &runtime) const {
-    auto evaled_target = m_InvokeTarget->eval(runtime);
+Object *InvokeExpr::eval() const {
+    auto evaled_target = m_InvokeTarget->eval();
     std::vector<const Object *> evaled_args;
     for (const auto &arg: m_InvokeArgs) {
-        evaled_args.emplace_back(arg->eval(runtime));
+        evaled_args.emplace_back(arg->eval());
     }
     if (evaled_target == nullptr) {
         throw std::runtime_error("Cannot call nil.");
@@ -135,39 +115,24 @@ Object *InvokeExpr::eval(Runtime &runtime) const {
 
 InvokeExpr::InvokeExpr(AExpr invokeTarget,
                        std::vector<AExpr> invokeArgs,
-                       LocalVarExpr targetResLocalVar,
-                       std::vector<LocalVarExpr> invokeArgsLocalVars,
-                       NativeInvokeArgArray packedArgArrayLocalVar)
+                       size_t invokeIndex)
         : m_InvokeTarget(std::move(invokeTarget)),
           m_InvokeArgs(std::move(invokeArgs)),
-          m_TargetResLocalVar(std::move(targetResLocalVar)),
-          m_InvokeArgsLocalsVars(std::move(invokeArgsLocalVars)),
-          m_PackedArgArrayLocalVar(packedArgArrayLocalVar) {}
+          m_InvokeIndex(invokeIndex) {}
 
 AExpr InvokeExpr::parse(ExpressionMode _, AnalyzerContext &ctx, const Object *form) {
     AExpr invokeTarget = SemanticAnalyzer::analyze(ctx, tc_list_first(form));
-    LocalVarExpr target_res_local_var("invoke_target_result",
-                                      ctx.functionDepth(),
-                                      ctx.currentLocalCount()++);
 
     std::vector<AExpr> invokeArgs;
     std::vector<LocalVarExpr> invoke_args_locals_vars;
-    unsigned i = 0;
     for (const Object *args = tc_list_next(form); args; args = tc_list_next(args)) {
         invokeArgs.emplace_back(SemanticAnalyzer::analyze(ctx, tc_list_first(args)));
-        invoke_args_locals_vars.emplace_back("invoke_target_arg_" + std::to_string(i++),
-                                             ctx.functionDepth(),
-                                             ctx.currentLocalCount()++);
     }
-    NativeInvokeArgArray packed_arg_array_local_vars{
-            .m_FunctionLocalsOffset = ctx.currentLocalCount(),
-            .m_Length = static_cast<unsigned>(invokeArgs.size())
-    };
-    ctx.currentLocalCount() += invokeArgs.size(); // reserve local vars for the packed arg array
+
+    unsigned invoke_index = ctx.currentInvokeArgCounts().size();
+    ctx.currentInvokeArgCounts().emplace_back(invokeArgs.size());
 
     return std::make_unique<InvokeExpr>(std::move(invokeTarget),
                                         std::move(invokeArgs),
-                                        std::move(target_res_local_var),
-                                        std::move(invoke_args_locals_vars),
-                                        packed_arg_array_local_vars);
+                                        invoke_index);
 }

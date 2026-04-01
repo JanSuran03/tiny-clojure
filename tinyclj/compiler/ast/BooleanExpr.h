@@ -1,13 +1,13 @@
 #pragma once
 
-#include "ConstantExpr.h"
+#include "Expr.h"
 
-class BooleanExpr : public ConstantExpr {
+class BooleanExpr : public Expr {
     bool m_Value;
 public:
-    llvm::Value *emitConstantValue(CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *evalConstantValue() const override;
+    Object * eval() const override;
 
     BooleanExpr(bool value);
 };

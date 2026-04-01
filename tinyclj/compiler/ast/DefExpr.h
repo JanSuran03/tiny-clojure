@@ -9,9 +9,9 @@ class DefExpr : public Expr {
 public:
     DefExpr(Object *var, AExpr value);
 
-    void emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *eval(Runtime &runtime) const override;
+    Object *eval() const override;
 
     static AExpr parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 };

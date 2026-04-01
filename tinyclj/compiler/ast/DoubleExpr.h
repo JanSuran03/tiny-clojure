@@ -1,14 +1,14 @@
 #pragma once
 
-#include "ConstantExpr.h"
+#include "Expr.h"
 #include "tcdef.h"
 
-class DoubleExpr : public ConstantExpr {
+class DoubleExpr : public Expr {
     tc_double_t m_Value;
 public:
-    llvm::Value * emitConstantValue(CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object * evalConstantValue() const override;
+    Object *eval() const override;
 
     DoubleExpr(tc_double_t value);
 };

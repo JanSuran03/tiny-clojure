@@ -4,5 +4,5 @@
 
 class UnevaluatableExpr : public Expr {
 public:
-    Object *eval(Runtime &runtime) const final;
+    Object *eval() const final;
 };

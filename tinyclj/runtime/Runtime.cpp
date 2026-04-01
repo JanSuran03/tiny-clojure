@@ -187,7 +187,7 @@ Object *Runtime::eval(const Object *form) {
     AExpr expr = SemanticAnalyzer::analyze(analyzer_ctx, new_form);
     analyzer_ctx.m_CodegenContext.linkModule();
 
-    const Object *evaled_wrapper_fn = expr->eval(*this);
+    const Object *evaled_wrapper_fn = expr->eval();
     return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);
 }
 

@@ -4,16 +4,17 @@
 #include <unordered_set>
 #include <vector>
 
-#include "LoopBase.h"
+#include "RecursionPoint.h"
 
 struct CodegenContext {
     std::unique_ptr<llvm::LLVMContext> m_LLVMContext;
     llvm::IRBuilder<> m_IRBuilder;
     std::unique_ptr<llvm::Module> m_Module;
-    std::vector<LoopBase> m_LoopLabels;
+    std::vector<RecursionPoint> m_LoopLabels;
     llvm::Function *m_CurrentFunction = nullptr;
-    std::vector<llvm::AllocaInst *> m_CurrentFunctionLocalAllocas;
-    std::unordered_map<std::string, llvm::AllocaInst *> m_VariableMap;
+    /// Argv allocas for each invoke expression, for each function frame
+    std::vector<std::vector<llvm::AllocaInst *>> m_InvokeArgvAllocasStack;
+    std::unordered_map<std::string, llvm::Value *> m_VariableMap;
     llvm::Argument *m_ClosureEnv = nullptr;
 
     llvm::PointerType *pointerType();
@@ -32,4 +33,6 @@ struct CodegenContext {
     CodegenContext();
 
     void linkModule();
+
+    std::vector<llvm::AllocaInst *> &currentInvokeArgvAllocas();
 };

@@ -11,7 +11,7 @@ class LetExpr : public UnevaluatableExpr {
     std::vector<AExpr> m_Body;
     bool m_IsLoop;
 public:
-    void emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
     LetExpr(std::vector<std::pair<std::shared_ptr<LocalVarExpr>, AExpr>> bindings,
             std::vector<AExpr> body,

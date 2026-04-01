@@ -6,26 +6,19 @@
 #include "tcdef.h"
 
 class InvokeExpr : public Expr {
-    struct NativeInvokeArgArray {
-        unsigned m_FunctionLocalsOffset;
-        unsigned m_Length;
-    };
-
     AExpr m_InvokeTarget;
     std::vector<AExpr> m_InvokeArgs;
-    LocalVarExpr m_TargetResLocalVar;
-    std::vector<LocalVarExpr> m_InvokeArgsLocalsVars;
-    NativeInvokeArgArray m_PackedArgArrayLocalVar;
+    /// The index of the invoke expression in the current function frame, used for acquiring the
+    /// reserved stack space for packing the native call arguments on the caller side into argv.
+    size_t m_InvokeIndex;
 public:
-    void emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *eval(Runtime &runtime) const override;
+    Object *eval() const override;
 
     InvokeExpr(AExpr invokeTarget,
                std::vector<AExpr> invokeArgs,
-               LocalVarExpr targetResLocalVar,
-               std::vector<LocalVarExpr> invokeArgsLocalVars,
-               NativeInvokeArgArray packedArgArrayLocalVar);
+               size_t invokeIndex);
 
     static AExpr parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 };

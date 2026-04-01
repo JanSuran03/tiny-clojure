@@ -136,10 +136,14 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
     FunctionType *exit_type = FunctionType::get(Type::getVoidTy(*ctx.m_LLVMContext),
                                                 {Type::getInt32Ty(*ctx.m_LLVMContext)}, false);
     FunctionCallee exit_func = ctx.m_Module->getOrInsertFunction("exit", exit_type);
-    FunctionType *tc_closure_get_envX_type = FunctionType::get(ctx.pointerType(),
-                                                               {ctx.pointerType()}, false);
-    FunctionCallee tc_closure_get_envX_func = ctx.m_Module->getOrInsertFunction("tc_closure_get_envX",
-                                                                                tc_closure_get_envX_type);
+    FunctionType *tc_closure_get_envX_type;
+    FunctionCallee tc_closure_get_envX_func;
+    if (!m_Captures.empty()) {
+        tc_closure_get_envX_type = FunctionType::get(ctx.pointerType(),
+                                                     {ctx.pointerType()}, false);
+        tc_closure_get_envX_func = ctx.m_Module->getOrInsertFunction("tc_closure_get_envX",
+                                                                     tc_closure_get_envX_type);
+    }
 
     auto arglist_type = ctx.pointerArrayType(); // array of Object *
     auto argcnt_type = Type::getInt64Ty(*ctx.m_LLVMContext);
@@ -285,7 +289,7 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
     ctx.m_CurrentFunction = prev_function;
 }
 
-void FunctionExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
+EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
     using namespace llvm;
     // For simple functions (without captures), the compiler needs to emit instructions to create a function object
     // that points to the stub and store it into dst
@@ -337,12 +341,9 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
         }
 
         // create the closure object with the stub pointer and env struct pointer
-        Value *closure_obj = ctx.m_IRBuilder.CreateCall(closure_new_fn,
-                                                        {stub_fn, env_struct_ptr, num_captures_val},
-                                                        "closure_obj");
-        if (dst != nullptr) {
-            ctx.m_IRBuilder.CreateStore(closure_obj, dst);
-        }
+        return ctx.m_IRBuilder.CreateCall(closure_new_fn,
+                                          {stub_fn, env_struct_ptr, num_captures_val},
+                                          "closure_obj");
     } else {
         // create the function object with the stub pointer
         FunctionType *function_new_fn_type = FunctionType::get(
@@ -351,10 +352,7 @@ void FunctionExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
                 false);
         FunctionCallee function_new_fn = ctx.m_Module->getOrInsertFunction("tc_function_new", function_new_fn_type);
         Constant *fn_name_const = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Name, "fn_name");
-        Value *function_obj = ctx.m_IRBuilder.CreateCall(function_new_fn, {stub_fn, fn_name_const}, "function_obj");
-        if (dst != nullptr) {
-            ctx.m_IRBuilder.CreateStore(function_obj, dst);
-        }
+        return ctx.m_IRBuilder.CreateCall(function_new_fn, {stub_fn, fn_name_const}, "function_obj");
     }
 }
 
@@ -362,8 +360,8 @@ bool FunctionExpr::isClosure() const {
     return !m_Captures.empty();
 }
 
-Object *FunctionExpr::eval(Runtime &runtime) const {
-    auto &jit = runtime.getJIT();
+Object *FunctionExpr::eval() const {
+    auto &jit = Runtime::getInstance().getJIT();
 
     const CallFn stub_fn = reinterpret_cast<const CallFn>(
             jit->lookup(m_StubName)->getAddress());

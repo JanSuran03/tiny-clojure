@@ -1,7 +1,7 @@
 #include "BooleanExpr.h"
 #include "types/TCBoolean.h"
 
-llvm::Value *BooleanExpr::emitConstantValue(CodegenContext &ctx) const {
+EmitResult BooleanExpr::emitIR(CodegenContext &ctx) const {
     // call a linked function "tc_boolean_new" with m_Name
     llvm::Function *func = ctx.m_Module->getFunction("tc_boolean_new");
     if (!func) {
@@ -17,7 +17,7 @@ llvm::Value *BooleanExpr::emitConstantValue(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {arg});
 }
 
-Object *BooleanExpr::evalConstantValue() const {
+Object *BooleanExpr::eval() const {
     return tc_boolean_new(m_Value);
 }
 

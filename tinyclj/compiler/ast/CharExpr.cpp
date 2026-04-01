@@ -1,7 +1,7 @@
 #include "CharExpr.h"
 #include "types/TCChar.h"
 
-llvm::Value *CharExpr::emitConstantValue(CodegenContext &ctx) const {
+EmitResult CharExpr::emitIR(CodegenContext &ctx) const {
     // call a linked function "tc_char_new" with m_Value
     llvm::Function *func = ctx.m_Module->getFunction("tc_char_new");
     if (!func) {
@@ -17,7 +17,7 @@ llvm::Value *CharExpr::emitConstantValue(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {arg});
 }
 
-Object *CharExpr::evalConstantValue() const {
+Object *CharExpr::eval() const {
     return tc_char_new(m_Value);
 }
 

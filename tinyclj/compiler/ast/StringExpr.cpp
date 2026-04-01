@@ -1,7 +1,7 @@
 #include "StringExpr.h"
 #include "types/TCString.h"
 
-llvm::Value *StringExpr::emitConstantValue(CodegenContext &ctx) const {
+EmitResult StringExpr::emitIR(CodegenContext &ctx) const {
     // call a linked function "tc_string_new" with m_Name
     llvm::Function *func = ctx.m_Module->getFunction("tc_string_new");
     if (!func) {
@@ -17,7 +17,7 @@ llvm::Value *StringExpr::emitConstantValue(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {strPtr}, "str_obj");
 }
 
-Object *StringExpr::evalConstantValue() const {
+Object *StringExpr::eval() const {
     return tc_string_new(m_Value.c_str());
 }
 

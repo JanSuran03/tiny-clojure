@@ -7,30 +7,76 @@
 #include "types/TCInteger.h"
 #include "types/TCSymbol.h"
 
-void LetExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
-    for (const auto &[binding, var]: m_Bindings) {
-        llvm::AllocaInst *alloca = ctx.m_CurrentFunctionLocalAllocas[binding->getLocalIndex()];
-        var->emitIR(alloca, ctx);
-    }
-
-    // create a recursion point if this is a loop expression
-    if (m_IsLoop) {
-        std::vector<llvm::AllocaInst *> recur_var_storages;
-        for (const auto &[binding, _]: m_Bindings) {
-            recur_var_storages.emplace_back(ctx.m_CurrentFunctionLocalAllocas[binding->getLocalIndex()]);
+EmitResult LetExpr::emitIR(CodegenContext &ctx) const {
+    using namespace llvm;
+    /// EMIT let* ///
+    if (!m_IsLoop) {
+        std::unordered_map<std::string, Value *> shadowed_context_vars;
+        for (const auto &[binding_var, binding_expr]: m_Bindings) {
+            const std::string &binding_name = binding_var->name();
+            if (ctx.m_VariableMap.contains(binding_name)) {
+                shadowed_context_vars.emplace(binding_name, ctx.m_VariableMap[binding_name]);
+            } else {
+                shadowed_context_vars.emplace(binding_name, nullptr);
+            }
+            Value *binding_llvm_val = binding_expr->emitIR(ctx).value();
+            ctx.m_VariableMap[binding_name] = binding_llvm_val;
         }
-
-        llvm::BasicBlock *recursion_point = ctx.createBasicBlock("loop_recursion_point");
-        ctx.m_LoopLabels.emplace_back(recursion_point, std::move(recur_var_storages));
-        ctx.m_IRBuilder.CreateBr(recursion_point);
-        ctx.m_IRBuilder.SetInsertPoint(recursion_point);
+        EmitResult let_body_result = CompilerUtils::emitBody(m_Body, "let", ctx);
+        // restore shadowed variables in the context
+        for (const auto &[name, prev_value]: shadowed_context_vars) {
+            if (prev_value) {
+                ctx.m_VariableMap[name] = prev_value;
+            } else {
+                ctx.m_VariableMap.erase(name);
+            }
+        }
+        return let_body_result;
     }
 
-    CompilerUtils::emitBody(m_Body, m_IsLoop ? "let" : "loop", dst, ctx);
+    /// EMIT loop* ///
+    BasicBlock *recursion_point = ctx.createBasicBlock("loop_recursion_point");
+    // Create phi node for loop arguments
+    std::vector<PHINode *> phi_nodes;
+    std::unordered_map<std::string, Value *> shadowed_context_vars;
+    for (size_t i = 0; i < m_Bindings.size(); i++) {
+        const std::string &binding_name = m_Bindings[i].first->name();
+        PHINode *phi_node = PHINode::Create(ctx.pointerType(),
+                                            0,
+                                            "loop_arg_phi_" + std::to_string(i),
+                                            recursion_point);
+        phi_nodes.emplace_back(phi_node);
+        Value *binding_llvm_val = m_Bindings[i].second->emitIR(ctx).value();
+        // Store the initial loop arguments in the phi nodes
+        // This needs to be done before altering the context with the loop argument bindings, since the loop
+        // variables might shadow variables in the context that are used in the loop argument expressions, e.g.:
+        // (loop (x x) ...)
+        BasicBlock *current_block = ctx.m_IRBuilder.GetInsertBlock();
+        phi_nodes[i]->addIncoming(binding_llvm_val, current_block);
 
-    if (m_IsLoop) {
-        ctx.m_LoopLabels.pop_back();
+        if (ctx.m_VariableMap.contains(binding_name) && !shadowed_context_vars.contains(binding_name)) {
+            shadowed_context_vars.emplace(binding_name, ctx.m_VariableMap[binding_name]);
+        } else {
+            shadowed_context_vars.emplace(binding_name, nullptr);
+        }
+        ctx.m_VariableMap[binding_name] = phi_node;
     }
+    ctx.m_LoopLabels.emplace_back(recursion_point, phi_nodes);
+
+    ctx.m_IRBuilder.CreateBr(recursion_point);
+    ctx.m_IRBuilder.SetInsertPoint(recursion_point);
+
+    Value *loop_body_result = CompilerUtils::emitBody(m_Body, "loop", ctx).value();
+    ctx.m_LoopLabels.pop_back();
+    // restore shadowed variables in the context
+    for (const auto &[name, prev_value]: shadowed_context_vars) {
+        if (prev_value) {
+            ctx.m_VariableMap[name] = prev_value;
+        } else {
+            ctx.m_VariableMap.erase(name);
+        }
+    }
+    return loop_body_result;
 }
 
 LetExpr::LetExpr(std::vector<std::pair<std::shared_ptr<LocalVarExpr>, AExpr>> bindings,
@@ -91,8 +137,7 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
 
         std::shared_ptr<LocalVarExpr> local_binding_expr = std::make_shared<LocalVarExpr>(
                 binding_name,
-                ctx.functionDepth(),
-                ctx.currentLocalCount()++);
+                ctx.functionDepth());
 
         parsed_bindings.emplace_back(local_binding_expr, SemanticAnalyzer::analyze(
                 ExpressionMode::EXPR,

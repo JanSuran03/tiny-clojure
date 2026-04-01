@@ -1,7 +1,7 @@
 #include "IntegerExpr.h"
 #include "types/TCInteger.h"
 
-llvm::Value *IntegerExpr::emitConstantValue(CodegenContext &ctx) const {
+EmitResult IntegerExpr::emitIR(CodegenContext &ctx) const {
     // call a linked function "tc_integer_new" with m_Name
     llvm::Function *func = ctx.m_Module->getFunction("tc_integer_new");
     if (!func) {
@@ -17,7 +17,7 @@ llvm::Value *IntegerExpr::emitConstantValue(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {arg});
 }
 
-Object *IntegerExpr::evalConstantValue() const {
+Object *IntegerExpr::eval() const {
     return tc_integer_new(m_Value);
 }
 

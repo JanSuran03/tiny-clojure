@@ -1,7 +1,7 @@
 #include "DoubleExpr.h"
 #include "types/TCDouble.h"
 
-llvm::Value *DoubleExpr::emitConstantValue(CodegenContext &ctx) const {
+EmitResult DoubleExpr::emitIR(CodegenContext &ctx) const {
     // call a linked function "tc_double_new" with m_Name
     llvm::Function *func = ctx.m_Module->getFunction("tc_double_new");
     if (!func) {
@@ -17,7 +17,7 @@ llvm::Value *DoubleExpr::emitConstantValue(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {arg});
 }
 
-Object *DoubleExpr::evalConstantValue() const {
+Object *DoubleExpr::eval() const {
     return tc_double_new(m_Value);
 }
 

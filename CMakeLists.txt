@@ -14,6 +14,7 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/AnalyzerContext.cpp
         tinyclj/compiler/CodegenContext.cpp
         tinyclj/compiler/CompilerUtils.cpp
+        tinyclj/compiler/RecursionPoint.cpp
         tinyclj/compiler/ast/BodyExpr.cpp
         tinyclj/compiler/ast/BooleanExpr.cpp
         tinyclj/compiler/ast/local-binding/CapturedLocalExpr.cpp
@@ -21,7 +22,6 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/ast/local-binding/BindingExpr.cpp
         tinyclj/compiler/ast/local-binding/LocalVarExpr.cpp
         tinyclj/compiler/ast/CharExpr.cpp
-        tinyclj/compiler/ast/ConstantExpr.cpp
         tinyclj/compiler/ast/DefExpr.cpp
         tinyclj/compiler/ast/DoubleExpr.cpp
         tinyclj/compiler/ast/FunctionExpr.cpp
@@ -37,7 +37,6 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarDerefExpr.cpp
         tinyclj/compiler/ast/VarLiteralExpr.cpp
-        tinyclj/compiler/LoopBase.cpp
         tinyclj/compiler/SemanticAnalyzer.cpp
         tinyclj/reader/BufferedReader.cpp
         tinyclj/reader/LispReader.cpp

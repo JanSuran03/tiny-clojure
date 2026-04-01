@@ -6,11 +6,10 @@ class FnArgExpr : public BindingExpr {
     unsigned m_FunctionDepth;
     unsigned m_ArgIndex;
 public:
-    llvm::Value *loadValue(CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
     FnArgExpr(std::string value,
-              unsigned functionDepth,
-              unsigned localIndex);
+              unsigned functionDepth);
 
     AExpr clone() const override;
 };

@@ -5,15 +5,11 @@
 
 class LocalVarExpr : public BindingExpr {
     unsigned m_FunctionDepth;
-    unsigned m_LocalIndex;
 public:
-    llvm::Value *loadValue(CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
     LocalVarExpr(std::string name,
-                 unsigned functionDepth,
-                 unsigned localIndex);
+                 unsigned functionDepth);
 
     AExpr clone() const override;
-
-    unsigned getLocalIndex() const;
 };

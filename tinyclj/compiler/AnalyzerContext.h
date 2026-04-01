@@ -30,8 +30,9 @@ struct AnalyzerContext {
     std::vector<std::unordered_map<std::string, std::shared_ptr<BindingExpr>>> m_StackFrameBindings;
     /// A set of the count of recur arguments for each recur frame.
     std::vector<size_t> m_NumRecurArgsStack;
-    /// A set of the count of local variables for each function frame.
-    std::vector<unsigned> m_NumLocalsStack;
+    /// For each invoke expression in the current function frame, a vector of the argument counts which
+    /// need to be reserved on the stack on the caller side for the native call to the callee stub function.
+    std::vector<std::vector<unsigned>> m_InvokeArgCountsStack;
     /// A mapping of local variable name to the binding in the current stack frame.
     std::unordered_map<std::string, std::shared_ptr<BindingExpr>> m_ScopeBindings;
 
@@ -43,7 +44,7 @@ struct AnalyzerContext {
 
     size_t &currentRecurArgCount();
 
-    unsigned &currentLocalCount();
+    std::vector<unsigned> &currentInvokeArgCounts();
 
     unsigned functionDepth() const;
 };

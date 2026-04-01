@@ -5,16 +5,11 @@
 #include "types/TCSymbol.h"
 #include "runtime/Runtime.h"
 
-void VarLiteralExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
-    using namespace llvm;
-    if (dst) {
-        // emit the Var's pointer as a literal
-        Value *var_ptr = CompilerUtils::emitObjectPtr(m_Var, ctx);
-        ctx.m_IRBuilder.CreateStore(var_ptr, dst);
-    }
+EmitResult VarLiteralExpr::emitIR(CodegenContext &ctx) const {
+    return CompilerUtils::emitObjectPtr(m_Var, ctx);
 }
 
-Object *VarLiteralExpr::eval(Runtime &runtime) const {
+Object *VarLiteralExpr::eval() const {
     return m_Var;
 }
 

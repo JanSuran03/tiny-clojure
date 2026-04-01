@@ -1,13 +1,13 @@
 #pragma once
 
-#include "ConstantExpr.h"
+#include "Expr.h"
 
-class CharExpr : public ConstantExpr {
+class CharExpr : public Expr {
     char m_Value;
 public:
-    llvm::Value *emitConstantValue(CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *evalConstantValue() const override;
+    Object *eval() const override;
 
     CharExpr(char value);
 };

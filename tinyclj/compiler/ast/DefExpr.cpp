@@ -11,7 +11,7 @@ DefExpr::DefExpr(Object *var, AExpr value)
         : m_Var(var),
           m_Value(std::move(value)) {}
 
-void DefExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
+EmitResult DefExpr::emitIR(CodegenContext &ctx) const {
     using namespace llvm;
 
     // emit a call to tc_var_bind_root with the variable and the value
@@ -21,18 +21,15 @@ void DefExpr::emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const {
             false);
     FunctionCallee bind_var_fn = ctx.m_Module->getOrInsertFunction("tc_var_bind_root", bind_var_fn_type);
 
-    llvm::AllocaInst *def_value_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(), nullptr, "def_result");
-    m_Value->emitIR(def_value_alloca, ctx);
+    EmitResult value_to_bind = m_Value->emitIR(ctx);
     Value *llvm_var_ptr = CompilerUtils::emitObjectPtr(m_Var, ctx);
-    Value *value_to_bind = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), def_value_alloca, "def_value");
-    ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind});
-    if (dst != nullptr) {
-        ctx.m_IRBuilder.CreateStore(llvm_var_ptr, dst);
-    }
+    // todo: make tc_Var_bind_root not void and return its result directly
+    ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind.value()});
+    return CompilerUtils::emitObjectPtr(m_Var, ctx);
 }
 
-Object *DefExpr::eval(Runtime &runtime) const {
-    Object *res = m_Value->eval(runtime);
+Object *DefExpr::eval() const {
+    Object *res = m_Value->eval();
     tc_var_bind_root(m_Var, res);
     return m_Var;
 }

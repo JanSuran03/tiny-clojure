@@ -46,3 +46,7 @@ void CodegenContext::linkModule() {
         throw std::runtime_error("Failed to add module to JIT: " + llvm::toString(std::move(err)));
     }
 }
+
+std::vector<llvm::AllocaInst *> &CodegenContext::currentInvokeArgvAllocas() {
+    return m_InvokeArgvAllocasStack.back();
+}

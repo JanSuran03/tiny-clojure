@@ -5,9 +5,9 @@
 class VarDerefExpr : public Expr {
     Object *m_Var;
 public:
-    void emitIR(llvm::AllocaInst *dst, CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *eval(Runtime &runtime) const override;
+    Object *eval() const override;
 
     VarDerefExpr(Object *var);
 };

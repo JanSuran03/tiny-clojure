@@ -7,7 +7,7 @@ class CapturedLocalExpr : public BindingExpr {
     // for storing the original binding expression into env[m_ClosureEnvIndex] at runtime when the variable is captured
     std::shared_ptr<BindingExpr> origin;
 public:
-    llvm::Value *loadValue(CodegenContext &ctx) const override;
+    EmitResult emitIR(CodegenContext &ctx) const override;
 
     CapturedLocalExpr(std::string value,
                       unsigned closureEnvIndex,
