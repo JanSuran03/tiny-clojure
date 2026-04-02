@@ -16,7 +16,7 @@
 
 std::string unary_to_string(const Object *obj) {
     if (obj == nullptr) {
-        return "nil";
+        return "";
     }
     switch (obj->m_Type) {
         case ObjectType::BOOLEAN:
@@ -58,6 +58,83 @@ std::string unary_to_string(const Object *obj) {
     }
 }
 
+std::string unary_to_edn(const Object *obj) {
+    if (obj == nullptr) {
+        return "nil";
+    }
+    switch (obj->m_Type) {
+        case ObjectType::BOOLEAN:
+            return static_cast<TCBoolean *>(obj->m_Data)->m_Value ? "true" : "false";
+        case ObjectType::INTEGER:
+            return std::to_string(static_cast<TCInteger *>(obj->m_Data)->m_Value);
+        case ObjectType::DOUBLE:
+            return std::to_string(static_cast<TCDouble *>(obj->m_Data)->m_Value);
+        case ObjectType::STRING: {
+            std::string buf("\"");
+            for (const char *c = static_cast<TCString *>(obj->m_Data)->m_Value; *c; c++) {
+                if (*c == '\n') {
+                    buf.append("\\n");
+                } else if (*c == '\t') {
+                    buf.append("\\t");
+                } else if (*c == '\r') {
+                    buf.append("\\r");
+                } else if (*c == '\b') {
+                    buf.append("\\b");
+                } else if (*c == '\"') {
+                    buf.append("\\\"");
+                } else if (*c == '\\') {
+                    buf.append("\\\\");
+                } else {
+                    buf.push_back(*c);
+                }
+            }
+            return buf.append("\"");
+        }
+        case ObjectType::SYMBOL:
+            return static_cast<TCSymbol *>(obj->m_Data)->m_Name;
+        case ObjectType::CHARACTER: {
+            char c = static_cast<TCChar *>(obj->m_Data)->m_Value;
+            switch (c) {
+                case '\n':
+                    return "\\newline";
+                case ' ':
+                    return "\\space";
+                case '\t':
+                    return "\\tab";
+                case '\r':
+                    return "\\return";
+                case '\b':
+                    return "\\backspace";
+                default:
+                    return std::string{c};
+            }
+        }
+        case ObjectType::LIST: {
+            std::string str = "(";
+            bool first = true;
+            for (const Object *s = tc_list_seq(obj); s; s = tc_list_next(s)) {
+                if (first) {
+                    first = false;
+                } else {
+                    str += ' ';
+                }
+                const Object *list_elem = tc_list_first(s);
+                str += unary_to_edn(list_elem);
+            }
+            str += ')';
+            return str;
+        }
+        case ObjectType::FUNCTION:
+            return "function '" + std::string(static_cast<const TCFunction *>(obj->m_Data)->m_Name)
+                   + " @" + std::to_string((uintptr_t) obj->m_Call);
+        case ObjectType::CLOSURE:
+            return "closure @" + std::to_string((uintptr_t) obj->m_Call);
+        case ObjectType::VAR:
+            return "#'" + std::string(static_cast<const TCVar *>(obj->m_Data)->m_Name);
+        default:
+            return "<object of type " + std::to_string(static_cast<int>(obj->m_Type)) + ">";
+    }
+}
 
 extern "C" {
 Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **argv) {
@@ -317,10 +394,24 @@ Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
                 std::cout << "<object of type " << static_cast<int>(a->m_Type) << ">";
         }
     }
-    // todo: remove
+    return nullptr;
+}
+
+Object *tinyclj_rt_flush(const Object *self, size_t argc, const Object **argv) {
+    // probably skip argcnt check here to make flushing more efficient
     std::cout << std::flush;
     return nullptr;
 }
+
+Object *tinyclj_rt_to_edn(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("to-edn requires exactly 1 argument");
+    }
+    const Object *a = argv[0];
+    std::string edn_str = unary_to_edn(a);
+    return tc_string_new(edn_str.c_str());
+}
+
 Object *tinyclj_rt_setmacro(const Object *self, size_t argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("setmacro requires exactly 1 argument");

@@ -307,3 +307,9 @@
     (if (list? expanded)
       (map macroexpand-all expanded)
       expanded)))
+
+(defn inc (x)
+  (+ x 1))
+
+(defn dec (x)
+  (- x 1))

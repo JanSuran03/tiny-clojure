@@ -94,6 +94,8 @@ void Runtime::init() {
     defn("builtin_binary_mul", tinyclj_rt_mul);
     defn("builtin_binary_div", tinyclj_rt_div);
     defn("builtin_unary_print", tinyclj_rt_print);
+    defn("flush", tinyclj_rt_flush);
+    defn("to-edn", tinyclj_rt_to_edn);
     defn("builtin_binary_equal", tinyclj_rt_binary_equal);
     defn("builtin_binary_lt", tinyclj_rt_lt);
     defn("builtin_binary_lte", tinyclj_rt_lte);
@@ -220,7 +222,8 @@ void Runtime::repl() {
         try {
             const Object *res = eval(form);
             std::cout << "=> ";
-            tinyclj_rt_print(res, 1, &res);
+            const Object *as_edn = tinyclj_rt_to_edn(nullptr, 1, &res);
+            tinyclj_rt_print(nullptr, 1, &as_edn);
             std::cout << std::endl;
             m_Heap.collectGarbageIfNeeded(this);
         } catch (const std::runtime_error &e) {

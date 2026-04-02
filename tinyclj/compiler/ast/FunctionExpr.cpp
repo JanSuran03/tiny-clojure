@@ -329,7 +329,7 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
         // store captured variables into the env struct
         for (const auto &[var_name, captured_local_expr]: m_Captures) {
             auto &origin = captured_local_expr.getOrigin();
-            Value *captured_var_value = origin->loadValue(ctx);
+            EmitResult captured_var_value = origin->emitIR(ctx);
             Value *env_slot_ptr = ctx.m_IRBuilder.CreateGEP(
                     ctx.pointerType(),
                     env_struct_ptr,
@@ -337,7 +337,7 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
                                      captured_local_expr.getClosureEnvIndex(),
                                      false),
                     var_name + "_env_slot_ptr");
-            ctx.m_IRBuilder.CreateStore(captured_var_value, env_slot_ptr);
+            ctx.m_IRBuilder.CreateStore(captured_var_value.value(), env_slot_ptr);
         }
 
         // create the closure object with the stub pointer and env struct pointer

@@ -15,6 +15,10 @@ Object *tinyclj_rt_div(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv);
 
+Object *tinyclj_rt_flush(const Object *self, size_t argc, const Object **argv);
+
+Object *tinyclj_rt_to_edn(const Object *self, size_t argc, const Object **argv);
+
 Object *tinyclj_rt_setmacro(const Object *self, size_t argc, const Object **argv);
 
 Object *tinyclj_rt_list(const Object *self, size_t argc, const Object **argv);

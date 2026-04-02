@@ -26,8 +26,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
     Value *evaled_target = m_InvokeTarget->emitIR(ctx).value();
 
     std::vector<EmitResult> evaled_args;
-    for (size_t i = 0; i < m_InvokeArgs.size(); i++) {
-        const auto &arg = m_InvokeArgs[i];
+    for (const auto & arg : m_InvokeArgs) {
         evaled_args.emplace_back(arg->emitIR(ctx));
     }
 
