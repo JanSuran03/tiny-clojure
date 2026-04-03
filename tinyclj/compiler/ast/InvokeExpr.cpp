@@ -1,4 +1,5 @@
 #include "InvokeExpr.h"
+#include "compiler/CompilerUtils.h"
 #include "compiler/SemanticAnalyzer.h"
 #include "runtime/rt.h"
 #include "runtime/Runtime.h"
@@ -7,16 +8,7 @@
 EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
     using namespace llvm;
 
-    // printf and exit for error handling in the stub
-    FunctionType *printf_type = FunctionType::get(Type::getInt32Ty(*ctx.m_LLVMContext),
-                                                  {Type::getInt8PtrTy(*ctx.m_LLVMContext)}, true);
-    FunctionCallee printf_func = ctx.m_Module->getOrInsertFunction("printf", printf_type);
-    FunctionType *exit_type = FunctionType::get(Type::getVoidTy(*ctx.m_LLVMContext),
-                                                {Type::getInt32Ty(*ctx.m_LLVMContext)}, false);
-    FunctionCallee exit_func = ctx.m_Module->getOrInsertFunction("exit", exit_type);
-    // call fn getter
     Type *sizeTy = ctx.m_IRBuilder.getIntPtrTy(ctx.m_Module->getDataLayout());
-    Type *objArrayTy = PointerType::get(ctx.pointerType(), 0);
     ctx.jumpToTmpBasicBlock();
     Value *evaled_target = m_InvokeTarget->emitIR(ctx).value();
 
@@ -43,9 +35,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
     // fn == null => print error and exit
     ctx.m_IRBuilder.SetInsertPoint(target_is_null);
     Value *nullptr_msg = ctx.registerGlobalString("Error: Attempted to call `nil` at runtime.\n");
-    ctx.m_IRBuilder.CreateCall(printf_func, {nullptr_msg});
-    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
-    ctx.m_IRBuilder.CreateUnreachable();
+    CompilerUtils::emitThrow(nullptr_msg, ctx);
 
     // fn != null => check whether fn is invokable
     ctx.m_IRBuilder.SetInsertPoint(check_target_invokable);
@@ -60,8 +50,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
     // evaled_target.m_CallFn == null => print error and exit
     ctx.m_IRBuilder.SetInsertPoint(target_not_invokable);
     Value *not_callable_msg = ctx.registerGlobalString("Error: Attempted to call a non-callable object at runtime.\n");
-    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
-    ctx.m_IRBuilder.CreateUnreachable();
+    CompilerUtils::emitThrow(not_callable_msg, ctx);
 
     // invoke the native function pointer
     ctx.m_IRBuilder.SetInsertPoint(native_invoke_target);
@@ -81,7 +70,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
 
     FunctionType *callfn_type = FunctionType::get(
             ctx.pointerType(),
-            {ctx.pointerType(), sizeTy, objArrayTy}, // this->call(this, argc, argv)
+            {ctx.pointerType(), sizeTy, ctx.pointerArrayType()}, // this->call(this, argc, argv)
             false);
     return ctx.m_IRBuilder.CreateCall(
             callfn_type,

@@ -131,13 +131,6 @@ AExpr FunctionExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Objec
 void FunctionExpr::compile(CodegenContext &ctx) const {
     using namespace llvm;
 
-    FunctionType *printf_type = FunctionType::get(Type::getInt32Ty(*ctx.m_LLVMContext),
-                                                  {Type::getInt8PtrTy(*ctx.m_LLVMContext)}, true);
-    FunctionCallee printf_func = ctx.m_Module->getOrInsertFunction("printf", printf_type);
-    FunctionType *exit_type = FunctionType::get(Type::getVoidTy(*ctx.m_LLVMContext),
-                                                {Type::getInt32Ty(*ctx.m_LLVMContext)}, false);
-    FunctionCallee exit_func = ctx.m_Module->getOrInsertFunction("exit", exit_type);
-
     auto arglist_type = ctx.pointerArrayType(); // array of Object *
     auto argcnt_type = Type::getInt64Ty(*ctx.m_LLVMContext);
     auto return_type = ctx.pointerType();
@@ -270,12 +263,12 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
 
     // wrong argument count -> print error and exit
     ctx.m_IRBuilder.SetInsertPoint(wrong_argcnt_block);
-    const char *wrong_argcnt_fmt = "Error: Wrong number of arguments (%u) passed to a function %s\n";
+    // todo: format the error message with the function name and the wrong argument count
+    // const char *wrong_argcnt_fmt = "Error: Wrong number of arguments (%u) passed to a function %s\n";
+    const char *wrong_argcnt_fmt = "Error: Wrong number of arguments passed to a function\n";
     Value *wrong_argcnt_msg = ctx.registerGlobalString(wrong_argcnt_fmt);
     Value *fn_name_msg = ctx.registerGlobalString(m_Name);
-    ctx.m_IRBuilder.CreateCall(printf_func, {wrong_argcnt_msg, argc_arg, fn_name_msg});
-    ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
-    ctx.m_IRBuilder.CreateUnreachable();
+    CompilerUtils::emitThrow(wrong_argcnt_msg, ctx);
 
     ctx.m_CurrentFunction = prev_function;
 }

@@ -230,7 +230,7 @@ void Runtime::repl() {
             std::cout << std::endl;
             m_Heap.collectGarbageIfNeeded(this);
         } catch (const std::runtime_error &e) {
-            std::cout << "Runtime error: " << e.what() << std::endl;
+            std::cout << "Could not evaluate form due to a runtime error:\n" << e.what() << std::endl;
         }
     }
 }
