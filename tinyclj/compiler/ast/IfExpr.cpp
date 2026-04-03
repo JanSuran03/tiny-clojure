@@ -71,7 +71,7 @@ EmitResult IfExpr::emitIR(CodegenContext &ctx) const {
     return phi;
 }
 
-Object *IfExpr::eval() const {
+const Object *IfExpr::eval() const {
     auto res = m_CondExpr->eval();
     if (res == nullptr ||
         (res->m_Type == ObjectType::BOOLEAN && !static_cast<TCBoolean *>(res->m_Data)->m_Value)) {

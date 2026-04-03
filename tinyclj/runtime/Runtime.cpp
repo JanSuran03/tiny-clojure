@@ -157,43 +157,47 @@ std::unique_ptr<llvm::orc::LLJIT> &Runtime::getJIT() {
     return m_JIT;
 }
 
-Object *Runtime::eval(const Object *form) {
-    std::unique_ptr<llvm::LLVMContext> llvm_ctx = std::make_unique<llvm::LLVMContext>();
-    std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("eval_module", *llvm_ctx);
-    llvm::IRBuilder<> builder(*llvm_ctx);
+const Object *Runtime::eval(const Object *form) {
+    form = SemanticAnalyzer::macroexpand(Runtime::getInstance(), form);
+    const Object *original_form = form;
+    bool is_wrapped = false;
+    // do -> eval sequentially
+    // (f x y z) -> wrap in a fn (fn () (f x y z)), compile the function and call it
+    // otherwise -> eval directly (e.g. literals)
+    if (form && form->m_Type == ObjectType::LIST) {
+        const Object *op = tc_list_first(form);
+        if (op != nullptr && op->m_Type == ObjectType::SYMBOL) {
+            const char *name = static_cast<TCSymbol *>(op->m_Data)->m_Name;
+            if (strcmp(name, "do") == 0) {
+                const Object *res = nullptr;
+                for (const Object *forms = tc_list_next(form); forms; forms = tc_list_next(forms)) {
+                    res = eval(tc_list_first(forms));
+                }
+                return res;
+            } else if (strcmp(name, "def") == 0) {
+                goto not_wrapped;
+            }
+        }
+    }
+    form = tc_list_create3(tc_symbol_new("__eval_fn_wrapper"), empty_list(), form);
+    is_wrapped = true;
 
-    // wrap the code in an anonymous function call (for now, for all forms), then evaluate that function
-    // (-> (fn* fn_name [] form))
-
-    // todo: macroexpand and do some branching
-
-    //if (form && form->m_Type == ObjectType::sym_list) {
-    //    const Object *op = tc_list_first(form);
-    //    if (op != nullptr) {
-    //        const char *name = static_cast<TCSymbol *>(op->m_Data)->m_Name;
-    //        if (!strcmp(name, "do")) {
-    //            Object *res = nullptr;
-    //            for (const Object *forms = tc_list_next(form); forms; forms = tc_list_next(forms)) {
-    //                res = eval(tc_list_first(forms));
-    //            }
-    //            return res;
-    //        } else if (!strcmp(name, "def")) {
-    //            throw std::runtime_error("cannot eval def (yet)");
-    //        }
-    //    }
-    //}
-    const Object *new_form = tc_list_create3(tc_symbol_new("__eval_fn_wrapper"), empty_list(), form);
+    not_wrapped:
 
     AnalyzerContext analyzer_ctx;
+    AExpr expr = SemanticAnalyzer::analyze(analyzer_ctx, form);
 
-    AExpr expr = SemanticAnalyzer::analyze(analyzer_ctx, new_form);
+    std::string
+            orig_as_edn = static_cast<const TCString *>(tinyclj_rt_to_edn(nullptr, 1, &original_form)->m_Data)->m_Value;
 
-    std::string as_edn = static_cast<const TCString *>(tinyclj_rt_to_edn(nullptr, 1, &form)->m_Data)->m_Value;
-
-    analyzer_ctx.m_CodegenContext.linkModule(as_edn);
+    analyzer_ctx.m_CodegenContext.linkModule(orig_as_edn);
 
     const Object *evaled_wrapper_fn = expr->eval();
-    return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);
+    if (is_wrapped) {
+        return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);
+    } else {
+        return evaled_wrapper_fn;
+    }
 }
 
 void Runtime::registerConstant(const Object *obj) {
@@ -245,7 +249,7 @@ const Object *Runtime::loadStream(std::istream &stream) {
         }
         res = eval(form);
         {
-            RootFrameGuard guard(*this, {const_cast<Object *>(res)});
+            RootFrameGuard guard({res});
             m_Heap.collectGarbageIfNeeded(this);
         }
     }

@@ -150,13 +150,13 @@ AExpr SemanticAnalyzer::analyze(AnalyzerContext &ctx, const Object *form) {
     return analyze(ExpressionMode::EXPR, ctx, form);
 }
 
-Object *SemanticAnalyzer::macroexpand1(Runtime &rt, const Object *form) {
+const Object *SemanticAnalyzer::macroexpand1(Runtime &rt, const Object *form) {
     if (form == nullptr || form->m_Type != ObjectType::LIST) {
-        return const_cast<Object *>(form);
+        return form;
     }
     const Object *head = tc_list_first(form);
     if (head == nullptr || head->m_Type != ObjectType::SYMBOL) {
-        return const_cast<Object *>(form);
+        return form;
     }
     const std::string &sym = tc_symbol_valueX(head);
     if (Object *var = rt.getVar(sym)) {
@@ -165,30 +165,29 @@ Object *SemanticAnalyzer::macroexpand1(Runtime &rt, const Object *form) {
             tc_int_t argc = static_cast<TCInteger *>(tc_list_length(arglist)->m_Data)->m_Value;
             const Object **argv = new const Object *[argc];
             for (size_t i = 0; i < static_cast<size_t>(argc); i++) {
-                argv[i] = const_cast<Object *>(tc_list_first(arglist));
+                argv[i] = tc_list_first(arglist);
                 arglist = tc_list_next(arglist);
             }
-            Object *expanded = (var->m_Call)(var, argc, argv);
+            const Object *expanded = var->m_Call(var, argc, argv);
             delete[] argv;
             return expanded;
         } else {
-            return const_cast<Object *>(form);
+            return form;
         }
     } else {
-        return const_cast<Object *>(form);
+        return form;
     }
 }
 
-Object *SemanticAnalyzer::macroexpand(Runtime &rt, const Object *form) {
-    Object *new_form;
+const Object *SemanticAnalyzer::macroexpand(Runtime &rt, const Object *form) {
+    const Object *new_form;
     do {
         new_form = macroexpand1(rt, form);
         if (new_form == form) {
-            break;
+            return new_form;
         }
         form = new_form;
     } while (true);
-    return const_cast<Object *>(form);
 }
 
 AExpr SemanticAnalyzer::analyze(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
@@ -219,7 +218,6 @@ AExpr SemanticAnalyzer::analyze(ExpressionMode mode, AnalyzerContext &ctx, const
                 }
             }
 
-            // todo: macroexpansion
             return InvokeExpr::parse(mode, ctx, form);
         }
         case ObjectType::CHARACTER:

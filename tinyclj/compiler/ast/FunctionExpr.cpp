@@ -344,7 +344,7 @@ bool FunctionExpr::isClosure() const {
     return !m_Captures.empty();
 }
 
-Object *FunctionExpr::eval() const {
+const Object *FunctionExpr::eval() const {
     auto &jit = Runtime::getInstance().getJIT();
 
     const CallFn stub_fn = reinterpret_cast<const CallFn>(

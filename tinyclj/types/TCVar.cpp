@@ -37,7 +37,7 @@ llvm::Value *TCVar::emitGetRoot(CodegenContext &ctx, llvm::Value *varObjPtr) {
     return ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), rootFieldPtr, "var_root");
 }
 
-Object *tc_var_invoke(const Object *self, size_t argc, const Object **argv) {
+const Object *tc_var_invoke(const Object *self, size_t argc, const Object **argv) {
     const TCVar *var = static_cast<const TCVar *>(self->m_Data);
     const Object *root = var->m_Root;
     if (root == nullptr) {

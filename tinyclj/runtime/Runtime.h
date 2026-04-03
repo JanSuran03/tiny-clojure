@@ -58,7 +58,7 @@ public:
 
     std::unique_ptr<llvm::orc::LLJIT> &getJIT();
 
-    Object *eval(const Object *form);
+    static const Object *eval(const Object *form);
 
     void repl();
 

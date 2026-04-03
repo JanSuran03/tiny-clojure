@@ -16,7 +16,7 @@ EmitResult CompilerUtils::emitBody(const std::vector<AExpr> &body,
     return result;
 }
 
-llvm::Value *CompilerUtils::emitObjectPtr(Object *obj, CodegenContext &ctx) {
+llvm::Value *CompilerUtils::emitObjectPtr(const Object *obj, CodegenContext &ctx) {
     using namespace llvm;
     return ctx.m_IRBuilder.CreateIntToPtr(
             ConstantInt::get(Type::getInt64Ty(*ctx.m_LLVMContext), reinterpret_cast<uint64_t>(obj), false),

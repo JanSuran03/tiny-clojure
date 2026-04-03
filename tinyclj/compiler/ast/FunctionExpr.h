@@ -21,7 +21,7 @@ class FunctionExpr : public Expr {
 public:
     EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *eval() const override;
+    const Object *eval() const override;
 
     FunctionExpr(std::string name,
                  std::unordered_map<size_t, FunctionOverload> overloads,

@@ -23,8 +23,7 @@ struct TestCase {
             description(std::move(description)) {}
 };
 
-bool test_eval(Runtime &runtime,
-               const TestCase &test_case) {
+bool test_eval(const TestCase &test_case) {
     std::istringstream iss(test_case.input);
     std::ostringstream console_oss;
     BufferedReader rdr(iss);
@@ -33,17 +32,18 @@ bool test_eval(Runtime &runtime,
     auto orig_rdbuf = std::cout.rdbuf();
     // redirect std::cout to capture console output
     std::cout.rdbuf(console_oss.rdbuf());
-    const Object *res = runtime.eval(obj);
+    const Object *res = Runtime::eval(obj);
     // restore std::cout
     std::cout.rdbuf(orig_rdbuf);
-    Object *as_edn = tinyclj_rt_to_edn(nullptr, 1, &res);
+    const Object *as_edn = tinyclj_rt_to_edn(nullptr, 1, &res);
     std::string result_string = static_cast<TCString *>(as_edn->m_Data)->m_Value;
     return console_oss.str() == test_case.expected_console_output
            && result_string == test_case.expected_result_str;
 }
 
 template<typename Fn, typename ErrFn>
-void test(const std::string &name, Fn test_fn, ErrFn err_fn, const std::vector<TestCase> &cases) {
+void test(const std::string &name, Fn test_fn, ErrFn
+err_fn, const std::vector<TestCase> &cases) {
     unsigned passed = 0;
 
     for (size_t i = 0; i < cases.size(); i++) {
@@ -73,8 +73,6 @@ int main() {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
-
-    Runtime &runtime = Runtime::getInstance();
 
     std::vector<TestCase> cases = {
             TestCase("67", "", "67", "eval integer literal"),
@@ -208,8 +206,8 @@ int main() {
     };
 
     test("test eval",
-         [&runtime](const TestCase &test_case) {
-             return test_eval(runtime, test_case);
+         [](const TestCase &test_case) {
+             return test_eval(test_case);
          },
          [](const TestCase &test_case) {
              return test_case.description;

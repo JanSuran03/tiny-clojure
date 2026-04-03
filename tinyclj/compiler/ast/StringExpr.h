@@ -7,7 +7,7 @@ class StringExpr : public Expr {
 public:
     EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *eval() const override;
+    const Object *eval() const override;
 
     StringExpr(std::string value);
 };

@@ -8,17 +8,15 @@ class Runtime;
 
 struct GCRootFrame {
     GCRootFrame *m_Prev;
-    std::vector<Object *> m_Roots;
+    std::vector<const Object *> m_Roots;
 
     GCRootFrame(GCRootFrame *prev);
 };
 
 class RootFrameGuard {
-    Runtime &m_Runtime;
     GCRootFrame m_Frame = GCRootFrame(nullptr);
 public:
-    RootFrameGuard(Runtime &runtime,
-                   std::vector<Object *> roots);
+    RootFrameGuard(std::vector<const Object *> roots);
 
     ~RootFrameGuard();
 };

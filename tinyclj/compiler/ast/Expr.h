@@ -23,7 +23,7 @@ struct Expr {
 
     virtual EmitResult emitIR(CodegenContext &ctx) const = 0;
 
-    virtual Object *eval() const = 0;
+    virtual const Object *eval() const = 0;
 };
 
 using AExpr = std::unique_ptr<Expr>;

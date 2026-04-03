@@ -79,7 +79,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
             "invoke_" + std::to_string(m_InvokeIndex) + "_result");
 }
 
-Object *InvokeExpr::eval() const {
+const Object *InvokeExpr::eval() const {
     auto evaled_target = m_InvokeTarget->eval();
     std::vector<const Object *> evaled_args;
     for (const auto &arg: m_InvokeArgs) {

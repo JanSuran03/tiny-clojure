@@ -3,14 +3,14 @@
 
 GCRootFrame::GCRootFrame(GCRootFrame *prev) : m_Prev(prev) {}
 
-RootFrameGuard::RootFrameGuard(Runtime &runtime,
-                               std::vector<Object *> roots)
-        : m_Runtime(runtime) {
+RootFrameGuard::RootFrameGuard(std::vector<const Object *> roots) {
+    Runtime &rt = Runtime::getInstance();
     m_Frame.m_Roots = std::move(roots);
-    m_Frame.m_Prev = runtime.m_RootStack;
-    runtime.m_RootStack = &m_Frame;
+    m_Frame.m_Prev = rt.m_RootStack;
+    rt.m_RootStack = &m_Frame;
 }
 
 RootFrameGuard::~RootFrameGuard() {
-    m_Runtime.m_RootStack = m_Frame.m_Prev;
+
+    Runtime::getInstance().m_RootStack = m_Frame.m_Prev;
 }

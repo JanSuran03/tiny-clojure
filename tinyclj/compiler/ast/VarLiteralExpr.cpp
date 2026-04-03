@@ -9,11 +9,11 @@ EmitResult VarLiteralExpr::emitIR(CodegenContext &ctx) const {
     return CompilerUtils::emitObjectPtr(m_Var, ctx);
 }
 
-Object *VarLiteralExpr::eval() const {
+const Object *VarLiteralExpr::eval() const {
     return m_Var;
 }
 
-VarLiteralExpr::VarLiteralExpr(Object *var) : m_Var(var) {}
+VarLiteralExpr::VarLiteralExpr(const Object *var) : m_Var(var) {}
 
 AExpr VarLiteralExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     TCList *list = static_cast<TCList *>(form->m_Data);

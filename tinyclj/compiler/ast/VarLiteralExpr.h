@@ -4,13 +4,13 @@
 #include "Expr.h"
 
 class VarLiteralExpr : public Expr {
-    Object *m_Var;
+    const Object *m_Var;
 public:
     EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *eval() const override;
+    const Object *eval() const override;
 
-    VarLiteralExpr(Object *var);
+    VarLiteralExpr(const Object *var);
 
     static AExpr parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 };

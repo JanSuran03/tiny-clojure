@@ -4,12 +4,11 @@
 #include "types/TCList.h"
 
 EmitResult QuotedExpr::emitIR(CodegenContext &ctx) const {
-    return CompilerUtils::emitObjectPtr(const_cast<Object *>(m_QuotedValue), ctx);
+    return CompilerUtils::emitObjectPtr(m_QuotedValue, ctx);
 }
 
-Object *QuotedExpr::eval() const {
-    // todo: const_cast (BIG SAD FACE) :(((((
-    return const_cast<Object *>(m_QuotedValue);
+const Object *QuotedExpr::eval() const {
+    return m_QuotedValue;
 }
 
 QuotedExpr::QuotedExpr(const Object *quotedValue) : m_QuotedValue(quotedValue) {

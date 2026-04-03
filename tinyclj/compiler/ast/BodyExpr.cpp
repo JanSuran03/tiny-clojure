@@ -10,8 +10,8 @@ EmitResult BodyExpr::emitIR(CodegenContext &ctx) const {
     return CompilerUtils::emitBody(m_Exprs, "do", ctx);
 }
 
-Object *BodyExpr::eval() const {
-    Object *result = nullptr;
+const Object *BodyExpr::eval() const {
+    const Object *result = nullptr;
     for (const auto &expr: m_Exprs) {
         result = expr->eval();
     }

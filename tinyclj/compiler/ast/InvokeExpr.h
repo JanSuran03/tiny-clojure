@@ -14,7 +14,7 @@ class InvokeExpr : public Expr {
 public:
     EmitResult emitIR(CodegenContext &ctx) const override;
 
-    Object *eval() const override;
+    const Object *eval() const override;
 
     InvokeExpr(AExpr invokeTarget,
                std::vector<AExpr> invokeArgs,

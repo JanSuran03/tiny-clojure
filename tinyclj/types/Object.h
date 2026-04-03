@@ -22,7 +22,7 @@ enum class ObjectType {
 
 struct Object;
 
-using CallFn = Object *(*)(const Object *self,
+using CallFn = const Object *(*)(const Object *self,
                            size_t argc,
                            const struct Object **argv);
 

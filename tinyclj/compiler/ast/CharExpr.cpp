@@ -17,7 +17,7 @@ EmitResult CharExpr::emitIR(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {arg});
 }
 
-Object *CharExpr::eval() const {
+const Object *CharExpr::eval() const {
     return tc_char_new(m_Value);
 }
 

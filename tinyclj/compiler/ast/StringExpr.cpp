@@ -18,7 +18,7 @@ EmitResult StringExpr::emitIR(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {strPtr}, "str_obj");
 }
 
-Object *StringExpr::eval() const {
+const Object *StringExpr::eval() const {
     return tc_string_new(m_Value.c_str());
 }
 

@@ -11,7 +11,7 @@ namespace SemanticAnalyzer {
 
     AExpr analyze(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 
-    Object *macroexpand1(Runtime &rt, const Object *form);
+    const Object *macroexpand1(Runtime &rt, const Object *form);
 
-    Object *macroexpand(Runtime &rt, const Object *form);
+    const Object *macroexpand(Runtime &rt, const Object *form);
 }

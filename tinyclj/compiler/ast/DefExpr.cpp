@@ -28,8 +28,8 @@ EmitResult DefExpr::emitIR(CodegenContext &ctx) const {
     return CompilerUtils::emitObjectPtr(m_Var, ctx);
 }
 
-Object *DefExpr::eval() const {
-    Object *res = m_Value->eval();
+const Object *DefExpr::eval() const {
+    const Object *res = m_Value->eval();
     tc_var_bind_root(m_Var, res);
     return m_Var;
 }

@@ -17,7 +17,7 @@ EmitResult DoubleExpr::emitIR(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {arg});
 }
 
-Object *DoubleExpr::eval() const {
+const Object *DoubleExpr::eval() const {
     return tc_double_new(m_Value);
 }
 

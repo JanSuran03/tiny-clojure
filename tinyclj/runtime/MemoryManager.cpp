@@ -32,7 +32,7 @@ void MemoryManager::markRoots(Runtime *rt) {
     }
     // mark all constant objects
     for (const Object *obj: rt->getConstantObjects()) {
-        mark(const_cast<Object *>(obj));
+        mark(obj);
     }
 
     // protect the current execution frames from collection
@@ -99,20 +99,20 @@ void MemoryManager::mark(const Object *obj) {
             break; // no references to other objects, so nothing to mark
         case ObjectType::LIST: {
             auto *list = static_cast<TCList *>(obj->m_Data);
-            mark(const_cast<Object *>(list->m_Head));
-            mark(const_cast<Object *>(list->m_Tail));
+            mark(list->m_Head);
+            mark(list->m_Tail);
             break;
         }
         case ObjectType::VAR: {
             auto *var = static_cast<TCVar *>(obj->m_Data);
-            mark(const_cast<Object *>(var->m_Root));
+            mark(var->m_Root);
             break;
         }
 
         case ObjectType::CLOSURE: {
             auto *closure = static_cast<TCClosure *>(obj->m_Data);
             for (size_t i = 0; i < closure->m_NumCaptures; i++) {
-                mark(const_cast<Object *>(closure->m_Env[i]));
+                mark(closure->m_Env[i]);
             }
             break;
         }

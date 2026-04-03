@@ -17,7 +17,7 @@ EmitResult BooleanExpr::emitIR(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {arg});
 }
 
-Object *BooleanExpr::eval() const {
+const Object *BooleanExpr::eval() const {
     return tc_boolean_new(m_Value);
 }
 

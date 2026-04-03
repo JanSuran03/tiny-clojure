@@ -17,7 +17,7 @@ EmitResult IntegerExpr::emitIR(CodegenContext &ctx) const {
     return ctx.m_IRBuilder.CreateCall(func, {arg});
 }
 
-Object *IntegerExpr::eval() const {
+const Object *IntegerExpr::eval() const {
     return tc_integer_new(m_Value);
 }
 
