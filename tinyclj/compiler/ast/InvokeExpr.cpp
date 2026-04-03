@@ -1,6 +1,7 @@
 #include "InvokeExpr.h"
 #include "compiler/SemanticAnalyzer.h"
 #include "runtime/rt.h"
+#include "runtime/Runtime.h"
 #include "types/TCList.h"
 
 EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
@@ -16,17 +17,11 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
     // call fn getter
     Type *sizeTy = ctx.m_IRBuilder.getIntPtrTy(ctx.m_Module->getDataLayout());
     Type *objArrayTy = PointerType::get(ctx.pointerType(), 0);
-    FunctionType *callfn_getter_type = FunctionType::get(ctx.pointerType(),
-                                                         {ctx.pointerType()},
-                                                         false);
-    FunctionCallee callfn_getter_func = ctx.m_Module->getOrInsertFunction("tinyclj_object_get_callfn",
-                                                                          callfn_getter_type);
-
     ctx.jumpToTmpBasicBlock();
     Value *evaled_target = m_InvokeTarget->emitIR(ctx).value();
 
     std::vector<EmitResult> evaled_args;
-    for (const auto & arg : m_InvokeArgs) {
+    for (const auto &arg: m_InvokeArgs) {
         evaled_args.emplace_back(arg->emitIR(ctx));
     }
 
@@ -47,7 +42,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
 
     // fn == null => print error and exit
     ctx.m_IRBuilder.SetInsertPoint(target_is_null);
-    Value *nullptr_msg = ctx.m_IRBuilder.CreateGlobalStringPtr("Error: Attempted to call `nil` at runtime.\n");
+    Value *nullptr_msg = ctx.registerGlobalString("Error: Attempted to call `nil` at runtime.\n");
     ctx.m_IRBuilder.CreateCall(printf_func, {nullptr_msg});
     ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
     ctx.m_IRBuilder.CreateUnreachable();
@@ -55,7 +50,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
     // fn != null => check whether fn is invokable
     ctx.m_IRBuilder.SetInsertPoint(check_target_invokable);
     // native_func_ptr = evaled_target.m_CallFn
-    Value *native_func_ptr = ctx.m_IRBuilder.CreateCall(callfn_getter_func, {evaled_target}, "native_func");
+    Value *native_func_ptr = Object::emitGetCallFn(ctx, evaled_target);
     Value *native_func_is_nullptr = ctx.m_IRBuilder.CreateICmpEQ(
             native_func_ptr,
             ConstantPointerNull::get(ctx.pointerType()),
@@ -64,9 +59,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
 
     // evaled_target.m_CallFn == null => print error and exit
     ctx.m_IRBuilder.SetInsertPoint(target_not_invokable);
-    Value *not_callable_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(
-            "Error: Attempted to call a non-callable object at runtime.\n");
-    ctx.m_IRBuilder.CreateCall(printf_func, {not_callable_msg});
+    Value *not_callable_msg = ctx.registerGlobalString("Error: Attempted to call a non-callable object at runtime.\n");
     ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
     ctx.m_IRBuilder.CreateUnreachable();
 
@@ -82,7 +75,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
                 ctx.pointerType(),
                 argv,
                 ConstantInt::get(sizeTy, i),
-                "invoke_" + std::to_string(m_InvokeIndex)+ "_arg_slot_" + std::to_string(i));
+                "invoke_" + std::to_string(m_InvokeIndex) + "_arg_slot_" + std::to_string(i));
         ctx.m_IRBuilder.CreateStore(evaled_args[i].value(), slot);
     }
 

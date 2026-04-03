@@ -9,6 +9,4 @@ struct TCInteger {
 
 extern "C" {
 Object *tc_integer_new(tc_int_t value);
-
-tc_int_t tc_integer_valueX(const Object *obj);
 }

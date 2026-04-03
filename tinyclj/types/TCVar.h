@@ -6,6 +6,10 @@ struct TCVar {
     const Object *m_Root = nullptr;
     char *m_Name;
     bool m_IsMacro = false;
+
+    static llvm::StructType *getVarStructType(CodegenContext &ctx);
+
+    static llvm::Value *emitGetRoot(CodegenContext &ctx, llvm::Value *varObjPtr);
 };
 
 extern "C" {

@@ -13,7 +13,8 @@ EmitResult StringExpr::emitIR(CodegenContext &ctx) const {
         );
         func = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "tc_string_new", *ctx.m_Module);
     }
-    llvm::Value *strPtr = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Value, "str");
+
+    llvm::Value *strPtr = ctx.registerGlobalString(m_Value);
     return ctx.m_IRBuilder.CreateCall(func, {strPtr}, "str_obj");
 }
 

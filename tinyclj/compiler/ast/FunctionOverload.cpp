@@ -145,7 +145,7 @@ FunctionOverload FunctionOverload::parse(AnalyzerContext &ctx, const Object *for
     VA_State varargs_state = VA_State::NONE;
     for (arglist = tc_list_seq(arglist); arglist; arglist = tc_list_next(arglist)) {
         const Object *arg = tc_list_first(arglist);
-        if (tinyclj_object_get_type(arg) != ObjectType::SYMBOL) {
+        if (arg->m_Type != ObjectType::SYMBOL) {
             throw std::runtime_error("fn argument must be a symbol");
         }
 

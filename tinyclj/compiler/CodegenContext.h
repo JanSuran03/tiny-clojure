@@ -32,7 +32,12 @@ struct CodegenContext {
 
     CodegenContext();
 
-    void linkModule();
+    void linkModule(const std::string &module_name = "eval_module");
 
     std::vector<llvm::AllocaInst *> &currentInvokeArgvAllocas();
+
+    // LLVM global string cache
+    std::unordered_map<std::string, std::pair<size_t, llvm::GlobalVariable *>> m_GlobalStringCache;
+
+    llvm::Value *registerGlobalString(const std::string &str);
 };

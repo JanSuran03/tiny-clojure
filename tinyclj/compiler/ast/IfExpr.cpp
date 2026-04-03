@@ -13,13 +13,6 @@ IfExpr::IfExpr(AExpr condExpr,
 EmitResult IfExpr::emitIR(CodegenContext &ctx) const {
     using namespace llvm;
 
-    FunctionType *get_objtype_fn_type = FunctionType::get(Type::getInt32Ty(*ctx.m_LLVMContext),
-                                                          {ctx.pointerType()}, false);
-    FunctionType *get_bool_value_fn_type = FunctionType::get(Type::getInt8Ty(*ctx.m_LLVMContext),
-                                                             {ctx.pointerType()}, false);
-    FunctionCallee get_objtype_fn = ctx.m_Module->getOrInsertFunction("tinyclj_object_get_type", get_objtype_fn_type);
-    FunctionCallee get_bool_value_fn = ctx.m_Module->getOrInsertFunction("tc_boolean_valueX", get_bool_value_fn_type);
-
     BasicBlock *then_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.then", ctx.m_CurrentFunction);
     BasicBlock *else_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.else", ctx.m_CurrentFunction);
     BasicBlock *merge_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.merge", ctx.m_CurrentFunction);
@@ -39,7 +32,7 @@ EmitResult IfExpr::emitIR(CodegenContext &ctx) const {
 
     // 3. Check (bool) cast, if not bool, jump to then directly (truthy)
     ctx.m_IRBuilder.SetInsertPoint(check_is_boolean_else_block);
-    Value *obj_type = ctx.m_IRBuilder.CreateCall(get_objtype_fn, {cond_res}, "obj_type");
+    Value *obj_type = Object::emitGetType(ctx, cond_res);
     Value *is_bool_res = ctx.m_IRBuilder.CreateICmpEQ(obj_type,
                                                       ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext),
                                                                        static_cast<int32_t>(ObjectType::BOOLEAN)));
@@ -47,7 +40,7 @@ EmitResult IfExpr::emitIR(CodegenContext &ctx) const {
 
     // 4. Extract bool value, if false, jump to else, otherwise jump to then
     ctx.m_IRBuilder.SetInsertPoint(check_raw_else_block);
-    Value *bool_value = ctx.m_IRBuilder.CreateCall(get_bool_value_fn, {cond_res}, "bool_value");
+    Value *bool_value = TCBoolean::emitGetValue(ctx, cond_res);
     Value *is_false = ctx.m_IRBuilder.CreateICmpEQ(bool_value, ConstantInt::get(Type::getInt8Ty(*ctx.m_LLVMContext),
                                                                                 APInt(8, 0, true)));
     ctx.m_IRBuilder.CreateCondBr(is_false, else_block, then_block);
@@ -81,7 +74,7 @@ EmitResult IfExpr::emitIR(CodegenContext &ctx) const {
 Object *IfExpr::eval() const {
     auto res = m_CondExpr->eval();
     if (res == nullptr ||
-        (res->m_Type == ObjectType::BOOLEAN && !tc_boolean_valueX(res))) {
+        (res->m_Type == ObjectType::BOOLEAN && !static_cast<TCBoolean *>(res->m_Data)->m_Value)) {
         return m_ElseExpr->eval();
     } else {
         return m_ThenExpr->eval();

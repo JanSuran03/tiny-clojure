@@ -7,8 +7,4 @@ Object *tc_integer_new(tc_int_t value) {
 
     return Runtime::getInstance().createObject(ObjectType::INTEGER, int_data);
 }
-
-tc_int_t tc_integer_valueX(const Object *obj) {
-    return static_cast<TCInteger *>(tinyclj_object_get_data(obj))->m_Value;
-}
 }

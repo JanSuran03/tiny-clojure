@@ -92,7 +92,7 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
     form = tc_list_next(form); // consume let* / loop*
     const Object *bindings = tc_list_first(form);
     form = tc_list_next(form);
-    if (bindings == nullptr || tinyclj_object_get_type(bindings) != ObjectType::LIST) {
+    if (bindings == nullptr || bindings->m_Type != ObjectType::LIST) {
         throw std::runtime_error("let requires a list of bindings");
     }
 
@@ -115,7 +115,7 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
         bindings = tc_list_next(bindings);
         const Object *binding_val = tc_list_first(bindings);
         bindings = tc_list_next(bindings);
-        if (tinyclj_object_get_type(binding_sym) != ObjectType::SYMBOL) {
+        if (binding_sym->m_Type != ObjectType::SYMBOL) {
             throw std::runtime_error("let binding name must be a symbol");
         }
 

@@ -51,7 +51,8 @@ bool SemanticAnalyzer::isSpecial(const Object *obj) {
 // Returns the local binding for the captured variable, which can be used to resolve the variable
 // reference in the current frame, which is needed to load the variable value at runtime and copy
 // it into the closure environment when the variable is captured.
-std::shared_ptr<BindingExpr> captureLocalBindingRec(AnalyzerContext &ctx, const std::string &name, ssize_t frame_index) {
+std::shared_ptr<BindingExpr>
+captureLocalBindingRec(AnalyzerContext &ctx, const std::string &name, ssize_t frame_index) {
     auto &currentFrameBindings = ctx.m_StackFrameBindings[frame_index];
     auto &currentFrameCapturesMapping = ctx.m_CapturesMappingStack[frame_index];
     if (frame_index == 0) {
@@ -197,11 +198,11 @@ AExpr SemanticAnalyzer::analyze(ExpressionMode mode, AnalyzerContext &ctx, const
     }
     switch (form->m_Type) {
         case ObjectType::BOOLEAN:
-            return std::make_unique<BooleanExpr>(tc_boolean_valueX(form));
+            return std::make_unique<BooleanExpr>(static_cast<TCBoolean *>(form->m_Data)->m_Value);
         case ObjectType::INTEGER:
-            return std::make_unique<IntegerExpr>(tc_integer_valueX(form));
+            return std::make_unique<IntegerExpr>(static_cast<TCInteger *>(form->m_Data)->m_Value);
         case ObjectType::DOUBLE:
-            return std::make_unique<DoubleExpr>(tc_double_valueX(form));
+            return std::make_unique<DoubleExpr>(static_cast<TCDouble *>(form->m_Data)->m_Value);
         case ObjectType::LIST: {
             if (tc_list_seq(form) == nullptr) {
                 return std::make_unique<QuotedExpr>(form);
@@ -222,9 +223,9 @@ AExpr SemanticAnalyzer::analyze(ExpressionMode mode, AnalyzerContext &ctx, const
             return InvokeExpr::parse(mode, ctx, form);
         }
         case ObjectType::CHARACTER:
-            return std::make_unique<CharExpr>(tc_char_valueX(form));
+            return std::make_unique<CharExpr>(static_cast<TCChar *>(form->m_Data)->m_Value);
         case ObjectType::STRING:
-            return std::make_unique<StringExpr>(tc_string_valueX(form));
+            return std::make_unique<StringExpr>(static_cast<TCString *>(form->m_Data)->m_Value);
         case ObjectType::SYMBOL:
             return resolveSymbol(ctx, form);
         case ObjectType::FUNCTION:

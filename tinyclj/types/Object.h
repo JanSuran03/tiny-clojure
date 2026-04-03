@@ -1,6 +1,11 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
+
+#include "llvm/IR/IRBuilder.h"
+
+class CodegenContext;
 
 enum class ObjectType {
     BOOLEAN,
@@ -17,9 +22,9 @@ enum class ObjectType {
 
 struct Object;
 
-typedef Object *(*CallFn)(const Object *self,
-                          size_t argc,
-                          const struct Object **argv);
+using CallFn = Object *(*)(const Object *self,
+                           size_t argc,
+                           const struct Object **argv);
 
 struct Object {
     void *m_Data;
@@ -31,12 +36,12 @@ struct Object {
     bool m_Static = false; // don't destroy static objects: empty_list etc.
 
     static Object createStaticObject(ObjectType type, void *data, CallFn callFn = nullptr);
+
+    static llvm::StructType *getObjectStructType(CodegenContext &ctx);
+
+    static llvm::Value *emitGetDataPtr(CodegenContext &ctx, llvm::Value *objPtr);
+
+    static llvm::Value *emitGetType(CodegenContext &ctx, llvm::Value *objPtr);
+
+    static llvm::Value *emitGetCallFn(CodegenContext &ctx, llvm::Value *objPtr);
 };
-
-extern "C" {
-void *tinyclj_object_get_data(const Object *obj);
-
-ObjectType tinyclj_object_get_type(const Object *obj);
-
-CallFn tinyclj_object_get_callfn(const Object *obj);
-}

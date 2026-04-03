@@ -34,7 +34,25 @@ bool CodegenContext::currentBlockTerminated() const {
     return m_IRBuilder.GetInsertBlock()->getTerminator() != nullptr;
 }
 
-void CodegenContext::linkModule() {
+void CodegenContext::linkModule(const std::string &module_name) {
+#if true
+    static unsigned moduleCounter = 0;
+    std::string ll_dst = std::string(PROJECT_SOURCE_DIR)
+            .append("/modules/")
+            .append("module_")
+            .append(std::to_string(moduleCounter++));
+    m_Module->setSourceFileName(module_name);
+    // print to <ll_dst>.ll for debugging
+    std::error_code ec;
+    llvm::raw_fd_ostream dest(ll_dst + ".ll", ec, llvm::sys::fs::OF_None);
+    if (ec) {
+        llvm::errs() << "Could not open file: " << ec.message();
+    } else {
+        llvm::errs() << "Dumping module to " << ll_dst + ".ll" << " for debugging\n";
+        m_Module->print(dest, nullptr);
+    }
+#endif
+
     if (llvm::verifyModule(*m_Module, &llvm::errs())) {
         m_Module->dump();
         throw std::runtime_error("Module verification failed");
@@ -49,4 +67,26 @@ void CodegenContext::linkModule() {
 
 std::vector<llvm::AllocaInst *> &CodegenContext::currentInvokeArgvAllocas() {
     return m_InvokeArgvAllocasStack.back();
+}
+
+llvm::Value *CodegenContext::registerGlobalString(const std::string &str) {
+    using namespace llvm;
+    GlobalVariable *globalStr;
+    size_t strId;
+    if (auto it = m_GlobalStringCache.find(str); it != m_GlobalStringCache.end()) {
+        globalStr = it->second.second;
+        strId = it->second.first;
+    } else {
+        strId = Runtime::getInstance().nextId();
+        globalStr = new llvm::GlobalVariable(
+                *m_Module,
+                ArrayType::get(Type::getInt8Ty(*m_LLVMContext), str.size() + 1),
+                true, // isConstant
+                GlobalValue::PrivateLinkage,
+                ConstantDataArray::getString(*m_LLVMContext, str),
+                "str_" + std::to_string(strId)
+        );
+        m_GlobalStringCache.emplace(str, std::make_pair(strId, globalStr));
+    }
+    return m_IRBuilder.CreateBitCast(globalStr, Type::getInt8PtrTy(*m_LLVMContext), "strptr_" + std::to_string(strId));
 }

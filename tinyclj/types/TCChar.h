@@ -8,6 +8,4 @@ struct TCChar {
 
 extern "C" {
 Object *tc_char_new(char value);
-
-char tc_char_valueX(const Object *obj);
 }

@@ -187,7 +187,10 @@ Object *Runtime::eval(const Object *form) {
     AnalyzerContext analyzer_ctx;
 
     AExpr expr = SemanticAnalyzer::analyze(analyzer_ctx, new_form);
-    analyzer_ctx.m_CodegenContext.linkModule();
+
+    std::string as_edn = static_cast<const TCString *>(tinyclj_rt_to_edn(nullptr, 1, &form)->m_Data)->m_Value;
+
+    analyzer_ctx.m_CodegenContext.linkModule(as_edn);
 
     const Object *evaled_wrapper_fn = expr->eval();
     return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);

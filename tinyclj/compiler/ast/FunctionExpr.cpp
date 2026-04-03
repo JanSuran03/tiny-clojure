@@ -8,6 +8,7 @@
 #include "FunctionExpr.h"
 #include "runtime/Runtime.h"
 #include "runtime/rt.h"
+#include "types/TCClosure.h"
 #include "types/TCFunction.h"
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
@@ -136,14 +137,6 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
     FunctionType *exit_type = FunctionType::get(Type::getVoidTy(*ctx.m_LLVMContext),
                                                 {Type::getInt32Ty(*ctx.m_LLVMContext)}, false);
     FunctionCallee exit_func = ctx.m_Module->getOrInsertFunction("exit", exit_type);
-    FunctionType *tc_closure_get_envX_type;
-    FunctionCallee tc_closure_get_envX_func;
-    if (!m_Captures.empty()) {
-        tc_closure_get_envX_type = FunctionType::get(ctx.pointerType(),
-                                                     {ctx.pointerType()}, false);
-        tc_closure_get_envX_func = ctx.m_Module->getOrInsertFunction("tc_closure_get_envX",
-                                                                     tc_closure_get_envX_type);
-    }
 
     auto arglist_type = ctx.pointerArrayType(); // array of Object *
     auto argcnt_type = Type::getInt64Ty(*ctx.m_LLVMContext);
@@ -198,8 +191,7 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
             direct_args.push_back(arg);
         }
         if (m_Overloads.at(argcnt).m_UsesClosureEnv) {
-            Value *closure_env =
-                    ctx.m_IRBuilder.CreateCall(tc_closure_get_envX_func, {stub_fn->getArg(0)}, "closure_env");
+            Value *closure_env = TCClosure::emitGetEnv(ctx, self_arg);
             direct_args.push_back(closure_env);
         }
         llvm::Value *result = ctx.m_IRBuilder.CreateCall(internal_fn, direct_args, "overload_result");
@@ -265,8 +257,7 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
         Value *varargs_val = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), varargs_alloca, "varargs_val");
         direct_args.push_back(varargs_val);
         if (m_VariadicOverload->m_UsesClosureEnv) {
-            Value *closure_env =
-                    ctx.m_IRBuilder.CreateCall(tc_closure_get_envX_func, {stub_fn->getArg(0)}, "closure_env");
+            Value *closure_env = TCClosure::emitGetEnv(ctx, self_arg);
             direct_args.push_back(closure_env);
         }
         llvm::Value *result = ctx.m_IRBuilder.CreateCall(variadic_internal_fn, direct_args, "variadic_overload_result");
@@ -280,8 +271,8 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
     // wrong argument count -> print error and exit
     ctx.m_IRBuilder.SetInsertPoint(wrong_argcnt_block);
     const char *wrong_argcnt_fmt = "Error: Wrong number of arguments (%u) passed to a function %s\n";
-    Value *wrong_argcnt_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(wrong_argcnt_fmt);
-    Value *fn_name_msg = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Name);
+    Value *wrong_argcnt_msg = ctx.registerGlobalString(wrong_argcnt_fmt);
+    Value *fn_name_msg = ctx.registerGlobalString(m_Name);
     ctx.m_IRBuilder.CreateCall(printf_func, {wrong_argcnt_msg, argc_arg, fn_name_msg});
     ctx.m_IRBuilder.CreateCall(exit_func, {ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext), 1)});
     ctx.m_IRBuilder.CreateUnreachable();
@@ -351,7 +342,7 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
                 {PointerType::get(call_fn_type, 0), Type::getInt8PtrTy(*ctx.m_LLVMContext)},
                 false);
         FunctionCallee function_new_fn = ctx.m_Module->getOrInsertFunction("tc_function_new", function_new_fn_type);
-        Constant *fn_name_const = ctx.m_IRBuilder.CreateGlobalStringPtr(m_Name, "fn_name");
+        Value *fn_name_const = ctx.registerGlobalString(m_Name);
         return ctx.m_IRBuilder.CreateCall(function_new_fn, {stub_fn, fn_name_const}, "function_obj");
     }
 }
