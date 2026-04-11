@@ -2,10 +2,13 @@
 #include <optional>
 #include <utility>
 
-#include "local-binding/CapturedLocalExpr.h"
+#include "FunctionExpr.h"
+#include "util.h"
 #include "compiler/CodegenContext.h"
 #include "compiler/CompilerUtils.h"
-#include "FunctionExpr.h"
+#include "compiler/aot/FunctionModule.h"
+#include "compiler/aot/ModuleUtil.h"
+#include "local-binding/CapturedLocalExpr.h"
 #include "runtime/Runtime.h"
 #include "runtime/rt.h"
 #include "types/TCClosure.h"
@@ -16,11 +19,15 @@
 FunctionExpr::FunctionExpr(std::string name,
                            std::unordered_map<size_t, FunctionOverload> overloads,
                            std::optional<FunctionOverload> variadic_overload,
-                           Captures captures)
+                           Captures captures,
+                           std::unordered_set<std::string> referenced_global_names,
+                           std::unordered_set<std::string> module_imports)
         : m_Name(std::move(name)),
           m_Overloads(std::move(overloads)),
           m_VariadicOverload(std::move(variadic_overload)),
-          m_Captures(std::move(captures)) {}
+          m_Captures(std::move(captures)),
+          m_ReferencedGlobalNames(std::move(referenced_global_names)),
+          m_ModuleImports(std::move(module_imports)) {}
 
 std::string ambiguousOverload(const std::string &fn_name, size_t variadic_fixed_argcnt, size_t other_fixed_argcnt) {
     return "Ambiguous overloads: A function " + fn_name +
@@ -29,7 +36,10 @@ std::string ambiguousOverload(const std::string &fn_name, size_t variadic_fixed_
            std::to_string(other_fixed_argcnt) + " fixed arguments";
 }
 
-AExpr FunctionExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
+AExpr FunctionExpr::parse(ExpressionMode mode,
+                          AnalyzerContext &ctx,
+                          const Object *form,
+                          const std::optional<std::string> &nameHint) {
     bool is_eval_wrapper = strcmp(static_cast<const TCSymbol *>(tc_list_first(form)->m_Data)->m_Name,
                                   "__eval_fn_wrapper") == 0;
     const Object *original_form = form;
@@ -41,9 +51,12 @@ AExpr FunctionExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Objec
     const Object *name_sym = tc_list_first(form);
     std::string name;
 
+    // todo: improve the logic
     if (name_sym != nullptr && name_sym->m_Type == ObjectType::SYMBOL) {
         form = tc_list_next(form); // consume the name if it's present
         name = tc_symbol_valueX(name_sym);
+    } else if (nameHint.has_value()) {
+        name = nameHint.value() + "__" + std::to_string(Runtime::getInstance().nextId());
     } else {
         name = "fn__" + std::to_string(Runtime::getInstance().nextId());
     }
@@ -71,6 +84,8 @@ AExpr FunctionExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Objec
     // overloads, the capture scope needs to be created before parsing the overloads
     // and the capture scope is the union of the captures from all overloads
     ctx.m_CapturesMappingStack.emplace_back();
+    ctx.m_ReferencedGlobalNamesStack.emplace_back();
+    ctx.m_ModuleImportsStack.emplace_back();
     // if there exists a variadic overload with m_Args = N (i.e. N-1 fixed args), then there can exist
     // a (non-variadic) overload with m_Args <= N-1 (i.e. m_Args < N)
     std::unordered_map<size_t, FunctionOverload> overloads;
@@ -112,14 +127,31 @@ AExpr FunctionExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Objec
 
     auto captures = std::move(ctx.m_CapturesMappingStack.back());
     ctx.m_CapturesMappingStack.pop_back();
+    auto referenced_global_names = std::move(ctx.m_ReferencedGlobalNamesStack.back());
+    ctx.m_ReferencedGlobalNamesStack.pop_back();
+    auto module_imports = std::move(ctx.m_ModuleImportsStack.back());
+    ctx.m_ModuleImportsStack.pop_back();
+
+    /*
+    // register a reference to this function in the parent scope
+    if (!ctx.m_ReferencedGlobalNamesStack.empty()) {
+        ctx.m_ReferencedGlobalNamesStack.back().insert(name);
+    }
+    */
+    // register import of this module in the parent scope
+    if (!ctx.m_ModuleImportsStack.empty()) {
+        ctx.m_ModuleImportsStack.back().insert(name);
+    }
 
     auto fn_expr = std::make_unique<FunctionExpr>(
             name,
             std::move(overloads),
             std::move(variadic_overload),
-            std::move(captures));
+            std::move(captures),
+            std::move(referenced_global_names),
+            std::move(module_imports));
 
-    fn_expr->compile(ctx.m_CodegenContext);
+    fn_expr->compile();
 
     return fn_expr;
 }
@@ -128,8 +160,23 @@ AExpr FunctionExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Objec
  * case of a closure) and creates a stub function that has a consistent signature and can be called at runtime:
  * stub_fn(Object *self, size_t argcnt, Object **argv)
  */
-void FunctionExpr::compile(CodegenContext &ctx) const {
+std::string FunctionExpr::compile() const {
     using namespace llvm;
+    CodegenContext ctx(m_Name);
+
+    std::unordered_map<std::string, GlobalVariable *> global_vars = ModuleUtil::declareReferencedGlobals
+            (ctx, m_ReferencedGlobalNames);
+
+    // todo: looks like this field is only assigned once so maybe it doesn't need to be a stack?
+    ctx.m_GlobalVariableMapStack.emplace_back(global_vars);
+
+    Function *module_init_fn = ModuleUtil::initReferencedGlobals(ctx, m_Name, global_vars);
+
+    FunctionModule function_module(m_Name, m_ModuleImports);
+
+    if (Runtime::getInstance().m_CompilingAOT) {
+        function_module.emitImportsFile();
+    }
 
     auto arglist_type = ctx.pointerArrayType(); // array of Object *
     auto argcnt_type = Type::getInt64Ty(*ctx.m_LLVMContext);
@@ -142,6 +189,9 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
                                                llvm::Function::ExternalLinkage,
                                                m_StubName,
                                                *ctx.m_Module);
+
+    ctx.m_CurrentFunctionStack.emplace_back(stub_fn);
+
     Argument *self_arg = stub_fn->getArg(0);
     self_arg->setName("self");
     Argument *argc_arg = stub_fn->getArg(1);
@@ -160,9 +210,6 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
         variadic_internal_fn = m_VariadicOverload->compile(ctx, m_Captures);
     }
 
-
-    Function *prev_function = ctx.m_CurrentFunction;
-    ctx.m_CurrentFunction = stub_fn;
     // create a switch that dispatches to the correct internal function based on the argument count
     BasicBlock *entry_block = ctx.createBasicBlock("entry");
     BasicBlock *default_block = ctx.createBasicBlock("argcnt_default");
@@ -225,7 +272,7 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
 
         // no extra varargs -> the packed list is nil
         ctx.m_IRBuilder.SetInsertPoint(varargs_empty_block);
-        Value *nil_val = CompilerUtils::emitObjectPtr(nullptr, ctx);
+        Value *nil_val = ConstantPointerNull::get(ctx.pointerType());
         ctx.m_IRBuilder.CreateStore(nil_val, varargs_alloca);
         ctx.m_IRBuilder.CreateBr(merge_block);
 
@@ -267,10 +314,28 @@ void FunctionExpr::compile(CodegenContext &ctx) const {
     // const char *wrong_argcnt_fmt = "Error: Wrong number of arguments (%u) passed to a function %s\n";
     const char *wrong_argcnt_fmt = "Error: Wrong number of arguments passed to a function\n";
     Value *wrong_argcnt_msg = ctx.registerGlobalString(wrong_argcnt_fmt);
-    Value *fn_name_msg = ctx.registerGlobalString(m_Name);
+    //Value *fn_name_msg = ctx.registerGlobalString(m_Name);
     CompilerUtils::emitThrow(wrong_argcnt_msg, ctx);
 
-    ctx.m_CurrentFunction = prev_function;
+    if (Runtime::getInstance().m_CompilingAOT) {
+        function_module.writeModule(ctx);
+    }
+
+    ctx.linkModule(m_Name);
+
+    // load module by calling the load function
+    auto &rt = Runtime::getInstance();
+    auto &jit = rt.getJIT();
+    auto &aot_engine = rt.getAotEngine();
+    using LoadFnType = void (*)();
+    auto init_fn = reinterpret_cast<LoadFnType>(jit->lookup(util::module_init_fn_name(m_Name))->getAddress());
+
+    aot_engine.startLoading(m_Name);
+    init_fn();
+    aot_engine.finishLoading(m_Name);
+
+    ctx.m_CurrentFunctionStack.pop_back();
+    return m_StubName;
 }
 
 EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
@@ -280,11 +345,14 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
 
     // For closures, the compiler needs to emit instructions to create an environment struct from the captured
     // variables, then create a closure object that points to the stub and store it into dst
-
-    llvm::Function *stub_fn = ctx.m_Module->getFunction(m_StubName);
-    if (!stub_fn) {
-        throw std::runtime_error("Cannot find the stub function for " + m_Name);
-    }
+    FunctionType *stub_fn_type = FunctionType::get(
+            ctx.pointerType(),
+            {ctx.pointerType(), Type::getInt64Ty(*ctx.m_LLVMContext), ctx.pointerArrayType()},
+            false);
+    llvm::Function *stub_fn = llvm::Function::Create(stub_fn_type,
+                                                     llvm::Function::ExternalLinkage,
+                                                     m_StubName,
+                                                     *ctx.m_Module);
 
     // Object *stub_fn(Object *self, size_t arg, Object **argv)
     FunctionType *call_fn_type = FunctionType::get(

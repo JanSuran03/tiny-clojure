@@ -11,10 +11,16 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 add_definitions(${LLVM_DEFINITIONS})
 
 add_library(tinyclj_lib SHARED
+        tinyclj/util.cpp
         tinyclj/compiler/AnalyzerContext.cpp
         tinyclj/compiler/CodegenContext.cpp
         tinyclj/compiler/CompilerUtils.cpp
+        tinyclj/compiler/Module.cpp
         tinyclj/compiler/RecursionPoint.cpp
+        tinyclj/compiler/aot/FunctionModule.cpp
+        tinyclj/compiler/aot/Module.cpp
+        tinyclj/compiler/aot/ModuleLoader.cpp
+        tinyclj/compiler/aot/ModuleUtil.cpp
         tinyclj/compiler/ast/BodyExpr.cpp
         tinyclj/compiler/ast/BooleanExpr.cpp
         tinyclj/compiler/ast/local-binding/CapturedLocalExpr.cpp
@@ -31,7 +37,7 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/ast/InvokeExpr.cpp
         tinyclj/compiler/ast/LetExpr.cpp
         tinyclj/compiler/ast/NilExpr.cpp
-        tinyclj/compiler/ast/QuotedExpr.cpp
+        tinyclj/compiler/ast/ConstantExpr.cpp
         tinyclj/compiler/ast/RecurExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
@@ -40,6 +46,7 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/SemanticAnalyzer.cpp
         tinyclj/reader/BufferedReader.cpp
         tinyclj/reader/LispReader.cpp
+        "tinyclj/compiler/aot/AotEngine.cpp"
         tinyclj/runtime/GCFrame.cpp
         tinyclj/runtime/MemoryManager.cpp
         tinyclj/runtime/rt.cpp

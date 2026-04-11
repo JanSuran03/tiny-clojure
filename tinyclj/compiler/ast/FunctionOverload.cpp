@@ -8,12 +8,10 @@
 #include "types/TCSymbol.h"
 
 FunctionOverload::FunctionOverload(std::vector<FnArgExpr> args,
-                                   std::vector<unsigned> invokeArgCounts,
                                    bool isVariadic,
                                    bool usesClosureEnv,
                                    std::vector<AExpr> body)
         : m_Args(std::move(args)),
-          m_InvokeArgCounts(std::move(invokeArgCounts)),
           m_IsVariadic(isVariadic),
           m_UsesClosureEnv(usesClosureEnv),
           m_Body(std::move(body)) {}
@@ -34,25 +32,11 @@ llvm::Function *FunctionOverload::compile(CodegenContext &ctx, const Captures &c
                                                   Runtime::getInstance().nextId()),
                                           *ctx.m_Module);
 
-    Function *prev_function = ctx.m_CurrentFunction;
-    ctx.m_CurrentFunction = function;
+    ctx.m_CurrentFunctionStack.emplace_back(function);
 
     BasicBlock *entryBlock = ctx.createBasicBlock("entry");
 
     ctx.m_IRBuilder.SetInsertPoint(entryBlock);
-
-    // allocate space for each invoke argv inside the current function frame
-    ctx.m_InvokeArgvAllocasStack.emplace_back();
-    auto &current_invoke_argv_allocas = ctx.currentInvokeArgvAllocas();
-    for (size_t i = 0; i < m_InvokeArgCounts.size(); i++) {
-        unsigned argc = m_InvokeArgCounts[i];
-        AllocaInst *argv_alloca = ctx.m_IRBuilder.CreateAlloca(ctx.pointerType(),
-                                                               ConstantInt::get(Type::getInt64Ty(*ctx.m_LLVMContext),
-                                                                                argc,
-                                                                                false),
-                                                               "invoke_argv_alloca_" + std::to_string(i));
-        current_invoke_argv_allocas.emplace_back(argv_alloca);
-    }
 
     // Create an implicit tail recursion point
     BasicBlock *recursion_point = ctx.createBasicBlock("fn_recursion_point");
@@ -115,9 +99,7 @@ llvm::Function *FunctionOverload::compile(CodegenContext &ctx, const Captures &c
         ctx.m_ClosureEnv = prev_closure_env;
     }
 
-    ctx.m_CurrentFunction = prev_function;
-
-    ctx.m_InvokeArgvAllocasStack.pop_back();
+    ctx.m_CurrentFunctionStack.pop_back();
 
     return function;
 }
@@ -127,7 +109,6 @@ FunctionOverload FunctionOverload::parse(AnalyzerContext &ctx, const Object *for
     std::unordered_set<std::string> new_scope_bindings;
     ctx.m_CaptureUsedStack.emplace_back(false);
     ctx.m_StackFrameBindings.emplace_back();
-    ctx.m_InvokeArgCountsStack.emplace_back();
 
     const Object *arglist = tc_list_first(form);
     form = tc_list_next(form);
@@ -217,15 +198,12 @@ FunctionOverload FunctionOverload::parse(AnalyzerContext &ctx, const Object *for
         ctx.m_ScopeBindings[name] = binding_ref;
     }
 
-    std::vector<unsigned> invoke_arg_counts = std::move(ctx.m_InvokeArgCountsStack.back());
     bool capture_used = ctx.m_CaptureUsedStack.back();
 
-    ctx.m_InvokeArgCountsStack.pop_back();
     ctx.m_StackFrameBindings.pop_back();
     ctx.m_CaptureUsedStack.pop_back();
 
     return FunctionOverload(std::move(args),
-                            std::move(invoke_arg_counts),
                             varargs_state == VA_State::FOUND_VARARG,
                             capture_used,
                             std::move(body));

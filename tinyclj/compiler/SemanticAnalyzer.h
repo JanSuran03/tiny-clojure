@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "AnalyzerContext.h"
 #include "compiler/ast/Expr.h"
 #include "types/Object.h"
@@ -9,7 +11,10 @@ namespace SemanticAnalyzer {
 
     AExpr analyze(AnalyzerContext &ctx, const Object *form);
 
-    AExpr analyze(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
+    AExpr analyze(ExpressionMode mode,
+                  AnalyzerContext &ctx,
+                  const Object *form,
+                  const std::optional<std::string> &nameHint = std::nullopt);
 
     const Object *macroexpand1(Runtime &rt, const Object *form);
 

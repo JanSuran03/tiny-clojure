@@ -11,10 +11,10 @@ struct CodegenContext {
     llvm::IRBuilder<> m_IRBuilder;
     std::unique_ptr<llvm::Module> m_Module;
     std::vector<RecursionPoint> m_LoopLabels;
-    llvm::Function *m_CurrentFunction = nullptr;
-    /// Argv allocas for each invoke expression, for each function frame
-    std::vector<std::vector<llvm::AllocaInst *>> m_InvokeArgvAllocasStack;
+    std::vector<llvm::Function *> m_CurrentFunctionStack;
     std::unordered_map<std::string, llvm::Value *> m_VariableMap;
+    std::vector<std::unordered_map<std::string, llvm::GlobalVariable *>> m_GlobalVariableMapStack;
+    std::vector<std::string> m_ModuleImports;
     llvm::Argument *m_ClosureEnv = nullptr;
 
     llvm::PointerType *pointerType();
@@ -30,14 +30,16 @@ struct CodegenContext {
 
     bool currentBlockTerminated() const;
 
-    CodegenContext();
+    CodegenContext(const std::string &moduleName);
 
-    void linkModule(const std::string &module_name = "eval_module");
-
-    std::vector<llvm::AllocaInst *> &currentInvokeArgvAllocas();
+    void linkModule(const std::string &module_name);
 
     // LLVM global string cache
     std::unordered_map<std::string, std::pair<size_t, llvm::GlobalVariable *>> m_GlobalStringCache;
 
     llvm::Value *registerGlobalString(const std::string &str);
+
+    llvm::Function *currentFunction() const;
+
+    llvm::Function *createModuleLoadFunction(const std::string &moduleName);
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UnevaluatableExpr.h"
+#include "compiler/AnalyzerContext.h"
 
 class VarDerefExpr : public Expr {
     Object *m_Var;
@@ -9,5 +10,7 @@ public:
 
     const Object *eval() const override;
 
-    VarDerefExpr(Object *var);
+    VarDerefExpr(Object *var,
+                 const std::string &varName,
+                 AnalyzerContext &ctx);
 };

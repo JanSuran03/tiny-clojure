@@ -57,14 +57,22 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
 
     Value *argc_val = ConstantInt::get(sizeTy, m_InvokeArgs.size());
 
-    AllocaInst *argv = ctx.currentInvokeArgvAllocas()[m_InvokeIndex];
+    size_t invokeIndex = Runtime::getInstance().nextId();
+
+    // create alloca for the invoke argv in the current function frame using a builder at the function's
+    // entry block
+    Function *current_function = ctx.currentFunction();
+    IRBuilder<> entry_builder(&current_function->getEntryBlock(), current_function->getEntryBlock().begin());
+    AllocaInst *argv = entry_builder.CreateAlloca(ctx.pointerType(),
+                                                  ConstantInt::get(sizeTy, m_InvokeArgs.size(), false),
+                                                  "invoke_argv_alloca_" + std::to_string(invokeIndex));
 
     for (size_t i = 0; i < m_InvokeArgs.size(); i++) {
         Value *slot = ctx.m_IRBuilder.CreateGEP(
                 ctx.pointerType(),
                 argv,
                 ConstantInt::get(sizeTy, i),
-                "invoke_" + std::to_string(m_InvokeIndex) + "_arg_slot_" + std::to_string(i));
+                "invoke_" + std::to_string(invokeIndex) + "_arg_slot_" + std::to_string(i));
         ctx.m_IRBuilder.CreateStore(evaled_args[i].value(), slot);
     }
 
@@ -76,7 +84,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
             callfn_type,
             native_func_ptr,
             {evaled_target, argc_val, argv},
-            "invoke_" + std::to_string(m_InvokeIndex) + "_result");
+            "invoke_" + std::to_string(invokeIndex) + "_result");
 }
 
 const Object *InvokeExpr::eval() const {
@@ -95,11 +103,9 @@ const Object *InvokeExpr::eval() const {
 }
 
 InvokeExpr::InvokeExpr(AExpr invokeTarget,
-                       std::vector<AExpr> invokeArgs,
-                       size_t invokeIndex)
+                       std::vector<AExpr> invokeArgs)
         : m_InvokeTarget(std::move(invokeTarget)),
-          m_InvokeArgs(std::move(invokeArgs)),
-          m_InvokeIndex(invokeIndex) {}
+          m_InvokeArgs(std::move(invokeArgs)) {}
 
 AExpr InvokeExpr::parse(ExpressionMode _, AnalyzerContext &ctx, const Object *form) {
     AExpr invokeTarget = SemanticAnalyzer::analyze(ctx, tc_list_first(form));
@@ -110,10 +116,6 @@ AExpr InvokeExpr::parse(ExpressionMode _, AnalyzerContext &ctx, const Object *fo
         invokeArgs.emplace_back(SemanticAnalyzer::analyze(ctx, tc_list_first(args)));
     }
 
-    unsigned invoke_index = ctx.currentInvokeArgCounts().size();
-    ctx.currentInvokeArgCounts().emplace_back(invokeArgs.size());
-
     return std::make_unique<InvokeExpr>(std::move(invokeTarget),
-                                        std::move(invokeArgs),
-                                        invoke_index);
+                                        std::move(invokeArgs));
 }

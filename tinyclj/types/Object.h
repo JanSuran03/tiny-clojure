@@ -9,14 +9,14 @@ class CodegenContext;
 
 enum class ObjectType {
     BOOLEAN,
-    INTEGER,
-    DOUBLE,
-    LIST,
     CHARACTER,
+    CLOSURE,
+    DOUBLE,
+    FUNCTION,
+    INTEGER,
+    LIST,
     STRING,
     SYMBOL,
-    FUNCTION,
-    CLOSURE,
     VAR
 };
 

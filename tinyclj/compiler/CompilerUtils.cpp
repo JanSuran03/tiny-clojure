@@ -16,12 +16,10 @@ EmitResult CompilerUtils::emitBody(const std::vector<AExpr> &body,
     return result;
 }
 
-llvm::Value *CompilerUtils::emitObjectPtr(const Object *obj, CodegenContext &ctx) {
+llvm::Value *CompilerUtils::emitGlobalVar(CodegenContext &ctx, const std::string &name) {
     using namespace llvm;
-    return ctx.m_IRBuilder.CreateIntToPtr(
-            ConstantInt::get(Type::getInt64Ty(*ctx.m_LLVMContext), reinterpret_cast<uint64_t>(obj), false),
-            ctx.pointerType(),
-            "var_ptr");
+    GlobalVariable *global_var = ctx.m_GlobalVariableMapStack.back().at(name);
+    return ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), global_var, "global_var_" + name);
 }
 
 void CompilerUtils::emitThrow(llvm::Value *error_message_ptr, CodegenContext &ctx) {

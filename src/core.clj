@@ -3,10 +3,10 @@
     (cons 'fn* fdecl)))
 (set-macro! (var fn))
 
-; (defn name & fdecl) => (def name (fn name & fdecl))
+; (defn name & fdecl) => (def name (fn & fdecl))
 (def defn
   (fn (name & fdecl)
-    (list 'def name (list* 'fn name fdecl))))
+    (list 'def name (cons 'fn fdecl))))
 (set-macro! (var defn))
 
 (defn defmacro (name args & body)

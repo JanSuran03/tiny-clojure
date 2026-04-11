@@ -13,13 +13,13 @@ IfExpr::IfExpr(AExpr condExpr,
 EmitResult IfExpr::emitIR(CodegenContext &ctx) const {
     using namespace llvm;
 
-    BasicBlock *then_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.then", ctx.m_CurrentFunction);
-    BasicBlock *else_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.else", ctx.m_CurrentFunction);
-    BasicBlock *merge_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.merge", ctx.m_CurrentFunction);
-    BasicBlock *check_null_block = BasicBlock::Create(*ctx.m_LLVMContext, "check_null", ctx.m_CurrentFunction);
+    BasicBlock *then_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.then", ctx.currentFunction());
+    BasicBlock *else_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.else", ctx.currentFunction());
+    BasicBlock *merge_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.merge", ctx.currentFunction());
+    BasicBlock *check_null_block = BasicBlock::Create(*ctx.m_LLVMContext, "check_null", ctx.currentFunction());
     BasicBlock *check_is_boolean_else_block = BasicBlock::Create(*ctx.m_LLVMContext,
-                                                                 "check_bool_else", ctx.m_CurrentFunction);
-    BasicBlock *check_raw_else_block = BasicBlock::Create(*ctx.m_LLVMContext, "check_else", ctx.m_CurrentFunction);
+                                                                 "check_bool_else", ctx.currentFunction());
+    BasicBlock *check_raw_else_block = BasicBlock::Create(*ctx.m_LLVMContext, "check_else", ctx.currentFunction());
 
     // 1. Evaluate condition
     Value *cond_res = m_CondExpr->emitIR(ctx).value();

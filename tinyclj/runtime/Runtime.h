@@ -1,11 +1,13 @@
 #pragma once
 
 #include <atomic>
+#include <filesystem>
 #include <unordered_set>
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 
+#include "compiler/aot/AotEngine.h"
 #include "GCFrame.h"
 #include "MemoryManager.h"
 #include "types/Object.h"
@@ -22,7 +24,6 @@ class Runtime {
     std::unique_ptr<llvm::orc::LLJIT> m_JIT;
     std::atomic<size_t> m_IdCounter = 0;
     std::unordered_map<std::string, Object *> m_GlobalVarStorage;
-    std::unordered_set<const Object *> m_ConstantObjects;
     MemoryManager m_Heap;
 
     static std::unique_ptr<llvm::orc::LLJIT> createJIT();
@@ -31,10 +32,22 @@ class Runtime {
 
     Runtime();
 
-public:
-    void registerConstant(const Object *obj);
+    AotEngine m_AotEngine;
 
-    const std::unordered_set<const Object *> &getConstantObjects() const;
+    // last write time of the C++ source
+    std::filesystem::file_time_type m_SourceLastWriteTime;
+
+    static std::filesystem::file_time_type computeLastSourceWriteTime();
+
+public:
+    bool m_CompilingAOT = false;
+
+    std::filesystem::file_time_type getSourceLastWriteTime() const;
+
+    AotEngine &getAotEngine();
+
+    static constexpr uint64_t DEBUG_LOADER = 1ULL << 0;
+    static constexpr uint64_t st_DebugFlags = 0 /*& DEBUG_LOADER*/;
 
     GCRootFrame *m_RootStack = nullptr;
 
@@ -70,3 +83,9 @@ public:
 
     const Object *loadFile(const std::string &filename);
 };
+
+extern "C" {
+Object *tc_runtime_declare_var(const char *name);
+
+void tc_runtime_load_module(const char *moduleName);
+}

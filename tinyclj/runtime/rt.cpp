@@ -897,4 +897,31 @@ const Object *tinyclj_rt_lte(const Object *self, size_t argc, const Object **arg
             throw std::runtime_error("Cannot compare non-numeric types using <=");
     }
 }
+
+const Object *tinyclj_rt_compile_module(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("compile-file requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr || arg->m_Type != ObjectType::STRING) {
+        throw std::runtime_error("compile-file requires a string argument");
+    }
+    const char *moduleName = static_cast<TCString *>(arg->m_Data)->m_Value;
+    Runtime::getInstance().getAotEngine().compileModule(moduleName);
+    return nullptr;
 }
+
+
+const Object *tinyclj_rt_load_module(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("load-file requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr || arg->m_Type != ObjectType::STRING) {
+        throw std::runtime_error("load-file requires a string argument");
+    }
+    const char *moduleName = static_cast<TCString *>(arg->m_Data)->m_Value;
+    Runtime::getInstance().getAotEngine().loadCompiledModule(moduleName);
+    return nullptr;
+}
+} // extern "C"

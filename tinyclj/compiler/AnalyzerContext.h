@@ -9,8 +9,6 @@
 
 #include "llvm/IR/IRBuilder.h"
 
-#include "CodegenContext.h"
-
 class FunctionOverload;
 
 class BindingExpr;
@@ -20,7 +18,6 @@ class CapturedLocalExpr;
 using Captures = std::unordered_map<std::string, CapturedLocalExpr>;
 
 struct AnalyzerContext {
-    CodegenContext m_CodegenContext;
     /// A mapping of captured variable name to its index in the closure environment for each stack frame.
     std::vector<Captures> m_CapturesMappingStack;
     /// Whether the current stack frame (function overload) uses captures - the parent function stub
@@ -30,11 +27,12 @@ struct AnalyzerContext {
     std::vector<std::unordered_map<std::string, std::shared_ptr<BindingExpr>>> m_StackFrameBindings;
     /// A set of the count of recur arguments for each recur frame.
     std::vector<size_t> m_NumRecurArgsStack;
-    /// For each invoke expression in the current function frame, a vector of the argument counts which
-    /// need to be reserved on the stack on the caller side for the native call to the callee stub function.
-    std::vector<std::vector<unsigned>> m_InvokeArgCountsStack;
     /// A mapping of local variable name to the binding in the current stack frame.
     std::unordered_map<std::string, std::shared_ptr<BindingExpr>> m_ScopeBindings;
+    /// A set of all used global variable names for each stack frame.
+    std::vector<std::unordered_set<std::string>> m_ReferencedGlobalNamesStack;
+    /// A set of module imports for each stack frame.
+    std::vector<std::unordered_set<std::string>> m_ModuleImportsStack;
 
     AnalyzerContext() = default;
 
@@ -43,8 +41,6 @@ struct AnalyzerContext {
     std::unordered_map<std::string, std::shared_ptr<BindingExpr>> &currentStackFrameBindings();
 
     size_t &currentRecurArgCount();
-
-    std::vector<unsigned> &currentInvokeArgCounts();
 
     unsigned functionDepth() const;
 };

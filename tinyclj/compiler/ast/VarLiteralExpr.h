@@ -10,7 +10,9 @@ public:
 
     const Object *eval() const override;
 
-    VarLiteralExpr(const Object *var);
+    VarLiteralExpr(const Object *var,
+                   const std::string &varName,
+                   AnalyzerContext &ctx);
 
     static AExpr parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 };

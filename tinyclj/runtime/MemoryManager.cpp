@@ -30,10 +30,6 @@ void MemoryManager::markRoots(Runtime *rt) {
     for (auto &[name, var]: rt->getGlobalVarStorage()) {
         mark(var);
     }
-    // mark all constant objects
-    for (const Object *obj: rt->getConstantObjects()) {
-        mark(obj);
-    }
 
     // protect the current execution frames from collection
     for (GCRootFrame *frame = rt->m_RootStack; frame; frame = frame->m_Prev) {
@@ -78,7 +74,9 @@ void MemoryManager::collectGarbage(Runtime *rt) {
 
 void MemoryManager::collectGarbageIfNeeded(Runtime *rt) {
     if (m_Storage.size() >= m_HeapCapacity) {
-        collectGarbage(rt);
+        //collectGarbage(rt);
+        std::cerr << "GC is currently disabled." << std::endl;
+        m_HeapCapacity *= 2; // double the capacity to avoid frequent GC cycles during testing
     }
 }
 
@@ -138,7 +136,7 @@ void MemoryManager::destroyObject(Object *obj) {
             break;
         case ObjectType::STRING: {
             TCString *str = static_cast<TCString *>(obj->m_Data);
-            // todo: it's pretty sad, this has been created using strdup, so we have to use free here
+            // todo: it's pretty sad, this has been created using strdup, so we have to use free herex
             // probably should switch to an implemenation with delete[] and avoid strdup altogether
             free(str->m_Value);
             delete str; // delete TCString struct

@@ -6,14 +6,19 @@
 #include "runtime/Runtime.h"
 
 EmitResult VarLiteralExpr::emitIR(CodegenContext &ctx) const {
-    return CompilerUtils::emitObjectPtr(m_Var, ctx);
+    return CompilerUtils::emitGlobalVar(ctx, static_cast<TCVar *>(m_Var->m_Data)->m_Name);
 }
 
 const Object *VarLiteralExpr::eval() const {
     return m_Var;
 }
 
-VarLiteralExpr::VarLiteralExpr(const Object *var) : m_Var(var) {}
+VarLiteralExpr::VarLiteralExpr(const Object *var,
+                               const std::string &varName,
+                               AnalyzerContext &ctx)
+        : m_Var(var) {
+    ctx.m_ReferencedGlobalNamesStack.back().emplace(varName);
+}
 
 AExpr VarLiteralExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     TCList *list = static_cast<TCList *>(form->m_Data);
@@ -27,7 +32,7 @@ AExpr VarLiteralExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Obj
     }
     const std::string &var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
     if (Object *var = Runtime::getInstance().getVar(var_name)) {
-        return std::make_unique<VarLiteralExpr>(var);
+        return std::make_unique<VarLiteralExpr>(var, var_name, ctx);
     } else {
         throw std::runtime_error(std::string("Cannot resolve var: ").append(var_name).append(" in the context"));
     }

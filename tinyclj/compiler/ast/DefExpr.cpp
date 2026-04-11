@@ -22,10 +22,11 @@ EmitResult DefExpr::emitIR(CodegenContext &ctx) const {
     FunctionCallee bind_var_fn = ctx.m_Module->getOrInsertFunction("tc_var_bind_root", bind_var_fn_type);
 
     EmitResult value_to_bind = m_Value->emitIR(ctx);
-    Value *llvm_var_ptr = CompilerUtils::emitObjectPtr(m_Var, ctx);
+    // todo: instead use the var name directly lol, why use static cast
+    Value *llvm_var_ptr = CompilerUtils::emitGlobalVar(ctx, static_cast<TCVar *>(m_Var->m_Data)->m_Name);
     // todo: make tc_Var_bind_root not void and return its result directly
     ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind.value()});
-    return CompilerUtils::emitObjectPtr(m_Var, ctx);
+    return llvm_var_ptr;
 }
 
 const Object *DefExpr::eval() const {
@@ -47,16 +48,20 @@ AExpr DefExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
             if (name == nullptr || name->m_Type != ObjectType::SYMBOL) {
                 throw std::runtime_error("'def form must def a symbol.");
             }
+
             const Object *init = nullptr;
             if (has_init) {
                 args = tc_list_next(args);
                 init = tc_list_first(args);
             }
 
-            // allow recursive use (uninitialized = always nullptr)
+            // allow recursive use (uninitialized = always nullptr, at least for now)
             auto var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
+            ctx.m_ReferencedGlobalNamesStack.back().emplace(var_name);
+            Runtime::getInstance().getAotEngine().startLoading(var_name);
             auto var = Runtime::getInstance().declareVar(var_name);
-            AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init);
+            AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init, var_name);
+            Runtime::getInstance().getAotEngine().finishLoading(var_name);
 
             return std::make_unique<DefExpr>(var, std::move(init_expr));
         }

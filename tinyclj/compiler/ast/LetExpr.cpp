@@ -1,8 +1,9 @@
-#include "compiler/ast/local-binding/BindingExpr.h"
 #include "LetExpr.h"
+#include "compiler/ast/local-binding/BindingExpr.h"
 #include "compiler/ast/local-binding/LocalVarExpr.h"
 #include "compiler/CompilerUtils.h"
 #include "compiler/SemanticAnalyzer.h"
+#include "runtime/Runtime.h"
 #include "types/TCList.h"
 #include "types/TCInteger.h"
 #include "types/TCSymbol.h"
@@ -139,10 +140,17 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
                 binding_name,
                 ctx.functionDepth());
 
+        std::string binding_name_hint = std::string(is_loop ? "loop" : "let")
+                .append("_binding_")
+                .append(binding_name)
+                .append("_")
+                .append(std::to_string(Runtime::getInstance().nextId()));
+
         parsed_bindings.emplace_back(local_binding_expr, SemanticAnalyzer::analyze(
                 ExpressionMode::EXPR,
                 ctx,
-                binding_val));
+                binding_val,
+                std::string (is_loop ? "loop_" : "let").append("_binding_")));
         // todo: unify value vs shared ptr vs unique ptr
         ctx.currentStackFrameBindings().emplace(binding_name, local_binding_expr);
         ctx.m_ScopeBindings.emplace(binding_name, local_binding_expr);

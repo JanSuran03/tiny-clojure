@@ -1,13 +1,18 @@
+#include <fstream>
+
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Verifier.h"
 
+#include "util.h"
 #include "CodegenContext.h"
 #include "runtime/Runtime.h"
 
-CodegenContext::CodegenContext()
+CodegenContext::CodegenContext(const std::string &moduleName)
         : m_LLVMContext(std::make_unique<llvm::LLVMContext>()),
           m_IRBuilder(*m_LLVMContext),
-          m_Module(std::make_unique<llvm::Module>("eval_module", *m_LLVMContext)) {}
-
+          m_Module(std::make_unique<llvm::Module>(moduleName, *m_LLVMContext)) {
+    m_LLVMContext->enableOpaquePointers();
+}
 
 llvm::PointerType *CodegenContext::pointerType() {
     return llvm::PointerType::get(*m_LLVMContext, 0);
@@ -19,7 +24,7 @@ llvm::PointerType *CodegenContext::pointerArrayType() {
 
 void CodegenContext::jumpToTmpBasicBlock() {
     auto block_id = "block__" + std::to_string(Runtime::getInstance().nextId());
-    llvm::BasicBlock *block = llvm::BasicBlock::Create(*m_LLVMContext, block_id, m_CurrentFunction);
+    llvm::BasicBlock *block = llvm::BasicBlock::Create(*m_LLVMContext, block_id, currentFunction());
     m_IRBuilder.CreateBr(block);
     m_IRBuilder.SetInsertPoint(block);
 }
@@ -27,7 +32,7 @@ void CodegenContext::jumpToTmpBasicBlock() {
 llvm::BasicBlock *CodegenContext::createBasicBlock(const std::string &name) {
     return llvm::BasicBlock::Create(*m_LLVMContext,
                                     name,
-                                    m_CurrentFunction);
+                                    currentFunction());
 }
 
 bool CodegenContext::currentBlockTerminated() const {
@@ -35,27 +40,44 @@ bool CodegenContext::currentBlockTerminated() const {
 }
 
 void CodegenContext::linkModule(const std::string &module_name) {
-#if true
-    static unsigned moduleCounter = 0;
-    std::string ll_dst = std::string(PROJECT_SOURCE_DIR)
-            .append("/modules/")
-            .append("module_")
-            .append(std::to_string(moduleCounter++));
-    m_Module->setSourceFileName(module_name);
-    // print to <ll_dst>.ll for debugging
-    std::error_code ec;
-    llvm::raw_fd_ostream dest(ll_dst + ".ll", ec, llvm::sys::fs::OF_None);
-    if (ec) {
-        llvm::errs() << "Could not open file: " << ec.message();
-    } else {
-        llvm::errs() << "Dumping module to " << ll_dst + ".ll" << " for debugging\n";
-        m_Module->print(dest, nullptr);
-    }
-#endif
-
     if (llvm::verifyModule(*m_Module, &llvm::errs())) {
         m_Module->dump();
         throw std::runtime_error("Module verification failed");
+    }
+
+    if (Runtime::getInstance().m_CompilingAOT) {
+        std::string output_filename = Runtime::getInstance().getAotEngine().fullCompiledPath(module_name);
+        std::error_code ec;
+        llvm::raw_fd_ostream dest(output_filename, ec, llvm::sys::fs::OF_None);
+        if (ec) {
+            throw std::runtime_error("Could not open file: " + ec.message());
+        } else {
+            llvm::WriteBitcodeToFile(*m_Module, dest);
+            dest.flush();
+            if constexpr (Runtime::st_DebugFlags & Runtime::DEBUG_LOADER) {
+                llvm::errs() << "Compiled module written to " << output_filename << '\n';
+            }
+        }
+
+        std::ofstream debug_ofs(Runtime::getInstance().getAotEngine().fullCompiledDebugPath(module_name));
+        if (!debug_ofs.is_open()) {
+            throw std::runtime_error("Failed to open debug output file: " +
+                                     Runtime::getInstance().getAotEngine().fullCompiledDebugPath(module_name));
+        } else {
+            llvm::raw_fd_ostream debug_dest(Runtime::getInstance().getAotEngine().fullCompiledDebugPath(module_name),
+                                            ec,
+                                            llvm::sys::fs::OF_None);
+            if (ec) {
+                throw std::runtime_error("Could not open debug file: " + ec.message());
+            } else {
+                m_Module->print(debug_dest, nullptr);
+                debug_dest.flush();
+                if constexpr (Runtime::st_DebugFlags & Runtime::DEBUG_LOADER) {
+                    llvm::errs() << "Debug LLVM IR written to "
+                                 << Runtime::getInstance().getAotEngine().fullCompiledDebugPath(module_name) << '\n';
+                }
+            }
+        }
     }
 
     llvm::orc::ThreadSafeModule tsm(std::move(m_Module), std::move(m_LLVMContext));
@@ -63,10 +85,6 @@ void CodegenContext::linkModule(const std::string &module_name) {
     if (auto err = Runtime::getInstance().getJIT()->addIRModule(std::move(tsm))) {
         throw std::runtime_error("Failed to add module to JIT: " + llvm::toString(std::move(err)));
     }
-}
-
-std::vector<llvm::AllocaInst *> &CodegenContext::currentInvokeArgvAllocas() {
-    return m_InvokeArgvAllocasStack.back();
 }
 
 llvm::Value *CodegenContext::registerGlobalString(const std::string &str) {
@@ -89,4 +107,17 @@ llvm::Value *CodegenContext::registerGlobalString(const std::string &str) {
         m_GlobalStringCache.emplace(str, std::make_pair(strId, globalStr));
     }
     return m_IRBuilder.CreateBitCast(globalStr, Type::getInt8PtrTy(*m_LLVMContext), "strptr_" + std::to_string(strId));
+}
+
+llvm::Function *CodegenContext::currentFunction() const {
+    return m_CurrentFunctionStack.back();
+}
+
+llvm::Function *CodegenContext::createModuleLoadFunction(const std::string &moduleName) {
+    llvm::FunctionType *load_fn_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*m_LLVMContext), {}, false);
+    llvm::Function *load_fn = llvm::Function::Create(load_fn_type,
+                                                     llvm::Function::ExternalLinkage,
+                                                     util::module_load_fn_name(moduleName),
+                                                     *m_Module);
+    return load_fn;
 }

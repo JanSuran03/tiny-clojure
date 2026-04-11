@@ -51,4 +51,6 @@ const Object *tinyclj_rt_double(const Object *self, size_t argc, const Object **
 const Object *tinyclj_rt_long(const Object *self, size_t argc, const Object **argv);
 const Object *tinyclj_rt_lt(const Object *self, size_t argc, const Object **argv);
 const Object *tinyclj_rt_lte(const Object *self, size_t argc, const Object **argv);
+const Object *tinyclj_rt_compile_module(const Object *self, size_t argc, const Object **argv);
+const Object *tinyclj_rt_load_module(const Object *self, size_t argc, const Object **argv);
 }

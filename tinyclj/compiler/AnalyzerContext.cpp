@@ -14,10 +14,6 @@ size_t &AnalyzerContext::currentRecurArgCount() {
     return m_NumRecurArgsStack.back();
 }
 
-std::vector<unsigned int> &AnalyzerContext::currentInvokeArgCounts() {
-    return m_InvokeArgCountsStack.back();
-}
-
 unsigned int AnalyzerContext::functionDepth() const {
-    return m_InvokeArgCountsStack.size() - 1;
+    return m_StackFrameBindings.size() - 1;
 }

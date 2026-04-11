@@ -1,8 +1,8 @@
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 
-#include "llvm/IR/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "Runtime.h"
@@ -80,8 +80,28 @@ Object *Runtime::getVar(const std::string &name) const {
 }
 
 void Runtime::defn(const std::string &name, CallFn fn) {
+    getAotEngine().startLoading(name);
     auto var = declareVar(name);
     tc_var_bind_root(var, tc_function_new(fn, name.c_str()));
+    getAotEngine().finishLoading(name);
+}
+
+std::filesystem::file_time_type Runtime::computeLastSourceWriteTime() {
+    static std::string source_root = std::string(PROJECT_SOURCE_DIR) + "/tinyclj";
+    std::filesystem::file_time_type last_write_time = std::filesystem::file_time_type::min();
+    for (const auto &entry: std::filesystem::recursive_directory_iterator(source_root)) {
+        if (entry.is_regular_file()) {
+            auto entry_write_time = entry.last_write_time();
+            if (entry_write_time > last_write_time) {
+                last_write_time = entry_write_time;
+            }
+        }
+    }
+    return last_write_time;
+}
+
+std::filesystem::file_time_type Runtime::getSourceLastWriteTime() const {
+    return m_SourceLastWriteTime;
 }
 
 Object *Runtime::createObject(ObjectType type, void *data, CallFn callFn, bool isStatic) {
@@ -130,10 +150,17 @@ void Runtime::init() {
     defn("str", tinyclj_rt_str);
     defn("double", tinyclj_rt_double);
     defn("long", tinyclj_rt_long);
-
-    static const std::string core_file = PROJECT_SOURCE_DIR + std::string("/core.clj");
+    defn("compile-module", tinyclj_rt_compile_module);
+    defn("load-module", tinyclj_rt_load_module);
+    //static const std::string core_file = PROJECT_SOURCE_DIR + std::string("/core.clj");
+    static const std::string core_module = "core";
     try {
-        loadFile(core_file);
+        AotEngine &aot_engine = getAotEngine();
+        auto ts1 = std::chrono::high_resolution_clock::now();
+        aot_engine.compileModule(core_module, false);
+        auto ts2 = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = ts2 - ts1;
+        std::cout << "Loaded core.clj in " << elapsed.count() << " seconds." << std::endl;
     } catch (const std::runtime_error &e) {
         std::cerr << "Warning: Failed to load core.clj: " << e.what() << std::endl;
         throw;
@@ -141,7 +168,8 @@ void Runtime::init() {
 }
 
 Runtime::Runtime()
-        : m_JIT(createJIT()) {}
+        : m_JIT(createJIT()),
+          m_SourceLastWriteTime(computeLastSourceWriteTime()) {}
 
 Runtime &Runtime::getInstance() {
     static Runtime instance;
@@ -150,7 +178,10 @@ Runtime &Runtime::getInstance() {
 }
 
 size_t Runtime::nextId() {
-    return m_IdCounter++;
+    /*return m_IdCounter++;*/
+    // for now, use epoch nanos to generate IDs
+    auto ts = std::chrono::high_resolution_clock::now().time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(ts).count();
 }
 
 std::unique_ptr<llvm::orc::LLJIT> &Runtime::getJIT() {
@@ -187,11 +218,6 @@ const Object *Runtime::eval(const Object *form) {
     AnalyzerContext analyzer_ctx;
     AExpr expr = SemanticAnalyzer::analyze(analyzer_ctx, form);
 
-    std::string
-            orig_as_edn = static_cast<const TCString *>(tinyclj_rt_to_edn(nullptr, 1, &original_form)->m_Data)->m_Value;
-
-    analyzer_ctx.m_CodegenContext.linkModule(orig_as_edn);
-
     const Object *evaled_wrapper_fn = expr->eval();
     if (is_wrapped) {
         return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);
@@ -200,12 +226,8 @@ const Object *Runtime::eval(const Object *form) {
     }
 }
 
-void Runtime::registerConstant(const Object *obj) {
-    m_ConstantObjects.emplace(obj);
-}
-
-const std::unordered_set<const Object *> &Runtime::getConstantObjects() const {
-    return m_ConstantObjects;
+AotEngine &Runtime::getAotEngine() {
+    return m_AotEngine;
 }
 
 void Runtime::repl() {
@@ -273,4 +295,14 @@ const Object *Runtime::loadFile(const std::string &filename) {
         throw std::runtime_error("Failed to open file: " + filename);
     }
     return loadStream(file);
+}
+
+extern "C" {
+Object *tc_runtime_declare_var(const char *name) {
+    return Runtime::getInstance().declareVar(name);
+}
+
+void tc_runtime_load_module(const char *moduleName) {
+    Runtime::getInstance().getAotEngine().loadCompiledModule(moduleName);
+}
 }
