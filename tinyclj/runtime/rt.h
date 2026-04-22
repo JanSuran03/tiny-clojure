@@ -34,11 +34,10 @@ const Object *tinyclj_rt_is_character(const Object *self, size_t argc, const Obj
 const Object *tinyclj_rt_binary_equal(const Object *self, size_t argc, const Object **argv);
 const Object *tinyclj_rt_identical(const Object *self, size_t argc, const Object **argv);
 const Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **argv);
-
-//Object *tinyclj_rt_read(const Object *self, size_t argc, const Object **argv);
-//
-//Object *tinyclj_rt_read_string(const Object *self, size_t argc, const Object **argv);
-// runtime-dependent functions
+const Object *tinyclj_rt_read(const Object *self, size_t argc, const Object **argv);
+const Object *tinyclj_rt_read_string(const Object *self, size_t argc, const Object **argv);
+const Object *tinyclj_rt_slurp(const Object *self, size_t argc, const Object **argv);
+const Object *tinyclj_rt_spit(const Object *self, size_t argc, const Object **argv);
 const Object *tinyclj_rt_macroexpand(const Object *self, size_t argc, const Object **argv);
 const Object *tinyclj_rt_macroexpand1(const Object *self, size_t argc, const Object **argv);
 const Object *tinyclj_rt_eval(const Object *self, size_t argc, const Object **argv);

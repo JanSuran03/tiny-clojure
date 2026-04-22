@@ -57,7 +57,13 @@ AExpr DefExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
 
             // allow recursive use (uninitialized = always nullptr, at least for now)
             auto var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
-            ctx.m_ReferencedGlobalNamesStack.back().emplace(var_name);
+            // todo: is this actually needed during parsing, or only during codegen?
+            // the issue is, def forms are not wrapped in a fn during eval, so referenced global names is empty
+            // but they are wrapped during AOT codegen, so the check being here is semantically incorrect
+            // todo: refactor
+            if (!ctx.m_ReferencedGlobalNamesStack.empty()) {
+                ctx.m_ReferencedGlobalNamesStack.back().emplace(var_name);
+            }
             Runtime::getInstance().getAotEngine().startLoading(var_name);
             auto var = Runtime::getInstance().declareVar(var_name);
             AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init, var_name);

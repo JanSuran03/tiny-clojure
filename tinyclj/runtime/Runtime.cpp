@@ -140,6 +140,10 @@ void Runtime::init() {
     defn("var?", tinyclj_rt_is_var);
     defn("character?", tinyclj_rt_is_character);
     defn("apply", tinyclj_rt_apply);
+    defn("read", tinyclj_rt_read);
+    defn("read-string", tinyclj_rt_read_string);
+    defn("slurp", tinyclj_rt_slurp);
+    defn("spit", tinyclj_rt_spit);
     defn("macroexpand", tinyclj_rt_macroexpand);
     defn("macroexpand1", tinyclj_rt_macroexpand1);
     defn("eval", tinyclj_rt_eval);
@@ -160,7 +164,10 @@ void Runtime::init() {
         aot_engine.compileModule(core_module, false);
         auto ts2 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = ts2 - ts1;
-        std::cout << "Loaded core.clj in " << elapsed.count() << " seconds." << std::endl;
+        // disable this log for now
+        if (false) {
+            std::cout << "Loaded core.clj in " << elapsed.count() << " seconds." << std::endl;
+        }
     } catch (const std::runtime_error &e) {
         std::cerr << "Warning: Failed to load core.clj: " << e.what() << std::endl;
         throw;
@@ -232,29 +239,33 @@ AotEngine &Runtime::getAotEngine() {
 
 void Runtime::repl() {
     BufferedReader reader(std::cin);
+    Runtime &rt = Runtime::getInstance();
 
-    std::cout << "Welcome to TinyCLJ REPL!" << std::endl
-              << "Type exit or Ctrl+D to quit." << std::endl
-              << "Type (vars) to see all defined vars." << std::endl;
-
+    if (!rt.m_SuppressReplWelcome) {
+        std::cout << "Welcome to TinyCLJ REPL!" << std::endl
+                  << "Type exit or Ctrl+D to quit." << std::endl
+                  << "Type (vars) to see all defined vars." << std::endl;
+    }
     while (true) {
-        std::cout << "> " << std::flush;
+        std::cout << "user=> " << std::flush;
         const Object *form = LispReader::read(reader);
         if (form == LispReader::eof_object()
             || (form != nullptr
                 && form->m_Type == ObjectType::SYMBOL
                 && strcmp(static_cast<const TCSymbol *>(form->m_Data)->m_Name, "exit") == 0)) {
-            std::cout << "Goodbye!" << std::endl;
+            std::cout << std::endl;
+            if (!rt.m_SuppressReplWelcome) {
+                std::cout << "Goodbye!" << std::endl;
+            }
             break;
         }
 
         try {
             const Object *res = eval(form);
-            std::cout << "=> ";
             const Object *as_edn = tinyclj_rt_to_edn(nullptr, 1, &res);
             tinyclj_rt_print(nullptr, 1, &as_edn);
             std::cout << std::endl;
-            m_Heap.collectGarbageIfNeeded(this);
+            Runtime::getInstance().m_Heap.collectGarbageIfNeeded();
         } catch (const std::runtime_error &e) {
             std::cout << "Could not evaluate form due to a runtime error:\n" << e.what() << std::endl;
         }
@@ -272,10 +283,15 @@ const Object *Runtime::loadStream(std::istream &stream) {
         res = eval(form);
         {
             RootFrameGuard guard({res});
-            m_Heap.collectGarbageIfNeeded(this);
+            Runtime::getInstance().m_Heap.collectGarbageIfNeeded();
         }
     }
     return res;
+}
+
+const Object *Runtime::read() {
+    BufferedReader reader(std::cin);
+    return LispReader::read(reader);
 }
 
 const Object *Runtime::readString(const std::string &input) {
@@ -295,6 +311,26 @@ const Object *Runtime::loadFile(const std::string &filename) {
         throw std::runtime_error("Failed to open file: " + filename);
     }
     return loadStream(file);
+}
+
+const Object *Runtime::slurp(const std::string &filename) {
+    std::ifstream file(PROJECT_SOURCE_DIR + std::string("/") + filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return tc_string_new(buffer.str().c_str());
+}
+
+void Runtime::spit(const std::string &filename, const std::string &content) {
+    std::ofstream file(PROJECT_SOURCE_DIR + std::string("/") + filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file for writing: " + filename);
+    }
+
+    file << content;
 }
 
 extern "C" {

@@ -67,8 +67,13 @@ std::string unary_to_edn(const Object *obj) {
             return static_cast<TCBoolean *>(obj->m_Data)->m_Value ? "true" : "false";
         case ObjectType::INTEGER:
             return std::to_string(static_cast<TCInteger *>(obj->m_Data)->m_Value);
-        case ObjectType::DOUBLE:
-            return std::to_string(static_cast<TCDouble *>(obj->m_Data)->m_Value);
+        case ObjectType::DOUBLE: {
+            // cannot call std::to_string directly as it produces a lot of trailing zeros
+            // return std::to_string(static_cast<TCDouble *>(obj->m_Data)->m_Value);
+            std::ostringstream oss;
+            oss << std::defaultfloat << static_cast<TCDouble *>(obj->m_Data)->m_Value;
+            return oss.str();
+        }
         case ObjectType::STRING: {
             std::string buf("\"");
             for (const char *c = static_cast<TCString *>(obj->m_Data)->m_Value; *c; c++) {
@@ -665,6 +670,55 @@ const Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **a
     return result;
 }
 
+const Object *tinyclj_rt_read(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 0) {
+        throw std::runtime_error("read requires exactly 0 arguments");
+    }
+    return Runtime::read();
+}
+
+const Object *tinyclj_rt_read_string(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("read-string requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr || arg->m_Type != ObjectType::STRING) {
+        throw std::runtime_error("read-string requires a string argument");
+    }
+    const char *input = static_cast<TCString *>(arg->m_Data)->m_Value;
+    return Runtime::readString(input);
+}
+
+const Object *tinyclj_rt_slurp(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("slurp requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr || arg->m_Type != ObjectType::STRING) {
+        throw std::runtime_error("slurp requires a string argument");
+    }
+    const char *filename = static_cast<TCString *>(arg->m_Data)->m_Value;
+    return Runtime::slurp(filename);
+}
+
+const Object *tinyclj_rt_spit(const Object *self, size_t argc, const Object **argv) {
+    if (argc != 2) {
+        throw std::runtime_error("spit requires exactly 2 arguments");
+    }
+    const Object *filename_arg = argv[0];
+    const Object *content_arg = argv[1];
+    if (filename_arg == nullptr || filename_arg->m_Type != ObjectType::STRING) {
+        throw std::runtime_error("spit requires the first argument to be a string");
+    }
+    if (content_arg == nullptr || content_arg->m_Type != ObjectType::STRING) {
+        throw std::runtime_error("spit requires the second argument to be a string");
+    }
+    const char *filename = static_cast<TCString *>(filename_arg->m_Data)->m_Value;
+    const char *content = static_cast<TCString *>(content_arg->m_Data)->m_Value;
+    Runtime::spit(filename, content);
+    return nullptr;
+}
+
 const Object *tinyclj_rt_macroexpand(const Object *self, size_t argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("macroexpand requires exactly 1 argument");
@@ -913,7 +967,7 @@ const Object *tinyclj_rt_compile_module(const Object *self, size_t argc, const O
 
 
 const Object *tinyclj_rt_load_module(const Object *self, size_t argc, const Object **argv) {
-    if (argc != 1) {
+    if (argc < 1 || argc > 2) {
         throw std::runtime_error("load-file requires exactly 1 argument");
     }
     const Object *arg = argv[0];
@@ -921,7 +975,15 @@ const Object *tinyclj_rt_load_module(const Object *self, size_t argc, const Obje
         throw std::runtime_error("load-file requires a string argument");
     }
     const char *moduleName = static_cast<TCString *>(arg->m_Data)->m_Value;
-    Runtime::getInstance().getAotEngine().loadCompiledModule(moduleName);
+    bool force_reload = false;
+    if (argc == 2) {
+        const Object *forceArg = argv[1];
+        if (forceArg == nullptr || forceArg->m_Type != ObjectType::BOOLEAN) {
+            throw std::runtime_error("Second argument to load-file must be a boolean");
+        }
+        force_reload = static_cast<TCBoolean *>(forceArg->m_Data)->m_Value;
+    }
+    Runtime::getInstance().getAotEngine().loadCompiledModule(moduleName, force_reload);
     return nullptr;
 }
 } // extern "C"

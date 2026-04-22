@@ -13,7 +13,7 @@ class MemoryManager {
     // todo: is this needed?
     bool m_GCInProgress = false;
 
-    void markRoots(Runtime *rt);
+    void markRoots();
 
     void sweep();
 
@@ -27,7 +27,7 @@ public:
 
     Object *createObject(ObjectType type, void *data, CallFn callFn = nullptr, bool isStatic = false);
 
-    void collectGarbage(Runtime *rt);
+    void collectGarbage();
 
-    void collectGarbageIfNeeded(Runtime *rt);
+    void collectGarbageIfNeeded();
 };

@@ -41,6 +41,7 @@ class Runtime {
 
 public:
     bool m_CompilingAOT = false;
+    bool m_SuppressReplWelcome = false;
 
     std::filesystem::file_time_type getSourceLastWriteTime() const;
 
@@ -59,7 +60,7 @@ public:
 
     static Runtime &getInstance();
 
-    size_t nextId();
+    static size_t nextId();
 
     const std::unordered_map<std::string, Object *> &getGlobalVarStorage() const;
 
@@ -71,17 +72,23 @@ public:
 
     std::unique_ptr<llvm::orc::LLJIT> &getJIT();
 
+    static void repl();
+
     static const Object *eval(const Object *form);
 
-    void repl();
+    static const Object *read();
 
     static const Object *readString(const std::string &input);
 
-    const Object *loadString(const std::string &input);
+    static const Object *loadString(const std::string &input);
 
-    const Object *loadStream(std::istream &stream);
+    static const Object *slurp(const std::string &filename);
 
-    const Object *loadFile(const std::string &filename);
+    static void spit(const std::string &filename, const std::string &content);
+
+    static const Object *loadStream(std::istream &stream);
+
+    static const Object *loadFile(const std::string &filename);
 };
 
 extern "C" {

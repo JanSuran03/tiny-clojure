@@ -46,7 +46,7 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/SemanticAnalyzer.cpp
         tinyclj/reader/BufferedReader.cpp
         tinyclj/reader/LispReader.cpp
-        "tinyclj/compiler/aot/AotEngine.cpp"
+        tinyclj/compiler/aot/AotEngine.cpp
         tinyclj/runtime/GCFrame.cpp
         tinyclj/runtime/MemoryManager.cpp
         tinyclj/runtime/rt.cpp

@@ -26,13 +26,14 @@ Object *MemoryManager::createObject(ObjectType type, void *data, CallFn callFn, 
     return obj;
 }
 
-void MemoryManager::markRoots(Runtime *rt) {
-    for (auto &[name, var]: rt->getGlobalVarStorage()) {
+void MemoryManager::markRoots() {
+    Runtime &rt = Runtime::getInstance();
+    for (auto &[name, var]: rt.getGlobalVarStorage()) {
         mark(var);
     }
 
     // protect the current execution frames from collection
-    for (GCRootFrame *frame = rt->m_RootStack; frame; frame = frame->m_Prev) {
+    for (GCRootFrame *frame = rt.m_RootStack; frame; frame = frame->m_Prev) {
         for (auto root: frame->m_Roots) {
             mark(root);
         }
@@ -52,13 +53,16 @@ void MemoryManager::sweep() {
         }
         i++;
     }
-    std::cout << "GC cycle completed. Collected "
-              << (m_Storage.size() - newSize)
-              << " / " << m_Storage.size() << " objects." << std::endl;
+    // disable debug output for now
+    if (false) {
+        std::cout << "GC cycle completed. Collected "
+                  << (m_Storage.size() - newSize)
+                  << " / " << m_Storage.size() << " objects." << std::endl;
+    }
     m_Storage.resize(newSize);
 }
 
-void MemoryManager::collectGarbage(Runtime *rt) {
+void MemoryManager::collectGarbage() {
     if (m_GCInProgress) {
         printf("Debug: GC already in progress, skipping this cycle.\n");
         fflush(stdout);
@@ -66,17 +70,16 @@ void MemoryManager::collectGarbage(Runtime *rt) {
     }
     m_GCInProgress = true;
 
-    markRoots(rt);
+    markRoots();
     sweep();
     m_GCInProgress = false;
     m_HeapCapacity = m_Storage.size() * 2; // double the capacity for the next cycle to reduce frequency of GC
 }
 
-void MemoryManager::collectGarbageIfNeeded(Runtime *rt) {
+void MemoryManager::collectGarbageIfNeeded() {
     if (m_Storage.size() >= m_HeapCapacity) {
-        //collectGarbage(rt);
-        std::cerr << "GC is currently disabled." << std::endl;
-        m_HeapCapacity *= 2; // double the capacity to avoid frequent GC cycles during testing
+        collectGarbage();
+        m_HeapCapacity *= 2; // double the capacity
     }
 }
 

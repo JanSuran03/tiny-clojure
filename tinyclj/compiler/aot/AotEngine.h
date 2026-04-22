@@ -27,6 +27,4 @@ public:
     void finishLoading(const std::string &moduleName);
 
     void loadCompiledModule(const std::string &moduleName, bool forceReload = false);
-
-    void loadCompiledFunctionModule(const std::string &moduleName, bool forceReload = false);
 };
