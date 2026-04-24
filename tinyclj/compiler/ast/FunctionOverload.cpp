@@ -16,8 +16,15 @@ FunctionOverload::FunctionOverload(std::vector<FnArgExpr> args,
           m_UsesClosureEnv(usesClosureEnv),
           m_Body(std::move(body)) {}
 
-llvm::Function *FunctionOverload::compile(CodegenContext &ctx, const Captures &captures) const {
+llvm::Function *FunctionOverload::compile(const std::string &parent_fn_name,
+                                          CodegenContext &ctx,
+                                          const Captures &captures) const {
     using namespace llvm;
+    auto overload_name = parent_fn_name + "_overload_" + std::to_string(m_Args.size());
+    if (m_IsVariadic) {
+        overload_name.append("_variadic");
+    }
+
 
     std::vector<Type *> argTypes(m_Args.size(), ctx.pointerType()); // positional arguments
     bool uses_closure_env = !captures.empty();
@@ -28,9 +35,14 @@ llvm::Function *FunctionOverload::compile(CodegenContext &ctx, const Captures &c
     FunctionType *funcType = FunctionType::get(ctx.pointerType(), argTypes, false);
     Function *function = Function::Create(funcType,
                                           Function::ExternalLinkage,
-                                          "func_overload_" + std::to_string(
-                                                  Runtime::getInstance().nextId()),
+                                          overload_name,
                                           *ctx.m_Module);
+    for (size_t i = 0; i < m_Args.size(); i++) {
+        function->getArg(i)->setName(m_Args[i].name());
+    }
+    if (uses_closure_env) {
+        function->getArg(m_Args.size())->setName("closure_env");
+    }
 
     ctx.m_CurrentFunctionStack.emplace_back(function);
 

@@ -68,8 +68,8 @@ target_include_directories(tinyclj_lib PUBLIC
         ${LLVM_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}/tinyclj)
 
-target_compile_definitions(tinyclj_lib PRIVATE
-        PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+target_compile_definitions(tinyclj_lib PUBLIC
+        TINYCLJ_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
 )
 
 llvm_map_components_to_libnames(LLVM_LIBS

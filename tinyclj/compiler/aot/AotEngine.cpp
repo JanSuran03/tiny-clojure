@@ -18,22 +18,20 @@
 #include "compiler/ast/local-binding/CapturedLocalExpr.h"
 #include "reader/LispReader.h"
 
-std::string project_root = std::string(PROJECT_SOURCE_DIR) + "/";
-
 std::string AotEngine::fullSourcePath(const std::string &moduleName) const {
-    return project_root + m_SourceRoot + "/" + moduleName + ".clj";
+    return m_SourceRoot + "/" + moduleName + ".clj";
 }
 
 std::string AotEngine::fullCompiledPath(const std::string &moduleName) const {
-    return project_root + m_CompiledRoot + "/" + moduleName + ".bc";
+    return m_CompiledRoot + "/" + moduleName + ".bc";
 }
 
 std::string AotEngine::fullCompiledDebugPath(const std::string &moduleName) const {
-    return project_root + m_CompiledRoot + "/" + moduleName + ".ll";
+    return m_CompiledRoot + "/" + moduleName + ".ll";
 }
 
 std::string AotEngine::fullDepsFileName(const std::string &moduleName) const {
-    return project_root  + m_CompiledRoot + "/" + util::module_dependency_file_name(moduleName);
+    return m_CompiledRoot + "/" + util::module_dependency_file_name(moduleName);
 }
 
 bool shouldRecompile(const std::string &source_filename,

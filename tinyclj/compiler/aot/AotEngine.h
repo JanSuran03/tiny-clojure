@@ -9,8 +9,8 @@ public: //todo
     std::unordered_set<std::string> m_LoadedFiles;
     std::unordered_set<std::string> m_LoadingSet;
     std::vector<std::string> m_LoadingStack;
-    std::string m_SourceRoot = "src";
-    std::string m_CompiledRoot = "modules";
+    std::string m_SourceRoot = std::string(TINYCLJ_PROJECT_SOURCE_DIR) + "/src";
+    std::string m_CompiledRoot = std::string(TINYCLJ_PROJECT_SOURCE_DIR) + "/modules";
 public:
     std::string fullSourcePath(const std::string &moduleName) const;
 

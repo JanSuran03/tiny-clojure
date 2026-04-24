@@ -14,16 +14,16 @@ CodegenContext::CodegenContext(const std::string &moduleName)
     m_LLVMContext->enableOpaquePointers();
 }
 
-llvm::PointerType *CodegenContext::pointerType() {
+llvm::PointerType *CodegenContext::pointerType() const {
     return llvm::PointerType::get(*m_LLVMContext, 0);
 }
 
-llvm::PointerType *CodegenContext::pointerArrayType() {
+llvm::PointerType *CodegenContext::pointerArrayType() const {
     return llvm::PointerType::get(pointerType(), 0);
 }
 
 void CodegenContext::jumpToTmpBasicBlock() {
-    auto block_id = "block__" + std::to_string(Runtime::getInstance().nextId());
+    auto block_id = "block__" + std::to_string(Runtime::nextId());
     llvm::BasicBlock *block = llvm::BasicBlock::Create(*m_LLVMContext, block_id, currentFunction());
     m_IRBuilder.CreateBr(block);
     m_IRBuilder.SetInsertPoint(block);

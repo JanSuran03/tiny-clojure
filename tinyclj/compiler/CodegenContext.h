@@ -17,9 +17,9 @@ struct CodegenContext {
     std::vector<std::string> m_ModuleImports;
     llvm::Argument *m_ClosureEnv = nullptr;
 
-    llvm::PointerType *pointerType();
+    llvm::PointerType *pointerType() const;
 
-    llvm::PointerType *pointerArrayType();
+    llvm::PointerType *pointerArrayType() const;
 
     // Creates a new basic block and a branch instruction to that block from the current block
     // and sets the IR insertion point to that block.

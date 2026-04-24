@@ -11,7 +11,9 @@ class FunctionOverload {
     Captures m_Captures;
     std::vector<AExpr> m_Body;
 
-    llvm::Function *compile(CodegenContext &ctx, const Captures &captures) const;
+    llvm::Function *compile(const std::string &parent_fn_name,
+                            CodegenContext &ctx,
+                            const Captures &captures) const;
 
 public:
     friend class FunctionExpr;

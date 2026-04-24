@@ -202,12 +202,12 @@ std::string FunctionExpr::compile() const {
     // compile overloads and the stub function that dispatches to the correct overload based on the argument count
     std::unordered_map<size_t, Function *> internal_fns;
     for (const auto &[argcnt, overload]: m_Overloads) {
-        Function *internal_fn = overload.compile(ctx, m_Captures);
+        Function *internal_fn = overload.compile(m_Name, ctx, m_Captures);
         internal_fns.emplace(argcnt, internal_fn);
     }
     Function *variadic_internal_fn = nullptr;
     if (m_VariadicOverload.has_value()) {
-        variadic_internal_fn = m_VariadicOverload->compile(ctx, m_Captures);
+        variadic_internal_fn = m_VariadicOverload->compile(m_Name, ctx, m_Captures);
     }
 
     // create a switch that dispatches to the correct internal function based on the argument count

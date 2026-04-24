@@ -87,7 +87,7 @@ void Runtime::defn(const std::string &name, CallFn fn) {
 }
 
 std::filesystem::file_time_type Runtime::computeLastSourceWriteTime() {
-    static std::string source_root = std::string(PROJECT_SOURCE_DIR) + "/tinyclj";
+    static std::string source_root = std::string(TINYCLJ_PROJECT_SOURCE_DIR) + "/tinyclj";
     std::filesystem::file_time_type last_write_time = std::filesystem::file_time_type::min();
     for (const auto &entry: std::filesystem::recursive_directory_iterator(source_root)) {
         if (entry.is_regular_file()) {
@@ -108,7 +108,21 @@ Object *Runtime::createObject(ObjectType type, void *data, CallFn callFn, bool i
     return m_Heap.createObject(type, data, callFn, isStatic);
 }
 
+/// Creates the directory if it doesn't exist and clears all its contests.
+void clear_directory(const std::filesystem::path &path) {
+    namespace fs = std::filesystem;
+
+    fs::create_directories(path);
+
+    for (const auto &entry: fs::directory_iterator(path)) {
+        fs::remove_all(entry.path());
+    }
+}
+
 void Runtime::init() {
+    // Todo: Should we do this, or not? Under what circumstances?
+    //clear_directory(std::filesystem::path(m_AotEngine.m_CompiledRoot));
+
     defn("builtin_binary_add", tinyclj_rt_add);
     defn("builtin_binary_sub", tinyclj_rt_sub);
     defn("builtin_binary_mul", tinyclj_rt_mul);
@@ -156,7 +170,7 @@ void Runtime::init() {
     defn("long", tinyclj_rt_long);
     defn("compile-module", tinyclj_rt_compile_module);
     defn("load-module", tinyclj_rt_load_module);
-    //static const std::string core_file = PROJECT_SOURCE_DIR + std::string("/core.clj");
+
     static const std::string core_module = "core";
     try {
         AotEngine &aot_engine = getAotEngine();
@@ -238,7 +252,6 @@ AotEngine &Runtime::getAotEngine() {
 }
 
 void Runtime::repl() {
-    BufferedReader reader(std::cin);
     Runtime &rt = Runtime::getInstance();
 
     if (!rt.m_SuppressReplWelcome) {
@@ -248,19 +261,19 @@ void Runtime::repl() {
     }
     while (true) {
         std::cout << "user=> " << std::flush;
-        const Object *form = LispReader::read(reader);
-        if (form == LispReader::eof_object()
-            || (form != nullptr
-                && form->m_Type == ObjectType::SYMBOL
-                && strcmp(static_cast<const TCSymbol *>(form->m_Data)->m_Name, "exit") == 0)) {
-            std::cout << std::endl;
-            if (!rt.m_SuppressReplWelcome) {
-                std::cout << "Goodbye!" << std::endl;
-            }
-            break;
-        }
-
+        BufferedReader reader(std::cin);
         try {
+            const Object *form = LispReader::read(reader);
+            if (form == LispReader::eof_object()
+                || (form != nullptr
+                    && form->m_Type == ObjectType::SYMBOL
+                    && strcmp(static_cast<const TCSymbol *>(form->m_Data)->m_Name, "exit") == 0)) {
+                std::cout << std::endl;
+                if (!rt.m_SuppressReplWelcome) {
+                    std::cout << "Goodbye!" << std::endl;
+                }
+                break;
+            }
             const Object *res = eval(form);
             const Object *as_edn = tinyclj_rt_to_edn(nullptr, 1, &res);
             tinyclj_rt_print(nullptr, 1, &as_edn);
@@ -314,7 +327,7 @@ const Object *Runtime::loadFile(const std::string &filename) {
 }
 
 const Object *Runtime::slurp(const std::string &filename) {
-    std::ifstream file(PROJECT_SOURCE_DIR + std::string("/") + filename);
+    std::ifstream file(TINYCLJ_PROJECT_SOURCE_DIR + std::string("/") + filename);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open file: " + filename);
     }
@@ -325,7 +338,7 @@ const Object *Runtime::slurp(const std::string &filename) {
 }
 
 void Runtime::spit(const std::string &filename, const std::string &content) {
-    std::ofstream file(PROJECT_SOURCE_DIR + std::string("/") + filename);
+    std::ofstream file(TINYCLJ_PROJECT_SOURCE_DIR + std::string("/") + filename);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open file for writing: " + filename);
     }

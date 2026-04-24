@@ -62,8 +62,11 @@
   ((s1 s2 & colls)
    (reduce concat (concat s1 s2) colls)))
 
-(defmacro if-not (test then else)
-  `(if ~test ~else ~then))
+(defmacro if-not
+  ((test then)
+   `(if-not ~test ~then nil))
+  ((test then else)
+   `(if ~test ~else ~then)))
 
 (defmacro when (test & body)
   `(if ~test
@@ -241,6 +244,11 @@
          ret# (do ~@body))
      (println "Elapsed: " (/ (double (- (epoch-nanos) start#)) 1000000) " ms")
      ret#))
+
+(defmacro bench (& body)
+  `(let (start# (epoch-nanos)
+         ret# (do ~@body))
+     (/ (double (- (epoch-nanos) start#)) 1000000))) ; return the time in ms
 
 (defmacro dotimes (bindings & body)
   (let (iter-var (first bindings)
