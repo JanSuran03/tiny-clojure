@@ -39,7 +39,7 @@ EmitResult InvokeExpr::emitIR(CodegenContext &ctx) const {
 
     // fn != null => check whether fn is invokable
     ctx.m_IRBuilder.SetInsertPoint(check_target_invokable);
-    // native_func_ptr = evaled_target.m_CallFn
+    // native_func_ptr = evaled_target.m_MethodTable->m_CallFn
     Value *native_func_ptr = Object::emitGetCallFn(ctx, evaled_target);
     Value *native_func_is_nullptr = ctx.m_IRBuilder.CreateICmpEQ(
             native_func_ptr,
@@ -96,10 +96,11 @@ const Object *InvokeExpr::eval() const {
     if (evaled_target == nullptr) {
         throw std::runtime_error("Cannot call nil.");
     }
-    if (evaled_target->m_Call == nullptr) {
+    CallFn callFn = evaled_target->m_MethodTable->m_CallFn;
+    if (callFn == nullptr) {
         throw std::runtime_error("Object is not callable.");
     }
-    return evaled_target->m_Call(evaled_target, evaled_args.size(), evaled_args.data());
+    return callFn(evaled_target, evaled_args.size(), evaled_args.data());
 }
 
 InvokeExpr::InvokeExpr(AExpr invokeTarget,

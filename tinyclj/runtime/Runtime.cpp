@@ -79,10 +79,11 @@ Object *Runtime::getVar(const std::string &name) const {
     }
 }
 
-void Runtime::defn(const std::string &name, CallFn fn) {
+template<CallFn Fn>
+void Runtime::defn(const std::string &name) {
     getAotEngine().startLoading(name);
     auto var = declareVar(name);
-    tc_var_bind_root(var, tc_function_new(fn, name.c_str()));
+    tc_var_bind_root(var, tc_function_new(&BuiltinFunctionVTable<Fn>::value, name.c_str()));
     getAotEngine().finishLoading(name);
 }
 
@@ -104,8 +105,8 @@ std::filesystem::file_time_type Runtime::getSourceLastWriteTime() const {
     return m_SourceLastWriteTime;
 }
 
-Object *Runtime::createObject(ObjectType type, void *data, CallFn callFn, bool isStatic) {
-    return m_Heap.createObject(type, data, callFn, isStatic);
+Object *Runtime::createObject(ObjectType type, void *data, const MethodTable *methodTable, bool isStatic) {
+    return m_Heap.createObject(type, data, methodTable, isStatic);
 }
 
 /// Creates the directory if it doesn't exist and clears all its contests.
@@ -123,53 +124,53 @@ void Runtime::init() {
     // Todo: Should we do this, or not? Under what circumstances?
     //clear_directory(std::filesystem::path(m_AotEngine.m_CompiledRoot));
 
-    defn("builtin_binary_add", tinyclj_rt_add);
-    defn("builtin_binary_sub", tinyclj_rt_sub);
-    defn("builtin_binary_mul", tinyclj_rt_mul);
-    defn("builtin_binary_div", tinyclj_rt_div);
-    defn("builtin_unary_print", tinyclj_rt_print);
-    defn("flush", tinyclj_rt_flush);
-    defn("to-edn", tinyclj_rt_to_edn);
-    defn("builtin_binary_equal", tinyclj_rt_binary_equal);
-    defn("builtin_binary_lt", tinyclj_rt_lt);
-    defn("builtin_binary_lte", tinyclj_rt_lte);
-    defn("set-macro!", tinyclj_rt_setmacro);
-    defn("identical?", tinyclj_rt_identical);
-    defn("list", tinyclj_rt_list);
-    defn("cons", tinyclj_rt_cons);
-    defn("next", tinyclj_rt_next);
-    defn("seq", tinyclj_rt_seq);
-    defn("list*", tinyclj_rt_list_STAR);
-    defn("count", tinyclj_rt_count);
-    defn("first", tinyclj_rt_first);
-    defn("error", tinyclj_rt_error);
-    defn("nil?", tinyclj_rt_is_nil);
-    defn("string?", tinyclj_rt_is_string);
-    defn("symbol?", tinyclj_rt_is_symbol);
-    defn("list?", tinyclj_rt_is_list);
-    defn("function?", tinyclj_rt_is_function);
-    defn("integer?", tinyclj_rt_is_integer);
-    defn("double?", tinyclj_rt_is_double);
-    defn("boolean?", tinyclj_rt_is_boolean);
-    defn("var?", tinyclj_rt_is_var);
-    defn("character?", tinyclj_rt_is_character);
-    defn("apply", tinyclj_rt_apply);
-    defn("read", tinyclj_rt_read);
-    defn("read-string", tinyclj_rt_read_string);
-    defn("slurp", tinyclj_rt_slurp);
-    defn("spit", tinyclj_rt_spit);
-    defn("macroexpand", tinyclj_rt_macroexpand);
-    defn("macroexpand1", tinyclj_rt_macroexpand1);
-    defn("eval", tinyclj_rt_eval);
-    defn("vars", tinyclj_rt_vars);
-    defn("epoch-nanos", tinyclj_rt_epoch_nanos);
-    defn("next-id", tinyclj_rt_nextID);
-    defn("symbol", tinyclj_rt_symbol);
-    defn("str", tinyclj_rt_str);
-    defn("double", tinyclj_rt_double);
-    defn("long", tinyclj_rt_long);
-    defn("compile-module", tinyclj_rt_compile_module);
-    defn("load-module", tinyclj_rt_load_module);
+    defn<tinyclj_rt_add>("builtin_binary_add");
+    defn<tinyclj_rt_sub>("builtin_binary_sub");
+    defn<tinyclj_rt_mul>("builtin_binary_mul");
+    defn<tinyclj_rt_div>("builtin_binary_div");
+    defn<tinyclj_rt_print>("builtin_unary_print");
+    defn<tinyclj_rt_flush>("flush");
+    defn<tinyclj_rt_to_edn>("to-edn");
+    defn<tinyclj_rt_binary_equal>("builtin_binary_equal");
+    defn<tinyclj_rt_lt>("builtin_binary_lt");
+    defn<tinyclj_rt_lte>("builtin_binary_lte");
+    defn<tinyclj_rt_setmacro>("set-macro!");
+    defn<tinyclj_rt_identical>("identical?");
+    defn<tinyclj_rt_list>("list");
+    defn<tinyclj_rt_cons>("cons");
+    defn<tinyclj_rt_next>("next");
+    defn<tinyclj_rt_seq>("seq");
+    defn<tinyclj_rt_list_STAR>("list*");
+    defn<tinyclj_rt_count>("count");
+    defn<tinyclj_rt_first>("first");
+    defn<tinyclj_rt_error>("error");
+    defn<tinyclj_rt_is_nil>("nil?");
+    defn<tinyclj_rt_is_string>("string?");
+    defn<tinyclj_rt_is_symbol>("symbol?");
+    defn<tinyclj_rt_is_list>("list?");
+    defn<tinyclj_rt_is_function>("function?");
+    defn<tinyclj_rt_is_integer>("integer?");
+    defn<tinyclj_rt_is_double>("double?");
+    defn<tinyclj_rt_is_boolean>("boolean?");
+    defn<tinyclj_rt_is_var>("var?");
+    defn<tinyclj_rt_is_character>("character?");
+    defn<tinyclj_rt_apply>("apply");
+    defn<tinyclj_rt_read>("read");
+    defn<tinyclj_rt_read_string>("read-string");
+    defn<tinyclj_rt_slurp>("slurp");
+    defn<tinyclj_rt_spit>("spit");
+    defn<tinyclj_rt_macroexpand>("macroexpand");
+    defn<tinyclj_rt_macroexpand1>("macroexpand1");
+    defn<tinyclj_rt_eval>("eval");
+    defn<tinyclj_rt_vars>("vars");
+    defn<tinyclj_rt_epoch_nanos>("epoch-nanos");
+    defn<tinyclj_rt_nextID>("next-id");
+    defn<tinyclj_rt_symbol>("symbol");
+    defn<tinyclj_rt_str>("str");
+    defn<tinyclj_rt_double>("double");
+    defn<tinyclj_rt_long>("long");
+    defn<tinyclj_rt_compile_module>("compile-module");
+    defn<tinyclj_rt_load_module>("load-module");
 
     static const std::string core_module = "core";
     try {
@@ -241,7 +242,7 @@ const Object *Runtime::eval(const Object *form) {
 
     const Object *evaled_wrapper_fn = expr->eval();
     if (is_wrapped) {
-        return evaled_wrapper_fn->m_Call(evaled_wrapper_fn, 0, nullptr);
+        return evaled_wrapper_fn->m_MethodTable->m_CallFn(evaled_wrapper_fn, 0, nullptr);
     } else {
         return evaled_wrapper_fn;
     }

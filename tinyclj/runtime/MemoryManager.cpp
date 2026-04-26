@@ -14,11 +14,11 @@
 #include "types/TCVar.h"
 #include "GCFrame.h"
 
-Object *MemoryManager::createObject(ObjectType type, void *data, CallFn callFn, bool isStatic) {
+Object *MemoryManager::createObject(ObjectType type, void *data, const MethodTable *methodTable, bool isStatic) {
     Object *obj = new Object{
             .m_Data = data,
             .m_Type = type,
-            .m_Call = callFn,
+            .m_MethodTable = methodTable,
             .m_Marked = false,
             .m_Static = isStatic
     };

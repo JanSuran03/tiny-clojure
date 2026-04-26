@@ -2,5 +2,5 @@
 
 #include <cstdint>
 
-typedef int64_t tc_int_t;
-typedef double tc_double_t;
+using tc_int_t = int64_t;
+using tc_double_t = double;

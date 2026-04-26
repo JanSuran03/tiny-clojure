@@ -10,6 +10,12 @@ struct TCVar {
     static llvm::StructType *getVarStructType(CodegenContext &ctx);
 
     static llvm::Value *emitGetRoot(CodegenContext &ctx, llvm::Value *varObjPtr);
+
+    static const Object *toString(const Object *self);
+
+    static const Object *toEDN(const Object *self);
+
+    static MethodTable st_MethodTable;
 };
 
 extern "C" {

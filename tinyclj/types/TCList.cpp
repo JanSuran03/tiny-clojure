@@ -3,6 +3,45 @@
 #include "runtime/Runtime.h"
 #include "TCList.h"
 #include "TCInteger.h"
+#include "TCString.h"
+
+const Object *TCList::toString(const Object *self) {
+    std::string str = "(";
+    bool first = true;
+    for (const Object *s = tc_list_seq(self); s; s = tc_list_next(s)) {
+        if (first) {
+            first = false;
+        } else {
+            str += ' ';
+        }
+        const Object *list_elem = tc_list_first(s);
+        str += static_cast<TCString *>(tc_object_to_string(list_elem)->m_Data)->m_Value;
+    }
+    str += ')';
+    return tc_string_new(str.c_str());
+}
+
+const Object *TCList::toEDN(const Object *self) {
+    std::string str = "(";
+    bool first = true;
+    for (const Object *s = tc_list_seq(self); s; s = tc_list_next(s)) {
+        if (first) {
+            first = false;
+        } else {
+            str += ' ';
+        }
+        const Object *list_elem = tc_list_first(s);
+        str += static_cast<TCString *>(tc_object_to_edn(list_elem)->m_Data)->m_Value;
+    }
+    str += ')';
+    return tc_string_new(str.c_str());
+}
+
+MethodTable TCList::st_MethodTable = MethodTable {
+    .m_CallFn = nullptr,
+    .m_ToStringFn = TCList::toString,
+    .m_ToEdnFn = TCList::toEDN,
+};
 
 extern "C" {
 const Object *empty_list() {
@@ -11,7 +50,7 @@ const Object *empty_list() {
             .m_Tail = nullptr,
             .m_Length = 0
     };
-    static Object emptylist_obj = Object::createStaticObject(ObjectType::LIST, &empty);
+    static Object emptylist_obj = Object::createStaticObject(ObjectType::LIST, &empty, &TCList::st_MethodTable);
     return &emptylist_obj;
 }
 
@@ -23,7 +62,7 @@ const Object *tc_list_cons(const Object *head, const Object *tail) {
                 .m_Length = 1
         };
 
-        return Runtime::getInstance().createObject(ObjectType::LIST, list);
+        return Runtime::getInstance().createObject(ObjectType::LIST, list, &TCList::st_MethodTable);
     } else if (tail->m_Type != ObjectType::LIST) {
         throw std::runtime_error("Cannot cons to non-list type");
     } else {
@@ -34,7 +73,7 @@ const Object *tc_list_cons(const Object *head, const Object *tail) {
                 .m_Length = tail_list->m_Length + 1
         };
 
-        return Runtime::getInstance().createObject(ObjectType::LIST, list);
+        return Runtime::getInstance().createObject(ObjectType::LIST, list, &TCList::st_MethodTable);
     }
 }
 
@@ -84,7 +123,7 @@ const Object *tc_list_length(const Object *list) {
     if (list == nullptr) {
         TCInteger *zero_data = new TCInteger{.m_Value = 0};
 
-        return Runtime::getInstance().createObject(ObjectType::INTEGER, zero_data);
+        return Runtime::getInstance().createObject(ObjectType::INTEGER, zero_data, &TCInteger::st_MethodTable);
     }
     if (list->m_Type != ObjectType::LIST) {
         throw std::runtime_error("Cannot get length of non-list type");
@@ -93,7 +132,8 @@ const Object *tc_list_length(const Object *list) {
 
     TCInteger *length_data = new TCInteger{.m_Value = list_data->m_Length};
 
-    return Runtime::getInstance().createObject(ObjectType::INTEGER, length_data);
+    // todo: create tc_list_new function to avoid code duplication
+    return Runtime::getInstance().createObject(ObjectType::INTEGER, length_data, &TCInteger::st_MethodTable);
 }
 
 const Object *tc_list_from_array(size_t len, const Object **arr) {

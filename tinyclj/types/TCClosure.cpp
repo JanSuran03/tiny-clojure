@@ -34,10 +34,16 @@ llvm::Value *TCClosure::emitGetEnv(CodegenContext &ctx, llvm::Value *closureObjP
 }
 
 extern "C" {
-Object *tc_closure_new(CallFn callStub, const Object **env, size_t numCaptures) {
+void tc_closure_init_vtable(MethodTable *methodTable, CallFn callStub) {
+    methodTable->m_CallFn = callStub;
+    methodTable->m_ToStringFn = nullptr; // closures don't have a specific string representation
+    methodTable->m_ToEdnFn = nullptr; // closures don't have a specific EDN representation
+}
+
+Object *tc_closure_new(const MethodTable *methodTable, const Object **env, size_t numCaptures) {
     TCClosure *closure = new TCClosure{.m_Env = env, .m_NumCaptures = numCaptures};
 
-    return Runtime::getInstance().createObject(ObjectType::CLOSURE, closure, callStub);
+    return Runtime::getInstance().createObject(ObjectType::CLOSURE, closure, methodTable);
 }
 
 Object **tc_closure_allocate_env(size_t numCaptures) {

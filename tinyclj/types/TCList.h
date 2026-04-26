@@ -7,6 +7,12 @@ struct TCList {
     const Object *m_Head;
     const Object *m_Tail;
     tc_int_t m_Length;
+
+    static const Object *toString(const Object *self);
+
+    static const Object *toEDN(const Object *self);
+
+    static MethodTable st_MethodTable;
 };
 
 extern "C" {

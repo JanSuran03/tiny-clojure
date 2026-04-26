@@ -163,16 +163,12 @@ AExpr FunctionExpr::parse(ExpressionMode mode,
 std::string FunctionExpr::compile() const {
     using namespace llvm;
     CodegenContext ctx(m_Name);
+    FunctionModule function_module(m_Name, m_ModuleImports);
 
     std::unordered_map<std::string, GlobalVariable *> global_vars = ModuleUtil::declareReferencedGlobals
             (ctx, m_ReferencedGlobalNames);
 
-    // todo: looks like this field is only assigned once so maybe it doesn't need to be a stack?
-    ctx.m_GlobalVariableMapStack.emplace_back(global_vars);
-
-    Function *module_init_fn = ModuleUtil::initReferencedGlobals(ctx, m_Name, global_vars);
-
-    FunctionModule function_module(m_Name, m_ModuleImports);
+    ctx.m_GlobalVariableMap = global_vars;
 
     if (Runtime::getInstance().m_CompilingAOT) {
         function_module.emitImportsFile();
@@ -317,6 +313,9 @@ std::string FunctionExpr::compile() const {
     //Value *fn_name_msg = ctx.registerGlobalString(m_Name);
     CompilerUtils::emitThrow(wrong_argcnt_msg, ctx);
 
+    Function *module_init_fn = ModuleUtil::initReferencedGlobals(ctx, m_Name, global_vars);
+    function_module.createModuleVtable(ctx, stub_fn);
+
     if (Runtime::getInstance().m_CompilingAOT) {
         function_module.writeModule(ctx);
     }
@@ -360,6 +359,20 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
             {ctx.pointerType(), Type::getInt64Ty(*ctx.m_LLVMContext), ctx.pointerArrayType()},
             false);
 
+    // load vtable from m_VtableName global variable
+    llvm::GlobalVariable *vtable = ctx.m_Module->getGlobalVariable(m_VtableName);
+    if (!vtable) {
+        // need to declare the vtable which is defined in the function's module (different from the current module)
+        llvm::StructType *vtable_struct_type = Object::getMethodTableStructType(*ctx.m_LLVMContext);
+        vtable = new llvm::GlobalVariable(
+                *ctx.m_Module,
+                vtable_struct_type,
+                true, // isConstant
+                llvm::GlobalValue::ExternalLinkage,
+                nullptr, // initializer will be provided by the function's module
+                m_VtableName);
+    }
+
     if (isClosure()) {
         // allocate the closure environment struct on the heap (the env struct is an array of Object *)
         FunctionType *allocate_env_fn_type = FunctionType::get(
@@ -392,9 +405,9 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
             ctx.m_IRBuilder.CreateStore(captured_var_value.value(), env_slot_ptr);
         }
 
-        // create the closure object with the stub pointer and env struct pointer
+        // create the closure object with the vtable pointer and env struct pointer
         return ctx.m_IRBuilder.CreateCall(closure_new_fn,
-                                          {stub_fn, env_struct_ptr, num_captures_val},
+                                          {vtable, env_struct_ptr, num_captures_val},
                                           "closure_obj");
     } else {
         // create the function object with the stub pointer
@@ -404,7 +417,7 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
                 false);
         FunctionCallee function_new_fn = ctx.m_Module->getOrInsertFunction("tc_function_new", function_new_fn_type);
         Value *fn_name_const = ctx.registerGlobalString(m_Name);
-        return ctx.m_IRBuilder.CreateCall(function_new_fn, {stub_fn, fn_name_const}, "function_obj");
+        return ctx.m_IRBuilder.CreateCall(function_new_fn, {vtable, fn_name_const}, "function_obj");
     }
 }
 
@@ -415,7 +428,10 @@ bool FunctionExpr::isClosure() const {
 const Object *FunctionExpr::eval() const {
     auto &jit = Runtime::getInstance().getJIT();
 
+/*
     const CallFn stub_fn = reinterpret_cast<const CallFn>(
             jit->lookup(m_StubName)->getAddress());
-    return tc_function_new(stub_fn, m_Name.c_str());
+*/
+    const MethodTable *vtable = reinterpret_cast<const MethodTable *>(jit->lookup(m_VtableName)->getAddress());
+    return tc_function_new(vtable, m_Name.c_str());
 }

@@ -13,7 +13,9 @@ struct TCClosure {
 };
 
 extern "C" {
-Object *tc_closure_new(CallFn callStub, const Object **env, size_t numCaptures);
+void tc_closure_init_vtable(MethodTable *methodTable, CallFn callStub);
+
+Object *tc_closure_new(const MethodTable *methodTable, const Object **env, size_t numCaptures);
 
 Object **tc_closure_allocate_env(size_t numCaptures);
 }

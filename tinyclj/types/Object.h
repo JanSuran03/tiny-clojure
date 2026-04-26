@@ -21,21 +21,34 @@ enum class ObjectType {
 };
 
 struct Object;
+struct TCString;
 
 using CallFn = const Object *(*)(const Object *self,
-                           size_t argc,
-                           const struct Object **argv);
+                                 size_t argc,
+                                 const struct Object **argv);
+
+using UnaryFn = const Object *(*)(const Object *self);
+
+const Object *tc_object_to_string(const Object *obj);
+
+const Object *tc_object_to_edn(const Object *obj);
+
+struct MethodTable {
+    CallFn m_CallFn;
+    UnaryFn m_ToStringFn;
+    UnaryFn m_ToEdnFn;
+};
 
 struct Object {
     void *m_Data;
     ObjectType m_Type;
-    CallFn m_Call;
+    const MethodTable *m_MethodTable;
 
     // GC: mark & sweep
     mutable bool m_Marked = false;
     bool m_Static = false; // don't destroy static objects: empty_list etc.
 
-    static Object createStaticObject(ObjectType type, void *data, CallFn callFn = nullptr);
+    static Object createStaticObject(ObjectType type, void *data, const MethodTable *methodTable);
 
     static llvm::StructType *getObjectStructType(CodegenContext &ctx);
 
@@ -44,4 +57,6 @@ struct Object {
     static llvm::Value *emitGetType(CodegenContext &ctx, llvm::Value *objPtr);
 
     static llvm::Value *emitGetCallFn(CodegenContext &ctx, llvm::Value *objPtr);
+
+    static llvm::StructType *getMethodTableStructType(llvm::LLVMContext &llvmContext);
 };

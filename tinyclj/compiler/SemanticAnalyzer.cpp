@@ -144,7 +144,7 @@ const Object *SemanticAnalyzer::macroexpand1(Runtime &rt, const Object *form) {
                     argv[i] = tc_list_first(arglist);
                     arglist = tc_list_next(arglist);
                 }
-                const Object *expanded = var->m_Call(var, argc, argv);
+                const Object *expanded = var->m_MethodTable->m_CallFn(var, argc, argv);
                 delete[] argv;
                 return expanded;
             } catch (...) {

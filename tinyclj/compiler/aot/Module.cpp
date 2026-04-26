@@ -8,7 +8,6 @@ Module::Module(std::string name,
         : m_Name(std::move(name)),
           m_Imports(std::move(imports)) {}
 
-// todo: use the same function for both function and regular modules
 void Module::emitImportsFile() {
     std::string deps_file_name = Runtime::getInstance().getAotEngine().fullDepsFileName(m_Name);
     std::ofstream ofs(deps_file_name);

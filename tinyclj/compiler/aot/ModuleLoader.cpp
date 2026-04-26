@@ -33,7 +33,7 @@ void ModuleLoader::loadCompiledModule(const std::string &moduleName, bool forceR
     }
     if (!forceReload && aot_engine.m_LoadedFiles.contains(moduleName)) {
         if constexpr (Runtime::st_DebugFlags & Runtime::DEBUG_LOADER) {
-            std::cerr << "Module has already been loaded, skipping: " << moduleName << std::endl;
+            std::cerr << "FileModule has already been loaded, skipping: " << moduleName << std::endl;
         }
         return;
     }

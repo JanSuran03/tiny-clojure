@@ -10,6 +10,7 @@
 class FunctionExpr : public Expr {
     std::string m_Name;
     std::string m_StubName = m_Name + "__stub";
+    std::string m_VtableName = m_Name + "__vtable";
     std::unordered_map<size_t, FunctionOverload> m_Overloads;
     std::optional<FunctionOverload> m_VariadicOverload;
     Captures m_Captures;

@@ -28,7 +28,17 @@ class Runtime {
 
     static std::unique_ptr<llvm::orc::LLJIT> createJIT();
 
-    void defn(const std::string &name, CallFn fn);
+    template<CallFn Fn>
+    struct BuiltinFunctionVTable {
+        static constexpr MethodTable value = {
+                .m_CallFn = Fn,
+                .m_ToStringFn = nullptr,
+                .m_ToEdnFn = nullptr
+        };
+    };
+
+    template<CallFn Fn>
+    void defn(const std::string &name);
 
     Runtime();
 
@@ -52,7 +62,7 @@ public:
 
     GCRootFrame *m_RootStack = nullptr;
 
-    Object *createObject(ObjectType type, void *data, CallFn callFn = nullptr, bool isStatic = false);
+    Object *createObject(ObjectType type, void *data, const MethodTable *methodTable, bool isStatic = false);
 
     Runtime(const Runtime &) = delete;
 

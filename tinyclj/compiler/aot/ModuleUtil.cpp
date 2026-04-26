@@ -29,25 +29,24 @@ llvm::Function *ModuleUtil::initReferencedGlobals(
                                                 Function::ExternalLinkage,
                                                 util::module_init_fn_name(module_name),
                                                 *ctx.m_Module);
-    {
-        Type *objPtrTy = ctx.pointerType();
-        Type *charPtrTy = Type::getInt8PtrTy(*ctx.m_LLVMContext);
-        FunctionType *declare_var_fn_type = FunctionType::get(objPtrTy, {charPtrTy}, false);
-        Function *declare_var_fn = Function::Create(declare_var_fn_type,
-                                                    Function::ExternalLinkage,
-                                                    "tc_runtime_declare_var",
-                                                    *ctx.m_Module);
+    Type *objPtrTy = ctx.pointerType();
+    Type *charPtrTy = Type::getInt8PtrTy(*ctx.m_LLVMContext);
+    FunctionType *declare_var_fn_type = FunctionType::get(objPtrTy, {charPtrTy}, false);
+    Function *declare_var_fn = Function::Create(declare_var_fn_type,
+                                                Function::ExternalLinkage,
+                                                "tc_runtime_declare_var",
+                                                *ctx.m_Module);
 
 
-        BasicBlock *entry_block = BasicBlock::Create(*ctx.m_LLVMContext, "entry", module_init_fn);
-        ctx.m_IRBuilder.SetInsertPoint(entry_block);
-        for (const auto &[name, global_var]: global_vars) {
-            Value *global_name_global_str = ctx.m_IRBuilder.CreateGlobalStringPtr(
-                    name, "global_name_str_" + name);
-            Value *var_obj = ctx.m_IRBuilder.CreateCall(declare_var_fn, {global_name_global_str}, "var_obj");
-            ctx.m_IRBuilder.CreateStore(var_obj, global_var);
-        }
-        ctx.m_IRBuilder.CreateRetVoid();
+    BasicBlock *entry_block = BasicBlock::Create(*ctx.m_LLVMContext, "entry", module_init_fn);
+    ctx.m_IRBuilder.SetInsertPoint(entry_block);
+    for (const auto &[name, global_var]: global_vars) {
+        Value *global_name_global_str = ctx.m_IRBuilder.CreateGlobalStringPtr(
+                name, "global_name_str_" + name);
+        Value *var_obj = ctx.m_IRBuilder.CreateCall(declare_var_fn, {global_name_global_str}, "var_obj");
+        ctx.m_IRBuilder.CreateStore(var_obj, global_var);
     }
+    ctx.m_IRBuilder.CreateRetVoid();
+
     return module_init_fn;
 }

@@ -1,9 +1,40 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "TCString.h"
 #include "TCVar.h"
 #include "compiler/CodegenContext.h"
 #include "runtime/Runtime.h"
+
+const Object *tc_var_invoke(const Object *self, size_t argc, const Object **argv) {
+    const TCVar *var = static_cast<const TCVar *>(self->m_Data);
+    const Object *root = var->m_Root;
+    if (root == nullptr) {
+        throw std::runtime_error("Cannot invoke unbound var");
+    }
+    CallFn callFn = root->m_MethodTable->m_CallFn;
+    if (callFn == nullptr) {
+        throw std::runtime_error("Cannot call nil");
+    } else {
+        return callFn(root, argc, argv);
+    }
+}
+
+const Object *TCVar::toString(const Object *self) {
+    const TCVar *var = static_cast<const TCVar *>(self->m_Data);
+    return tc_string_new((std::string("(var") + var->m_Name + ")").c_str());
+}
+
+const Object *TCVar::toEDN(const Object *self) {
+    const TCVar *var = static_cast<const TCVar *>(self->m_Data);
+    return tc_string_new((std::string("(var") + var->m_Name + ")").c_str());
+}
+
+MethodTable TCVar::st_MethodTable = MethodTable{
+        .m_CallFn = tc_var_invoke,
+        .m_ToStringFn = TCVar::toString,
+        .m_ToEdnFn = TCVar::toEDN,
+};
 
 llvm::StructType *TCVar::getVarStructType(CodegenContext &ctx) {
     static constexpr const char *structName = "TCVar";
@@ -37,20 +68,11 @@ llvm::Value *TCVar::emitGetRoot(CodegenContext &ctx, llvm::Value *varObjPtr) {
     return ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), rootFieldPtr, "var_root");
 }
 
-const Object *tc_var_invoke(const Object *self, size_t argc, const Object **argv) {
-    const TCVar *var = static_cast<const TCVar *>(self->m_Data);
-    const Object *root = var->m_Root;
-    if (root == nullptr) {
-        throw std::runtime_error("Cannot invoke unbound var");
-    }
-    return root->m_Call(root, argc, argv);
-}
-
 extern "C" {
 Object *tc_var_new(const char *name) {
     TCVar *var = new TCVar{.m_Name = strdup(name)};
 
-    return Runtime::getInstance().createObject(ObjectType::VAR, var, tc_var_invoke);
+    return Runtime::getInstance().createObject(ObjectType::VAR, var, &TCVar::st_MethodTable);
 }
 
 const Object *tc_var_get_root(Object *var) {

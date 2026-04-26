@@ -1,11 +1,39 @@
 #include "Object.h"
+#include "TCString.h"
 #include "compiler/CodegenContext.h"
 
-Object Object::createStaticObject(ObjectType type, void *data, CallFn callFn) {
+const Object *tc_object_to_string(const Object *obj) {
+    if (obj == nullptr) {
+        return tc_string_new("");
+    }
+    UnaryFn toStringFn = obj->m_MethodTable->m_ToStringFn;
+    if (toStringFn) {
+        return toStringFn(obj);
+    } else {
+        // default toString implementation if no method is provided: print type and pointer value
+        return tc_string_new(("<object of type " + std::to_string(static_cast<int>(obj->m_Type))
+                              + " at " + std::to_string((uintptr_t) obj) + ">").c_str());
+    }
+}
+
+const Object *tc_object_to_edn(const Object *obj) {
+    if (obj == nullptr) {
+        return tc_string_new("nil");
+    }
+    UnaryFn toEdnFn = obj->m_MethodTable->m_ToEdnFn;
+    if (toEdnFn) {
+        return toEdnFn(obj);
+    } else {
+        // default toEDN implementation if no method is provided: same as toString
+        return tc_object_to_string(obj);
+    }
+}
+
+Object Object::createStaticObject(ObjectType type, void *data, const MethodTable *methodTable) {
     return Object{
             .m_Data = data,
             .m_Type = type,
-            .m_Call = callFn,
+            .m_MethodTable = methodTable,
             .m_Static = true
     };
 }
@@ -52,11 +80,30 @@ llvm::Value *Object::emitGetType(CodegenContext &ctx, llvm::Value *objPtr) {
 llvm::Value *Object::emitGetCallFn(CodegenContext &ctx, llvm::Value *objPtr) {
     using namespace llvm;
     // Get the pointer to the m_Call field of the Object struct
-    Value *callFnFieldPtr = ctx.m_IRBuilder.CreateStructGEP(
+    Value *methodTableFieldPtr = ctx.m_IRBuilder.CreateStructGEP(
             getObjectStructType(ctx),
             objPtr,
-            2, // index of m_Call field
+            2, // index of the m_MethodTable field
             "callfn_field_ptr");
-    // Load the CallFn value from the m_Call field
-    return ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), callFnFieldPtr, "obj_callfn");
+    Value *methodTable = ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), methodTableFieldPtr, "obj_methodTable");
+    llvm::StructType *methodTableStructType = getMethodTableStructType(*ctx.m_LLVMContext);
+    Value *callFnFieldPtr = ctx.m_IRBuilder.CreateStructGEP(
+            methodTableStructType,
+            methodTable,
+            0, // index of m_CallFn field in MethodTable
+            "callfn_ptr");
+    return ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), callFnFieldPtr, "obj_callFn");
+}
+
+llvm::StructType *Object::getMethodTableStructType(llvm::LLVMContext &llvmContext) {
+    static constexpr const char *structName = "MethodTable";
+    if (auto *ty = llvm::StructType::getTypeByName(llvmContext, structName)) {
+        return ty;
+    }
+    return llvm::StructType::create(
+            llvmContext,
+            {llvm::PointerType::get(llvmContext, 0), // m_CallFn
+             llvm::PointerType::get(llvmContext, 0), // m_ToStringFn
+             llvm::PointerType::get(llvmContext, 0)}, // m_ToEdnFn
+            structName);
 }

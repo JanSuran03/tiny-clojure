@@ -13,7 +13,7 @@ struct CodegenContext {
     std::vector<RecursionPoint> m_LoopLabels;
     std::vector<llvm::Function *> m_CurrentFunctionStack;
     std::unordered_map<std::string, llvm::Value *> m_VariableMap;
-    std::vector<std::unordered_map<std::string, llvm::GlobalVariable *>> m_GlobalVariableMapStack;
+    std::unordered_map<std::string, llvm::GlobalVariable *> m_GlobalVariableMap;
     std::vector<std::string> m_ModuleImports;
     llvm::Argument *m_ClosureEnv = nullptr;
 
@@ -34,7 +34,8 @@ struct CodegenContext {
 
     void linkModule(const std::string &module_name);
 
-    // LLVM global string cache
+    // LLVM global string cache for the current module, mapping string literals to their corresponding global variable
+    // todo: do we need the size_t ID here?
     std::unordered_map<std::string, std::pair<size_t, llvm::GlobalVariable *>> m_GlobalStringCache;
 
     llvm::Value *registerGlobalString(const std::string &str);

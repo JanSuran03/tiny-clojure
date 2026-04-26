@@ -7,7 +7,7 @@
 #include "llvm/Support/Host.h"
 
 #include "AotEngine.h"
-#include "Module.h"
+#include "FileModule.h"
 #include "runtime/Runtime.h"
 #include "util.h"
 #include "compiler/AnalyzerContext.h"
@@ -105,7 +105,7 @@ std::string AotEngine::compileModule(const std::string &moduleName, bool forceRe
     CodegenContext codegen_ctx(moduleName);
     codegen_ctx.m_Module->setSourceFileName(source_filename);
 
-    Module module(moduleName, module_imports);
+    FileModule module(moduleName, module_imports);
 
     //module.declareReferencedGlobals(codegen_ctx);
     auto llvm_globals = ModuleUtil::declareReferencedGlobals(codegen_ctx, globals_names);
@@ -118,7 +118,7 @@ std::string AotEngine::compileModule(const std::string &moduleName, bool forceRe
 
     llvm::Function *load_fn = codegen_ctx.createModuleLoadFunction(moduleName);
 
-    codegen_ctx.m_GlobalVariableMapStack.emplace_back(std::move(llvm_globals));
+    codegen_ctx.m_GlobalVariableMap = std::move(llvm_globals);
     codegen_ctx.m_CurrentFunctionStack.emplace_back(load_fn);
 
     llvm::BasicBlock *entry_block = llvm::BasicBlock::Create(*codegen_ctx.m_LLVMContext, "entry", load_fn);

@@ -25,7 +25,7 @@ class MemoryManager {
 public:
     MemoryManager() = default;
 
-    Object *createObject(ObjectType type, void *data, CallFn callFn = nullptr, bool isStatic = false);
+    Object *createObject(ObjectType type, void *data, const MethodTable *methodTable, bool isStatic = false);
 
     void collectGarbage();
 

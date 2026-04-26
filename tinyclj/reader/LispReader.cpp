@@ -35,12 +35,14 @@ bool is_symbol_char(char c);
 const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env);
 
 const Object *LispReader::eof_object() {
-    static Object eof_obj = Object::createStaticObject(ObjectType::SYMBOL, new TCSymbol{.m_Name = strdup("<EOF>")});
+    static Object eof_obj = Object::createStaticObject(ObjectType::SYMBOL, new TCSymbol{.m_Name = strdup("<EOF>")},
+                                                       nullptr);
     return &eof_obj;
 }
 
 const Object *delimiter_object() {
-    static Object delim_obj = Object::createStaticObject(ObjectType::SYMBOL, new TCSymbol{.m_Name = strdup("<DELIM>")});
+    static Object delim_obj = Object::createStaticObject(ObjectType::SYMBOL, new TCSymbol{.m_Name = strdup("<DELIM>")},
+                                                         nullptr);
     return &delim_obj;
 }
 
@@ -208,42 +210,48 @@ bool is_symbol_char(char c) {
 const Object *sym_unquote() {
     static Object sym_obj = Object::createStaticObject(
             ObjectType::SYMBOL,
-            new TCSymbol{.m_Name = strdup("unquote")});
+            new TCSymbol{.m_Name = strdup("unquote")},
+            nullptr);
     return &sym_obj;
 }
 
 const Object *sym_unquote_splicing() {
     static Object sym_obj = Object::createStaticObject(
             ObjectType::SYMBOL,
-            new TCSymbol{.m_Name = strdup("unquote-splicing")});
+            new TCSymbol{.m_Name = strdup("unquote-splicing")},
+            nullptr);
     return &sym_obj;
 }
 
 const Object *sym_quote() {
     static Object sym_obj = Object::createStaticObject(
             ObjectType::SYMBOL,
-            new TCSymbol{.m_Name = strdup("quote")});
+            new TCSymbol{.m_Name = strdup("quote")},
+            nullptr);
     return &sym_obj;
 }
 
 const Object *sym_list() {
     static Object sym_obj = Object::createStaticObject(
             ObjectType::SYMBOL,
-            new TCSymbol{.m_Name = strdup("list")});
+            new TCSymbol{.m_Name = strdup("list")},
+            nullptr);
     return &sym_obj;
 }
 
 const Object *sym_seq() {
     static Object sym_obj = Object::createStaticObject(
             ObjectType::SYMBOL,
-            new TCSymbol{.m_Name = strdup("seq")});
+            new TCSymbol{.m_Name = strdup("seq")},
+            nullptr);
     return &sym_obj;
 }
 
 const Object *sym_concat() {
     static Object sym_obj = Object::createStaticObject(
             ObjectType::SYMBOL,
-            new TCSymbol{.m_Name = strdup("concat")});
+            new TCSymbol{.m_Name = strdup("concat")},
+            nullptr);
     return &sym_obj;
 }
 

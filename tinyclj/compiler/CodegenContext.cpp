@@ -42,7 +42,7 @@ bool CodegenContext::currentBlockTerminated() const {
 void CodegenContext::linkModule(const std::string &module_name) {
     if (llvm::verifyModule(*m_Module, &llvm::errs())) {
         m_Module->dump();
-        throw std::runtime_error("Module verification failed");
+        throw std::runtime_error("FileModule verification failed");
     }
 
     if (Runtime::getInstance().m_CompilingAOT) {

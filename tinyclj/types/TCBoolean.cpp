@@ -1,4 +1,5 @@
 #include "TCBoolean.h"
+#include "TCString.h"
 #include "compiler/CodegenContext.h"
 #include "runtime/Runtime.h"
 
@@ -31,10 +32,26 @@ llvm::Value *TCBoolean::emitGetValue(CodegenContext &ctx, llvm::Value *boolDataP
     return ctx.m_IRBuilder.CreateLoad(ctx.m_IRBuilder.getInt8Ty(), valueFieldPtr, "bool_value");
 }
 
+const Object *TCBoolean::toString(const Object *self) {
+    bool value = static_cast<TCBoolean *>(self->m_Data)->m_Value;
+    return tc_string_new(value ? "true" : "false");
+}
+
+const Object *TCBoolean::toEDN(const Object *self) {
+    bool value = static_cast<TCBoolean *>(self->m_Data)->m_Value;
+    return tc_string_new(value ? "true" : "false");
+}
+
+MethodTable TCBoolean::st_MethodTable = MethodTable {
+    .m_CallFn = nullptr,
+    .m_ToStringFn = TCBoolean::toString,
+    .m_ToEdnFn = TCBoolean::toEDN,
+};
+
 extern "C" {
 Object *tc_boolean_new(bool value) {
     TCBoolean *bool_data = new TCBoolean{.m_Value = value};
 
-    return Runtime::getInstance().createObject(ObjectType::BOOLEAN, bool_data);
+    return Runtime::getInstance().createObject(ObjectType::BOOLEAN, bool_data, &TCBoolean::st_MethodTable);
 }
 }

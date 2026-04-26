@@ -15,8 +15,8 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/AnalyzerContext.cpp
         tinyclj/compiler/CodegenContext.cpp
         tinyclj/compiler/CompilerUtils.cpp
-        tinyclj/compiler/Module.cpp
         tinyclj/compiler/RecursionPoint.cpp
+        tinyclj/compiler/aot/FileModule.cpp
         tinyclj/compiler/aot/FunctionModule.cpp
         tinyclj/compiler/aot/Module.cpp
         tinyclj/compiler/aot/ModuleLoader.cpp
