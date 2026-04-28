@@ -45,5 +45,3 @@ cmake --build build # Build the project using the generated build files in the '
 ```shell
 ctest --test-dir build --output-on-failure # Run tests and output results on failure
 ```
-
-
