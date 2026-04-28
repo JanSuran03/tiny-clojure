@@ -22,12 +22,12 @@ std::string AotEngine::fullSourcePath(const std::string &moduleName) const {
     return m_SourceRoot + "/" + moduleName + ".clj";
 }
 
-std::string AotEngine::fullCompiledPath(const std::string &moduleName) const {
-    return m_CompiledRoot + "/" + moduleName + ".bc";
+std::string AotEngine::fullCompiledPath(const std::string &moduleName, bool optimized) const {
+    return m_CompiledRoot + "/" + moduleName + (optimized ? "-opt" : "") + ".bc";
 }
 
-std::string AotEngine::fullCompiledDebugPath(const std::string &moduleName) const {
-    return m_CompiledRoot + "/" + moduleName + ".ll";
+std::string AotEngine::fullCompiledDebugPath(const std::string &moduleName, bool optimized) const {
+    return m_CompiledRoot + "/" + moduleName + +(optimized ? "-opt" : "") + ".ll";
 }
 
 std::string AotEngine::fullDepsFileName(const std::string &moduleName) const {

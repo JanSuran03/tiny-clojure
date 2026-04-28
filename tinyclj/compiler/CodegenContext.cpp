@@ -1,14 +1,20 @@
 #include <fstream>
 
+#include <llvm/Analysis/CGSCCPassManager.h>
+#include <llvm/Analysis/LoopAnalysisManager.h>
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include <llvm/IR/PassManager.h>
 #include "llvm/IR/Verifier.h"
+#include <llvm/Passes/OptimizationLevel.h>
+#include <llvm/Passes/PassBuilder.h>
 
 #include "util.h"
 #include "CodegenContext.h"
 #include "runtime/Runtime.h"
 
 CodegenContext::CodegenContext(const std::string &moduleName)
-        : m_LLVMContext(std::make_unique<llvm::LLVMContext>()),
+        : m_ModuleName(moduleName),
+          m_LLVMContext(std::make_unique<llvm::LLVMContext>()),
           m_IRBuilder(*m_LLVMContext),
           m_Module(std::make_unique<llvm::Module>(moduleName, *m_LLVMContext)) {
     m_LLVMContext->enableOpaquePointers();
@@ -39,45 +45,81 @@ bool CodegenContext::currentBlockTerminated() const {
     return m_IRBuilder.GetInsertBlock()->getTerminator() != nullptr;
 }
 
-void CodegenContext::linkModule(const std::string &module_name) {
+void CodegenContext::optimizeModule() {
+    llvm::LoopAnalysisManager loop_analysis_manager;
+    llvm::FunctionAnalysisManager function_analysis_manager;
+    llvm::CGSCCAnalysisManager cgscc_analysis_manager;
+    llvm::ModuleAnalysisManager module_analysis_manager;
+
+    llvm::PassBuilder pb;
+
+    pb.registerModuleAnalyses(module_analysis_manager);
+    pb.registerCGSCCAnalyses(cgscc_analysis_manager);
+    pb.registerFunctionAnalyses(function_analysis_manager);
+    pb.registerLoopAnalyses(loop_analysis_manager);
+    pb.crossRegisterProxies(loop_analysis_manager,
+                            function_analysis_manager,
+                            cgscc_analysis_manager,
+                            module_analysis_manager);
+
+    llvm::ModulePassManager module_pass_manager = pb.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
+
+    module_pass_manager.run(*m_Module, module_analysis_manager);
+    m_Optimized = true;
+}
+
+void CodegenContext::writeDebugModuleToFile() {
+    std::error_code ec;
+    llvm::raw_fd_ostream dest(Runtime::getInstance().getAotEngine().fullCompiledDebugPath(m_ModuleName, m_Optimized),
+                              ec,
+                              llvm::sys::fs::OF_None);
+    if (ec) {
+        throw std::runtime_error("Could not open debug file: " + ec.message());
+    } else {
+        m_Module->print(dest, nullptr);
+        dest.flush();
+        if constexpr (Runtime::st_DebugFlags & Runtime::DEBUG_LOADER) {
+            llvm::errs() << "Debug LLVM IR written to "
+                         << Runtime::getInstance().getAotEngine().fullCompiledDebugPath(m_ModuleName) << '\n';
+        }
+    }
+}
+
+void CodegenContext::writeBitcodeToFile() {
+    std::string output_filename = Runtime::getInstance().getAotEngine().fullCompiledPath(m_ModuleName, m_Optimized);
+    std::error_code ec;
+    llvm::raw_fd_ostream dest(output_filename, ec, llvm::sys::fs::OF_None);
+    if (ec) {
+        throw std::runtime_error("Could not open file: " + ec.message());
+    } else {
+        llvm::WriteBitcodeToFile(*m_Module, dest);
+        dest.flush();
+        if constexpr (Runtime::st_DebugFlags & Runtime::DEBUG_LOADER) {
+            llvm::errs() << "Compiled module written to " << output_filename << '\n';
+        }
+    }
+}
+
+void CodegenContext::linkModule() {
     if (llvm::verifyModule(*m_Module, &llvm::errs())) {
         m_Module->dump();
-        throw std::runtime_error("FileModule verification failed");
+        throw std::runtime_error("Module verification failed");
     }
 
     if (Runtime::getInstance().m_CompilingAOT) {
-        std::string output_filename = Runtime::getInstance().getAotEngine().fullCompiledPath(module_name);
-        std::error_code ec;
-        llvm::raw_fd_ostream dest(output_filename, ec, llvm::sys::fs::OF_None);
-        if (ec) {
-            throw std::runtime_error("Could not open file: " + ec.message());
-        } else {
-            llvm::WriteBitcodeToFile(*m_Module, dest);
-            dest.flush();
-            if constexpr (Runtime::st_DebugFlags & Runtime::DEBUG_LOADER) {
-                llvm::errs() << "Compiled module written to " << output_filename << '\n';
-            }
-        }
+        writeBitcodeToFile();
+        writeDebugModuleToFile();
+    }
+    optimizeModule();
 
-        std::ofstream debug_ofs(Runtime::getInstance().getAotEngine().fullCompiledDebugPath(module_name));
-        if (!debug_ofs.is_open()) {
-            throw std::runtime_error("Failed to open debug output file: " +
-                                     Runtime::getInstance().getAotEngine().fullCompiledDebugPath(module_name));
-        } else {
-            llvm::raw_fd_ostream debug_dest(Runtime::getInstance().getAotEngine().fullCompiledDebugPath(module_name),
-                                            ec,
-                                            llvm::sys::fs::OF_None);
-            if (ec) {
-                throw std::runtime_error("Could not open debug file: " + ec.message());
-            } else {
-                m_Module->print(debug_dest, nullptr);
-                debug_dest.flush();
-                if constexpr (Runtime::st_DebugFlags & Runtime::DEBUG_LOADER) {
-                    llvm::errs() << "Debug LLVM IR written to "
-                                 << Runtime::getInstance().getAotEngine().fullCompiledDebugPath(module_name) << '\n';
-                }
-            }
-        }
+    if (llvm::verifyModule(*m_Module, &llvm::errs())) {
+        m_Module->dump();
+        throw std::runtime_error("Optimized module verification failed");
+    }
+
+    if (Runtime::getInstance().m_CompilingAOT) {
+        writeBitcodeToFile();
+        writeDebugModuleToFile();
     }
 
     llvm::orc::ThreadSafeModule tsm(std::move(m_Module), std::move(m_LLVMContext));

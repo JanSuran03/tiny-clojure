@@ -14,9 +14,9 @@ public: //todo
 public:
     std::string fullSourcePath(const std::string &moduleName) const;
 
-    std::string fullCompiledPath(const std::string &moduleName) const;
+    std::string fullCompiledPath(const std::string &moduleName, bool optimized = false) const;
 
-    std::string fullCompiledDebugPath(const std::string &moduleName) const;
+    std::string fullCompiledDebugPath(const std::string &moduleName, bool optimized = false) const;
 
     std::string fullDepsFileName(const std::string &moduleName) const;
 

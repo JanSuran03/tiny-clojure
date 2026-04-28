@@ -121,7 +121,7 @@ void clear_directory(const std::filesystem::path &path) {
 }
 
 void Runtime::init() {
-    // Todo: Should we do this, or not? Under what circumstances?
+    // Todo: clear the compiled directory if the source files have been updated since the last compilation.
     //clear_directory(std::filesystem::path(m_AotEngine.m_CompiledRoot));
 
     defn<tinyclj_rt_add>("builtin_binary_add");

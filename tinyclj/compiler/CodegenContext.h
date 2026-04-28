@@ -7,6 +7,7 @@
 #include "RecursionPoint.h"
 
 struct CodegenContext {
+    std::string m_ModuleName;
     std::unique_ptr<llvm::LLVMContext> m_LLVMContext;
     llvm::IRBuilder<> m_IRBuilder;
     std::unique_ptr<llvm::Module> m_Module;
@@ -16,6 +17,7 @@ struct CodegenContext {
     std::unordered_map<std::string, llvm::GlobalVariable *> m_GlobalVariableMap;
     std::vector<std::string> m_ModuleImports;
     llvm::Argument *m_ClosureEnv = nullptr;
+    bool m_Optimized = false;
 
     llvm::PointerType *pointerType() const;
 
@@ -32,7 +34,7 @@ struct CodegenContext {
 
     CodegenContext(const std::string &moduleName);
 
-    void linkModule(const std::string &module_name);
+    void linkModule();
 
     // LLVM global string cache for the current module, mapping string literals to their corresponding global variable
     // todo: do we need the size_t ID here?
@@ -43,4 +45,11 @@ struct CodegenContext {
     llvm::Function *currentFunction() const;
 
     llvm::Function *createModuleLoadFunction(const std::string &moduleName);
+
+private:
+    void optimizeModule();
+
+    void writeDebugModuleToFile();
+
+    void writeBitcodeToFile();
 };

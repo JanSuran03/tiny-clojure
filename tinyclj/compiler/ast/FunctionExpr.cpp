@@ -320,7 +320,7 @@ std::string FunctionExpr::compile() const {
         function_module.writeModule(ctx);
     }
 
-    ctx.linkModule(m_Name);
+    ctx.linkModule();
 
     // load module by calling the load function
     auto &rt = Runtime::getInstance();

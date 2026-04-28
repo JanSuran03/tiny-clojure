@@ -116,8 +116,9 @@ EmitResult ConstantExpr::emitIR(CodegenContext &ctx) const {
         case ObjectType::VAR: // todo: this should not throw, need to emit a reference to the var object
             throw std::runtime_error("Cannot emit as constant: type = "
                                      + std::to_string(static_cast<int>(m_Obj->m_Type)));
+        default:
+            throw std::runtime_error("Unknown constant type: " + std::to_string(static_cast<int>(m_Obj->m_Type)));
     }
-    std::unreachable();
 }
 
 const Object *ConstantExpr::eval() const {
