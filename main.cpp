@@ -66,7 +66,8 @@ std::map<std::string, std::string> parse_args(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
     auto args = parse_args(argc, argv);
     if (args.contains("help")) {
-        // todo: print & exit immediately
+        cli_options[0].m_Handler("");
+        return 0;
     }
     for (const auto &[key, value]: args) {
         auto option_it = std::find_if(cli_options.begin(), cli_options.end(),
