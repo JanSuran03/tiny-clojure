@@ -30,6 +30,7 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/ast/CharExpr.cpp
         tinyclj/compiler/ast/DefExpr.cpp
         tinyclj/compiler/ast/DoubleExpr.cpp
+        tinyclj/compiler/ast/DynamicInvokeExpr.cpp
         tinyclj/compiler/ast/FunctionExpr.cpp
         tinyclj/compiler/ast/FunctionOverload.cpp
         tinyclj/compiler/ast/IfExpr.cpp
@@ -39,6 +40,7 @@ add_library(tinyclj_lib SHARED
         tinyclj/compiler/ast/NilExpr.cpp
         tinyclj/compiler/ast/ConstantExpr.cpp
         tinyclj/compiler/ast/RecurExpr.cpp
+        tinyclj/compiler/ast/StaticInvokeExpr.cpp
         tinyclj/compiler/ast/StringExpr.cpp
         tinyclj/compiler/ast/UnevaluatableExpr.cpp
         tinyclj/compiler/ast/VarDerefExpr.cpp

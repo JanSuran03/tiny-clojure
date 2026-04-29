@@ -6,15 +6,15 @@
 #include "tcdef.h"
 
 class InvokeExpr : public Expr {
-    AExpr m_InvokeTarget;
+protected:
     std::vector<AExpr> m_InvokeArgs;
+
+    virtual const Object *evalInvoke(const std::vector<const Object *> &evaled_args) const = 0;
+
 public:
-    EmitResult emitIR(CodegenContext &ctx) const override;
+    const Object *eval() const final;
 
-    const Object *eval() const override;
-
-    InvokeExpr(AExpr invokeTarget,
-               std::vector<AExpr> invokeArgs);
+    InvokeExpr(std::vector<AExpr> invokeArgs);
 
     static AExpr parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 };

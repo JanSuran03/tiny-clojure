@@ -80,12 +80,14 @@ Object *Runtime::getVar(const std::string &name) const {
 }
 
 template<CallFn Fn>
-void Runtime::defn(const std::string &name) {
+void Runtime::defn(const std::string &name, const char *nativeFnName) {
     getAotEngine().startLoading(name);
     auto var = declareVar(name);
-    tc_var_bind_root(var, tc_function_new(&BuiltinFunctionVTable<Fn>::value, name.c_str()));
+    tc_var_bind_root(var, tc_function_new(&BuiltinFunctionVTable<Fn>::value, nativeFnName));
     getAotEngine().finishLoading(name);
 }
+
+#define TC_DEFN(name, nativeFn) defn<nativeFn>(name, #nativeFn)
 
 std::filesystem::file_time_type Runtime::computeLastSourceWriteTime() {
     static std::string source_root = std::string(TINYCLJ_PROJECT_SOURCE_DIR) + "/tinyclj";
@@ -124,59 +126,61 @@ void Runtime::init() {
     // Todo: clear the compiled directory if the source files have been updated since the last compilation.
     //clear_directory(std::filesystem::path(m_AotEngine.m_CompiledRoot));
 
-    defn<tinyclj_rt_add>("builtin_binary_add");
-    defn<tinyclj_rt_sub>("builtin_binary_sub");
-    defn<tinyclj_rt_mul>("builtin_binary_mul");
-    defn<tinyclj_rt_div>("builtin_binary_div");
-    defn<tinyclj_rt_print>("builtin_unary_print");
-    defn<tinyclj_rt_flush>("flush");
-    defn<tinyclj_rt_to_edn>("to-edn");
-    defn<tinyclj_rt_binary_equal>("builtin_binary_equal");
-    defn<tinyclj_rt_lt>("builtin_binary_lt");
-    defn<tinyclj_rt_lte>("builtin_binary_lte");
-    defn<tinyclj_rt_setmacro>("set-macro!");
-    defn<tinyclj_rt_identical>("identical?");
-    defn<tinyclj_rt_list>("list");
-    defn<tinyclj_rt_cons>("cons");
-    defn<tinyclj_rt_next>("next");
-    defn<tinyclj_rt_seq>("seq");
-    defn<tinyclj_rt_list_STAR>("list*");
-    defn<tinyclj_rt_count>("count");
-    defn<tinyclj_rt_first>("first");
-    defn<tinyclj_rt_error>("error");
-    defn<tinyclj_rt_is_nil>("nil?");
-    defn<tinyclj_rt_is_string>("string?");
-    defn<tinyclj_rt_is_symbol>("symbol?");
-    defn<tinyclj_rt_is_list>("list?");
-    defn<tinyclj_rt_is_function>("function?");
-    defn<tinyclj_rt_is_integer>("integer?");
-    defn<tinyclj_rt_is_double>("double?");
-    defn<tinyclj_rt_is_boolean>("boolean?");
-    defn<tinyclj_rt_is_var>("var?");
-    defn<tinyclj_rt_is_character>("character?");
-    defn<tinyclj_rt_apply>("apply");
-    defn<tinyclj_rt_read>("read");
-    defn<tinyclj_rt_read_string>("read-string");
-    defn<tinyclj_rt_slurp>("slurp");
-    defn<tinyclj_rt_spit>("spit");
-    defn<tinyclj_rt_macroexpand>("macroexpand");
-    defn<tinyclj_rt_macroexpand1>("macroexpand1");
-    defn<tinyclj_rt_eval>("eval");
-    defn<tinyclj_rt_vars>("vars");
-    defn<tinyclj_rt_epoch_nanos>("epoch-nanos");
-    defn<tinyclj_rt_nextID>("next-id");
-    defn<tinyclj_rt_symbol>("symbol");
-    defn<tinyclj_rt_str>("str");
-    defn<tinyclj_rt_double>("double");
-    defn<tinyclj_rt_long>("long");
-    defn<tinyclj_rt_compile_module>("compile-module");
-    defn<tinyclj_rt_load_module>("load-module");
+    TC_DEFN("builtin_binary_add", tinyclj_rt_add);
+    TC_DEFN("builtin_binary_sub", tinyclj_rt_sub);
+    TC_DEFN("builtin_binary_mul", tinyclj_rt_mul);
+    TC_DEFN("builtin_binary_div", tinyclj_rt_div);
+    TC_DEFN("builtin_unary_print", tinyclj_rt_print);
+    TC_DEFN("flush", tinyclj_rt_flush);
+    TC_DEFN("to-edn", tinyclj_rt_to_edn);
+    TC_DEFN("builtin_binary_equal", tinyclj_rt_binary_equal);
+    TC_DEFN("builtin_binary_lt", tinyclj_rt_lt);
+    TC_DEFN("builtin_binary_lte", tinyclj_rt_lte);
+    TC_DEFN("set-macro!", tinyclj_rt_setmacro);
+    TC_DEFN("identical?", tinyclj_rt_identical);
+    TC_DEFN("list", tinyclj_rt_list);
+    TC_DEFN("cons", tinyclj_rt_cons);
+    TC_DEFN("next", tinyclj_rt_next);
+    TC_DEFN("seq", tinyclj_rt_seq);
+    TC_DEFN("list*", tinyclj_rt_list_STAR);
+    TC_DEFN("count", tinyclj_rt_count);
+    TC_DEFN("first", tinyclj_rt_first);
+    TC_DEFN("error", tinyclj_rt_error);
+    TC_DEFN("nil?", tinyclj_rt_is_nil);
+    TC_DEFN("string?", tinyclj_rt_is_string);
+    TC_DEFN("symbol?", tinyclj_rt_is_symbol);
+    TC_DEFN("list?", tinyclj_rt_is_list);
+    TC_DEFN("function?", tinyclj_rt_is_function);
+    TC_DEFN("integer?", tinyclj_rt_is_integer);
+    TC_DEFN("double?", tinyclj_rt_is_double);
+    TC_DEFN("boolean?", tinyclj_rt_is_boolean);
+    TC_DEFN("var?", tinyclj_rt_is_var);
+    TC_DEFN("character?", tinyclj_rt_is_character);
+    TC_DEFN("apply", tinyclj_rt_apply);
+    TC_DEFN("read", tinyclj_rt_read);
+    TC_DEFN("read-string", tinyclj_rt_read_string);
+    TC_DEFN("slurp", tinyclj_rt_slurp);
+    TC_DEFN("spit", tinyclj_rt_spit);
+    TC_DEFN("macroexpand", tinyclj_rt_macroexpand);
+    TC_DEFN("macroexpand1", tinyclj_rt_macroexpand1);
+    TC_DEFN("eval", tinyclj_rt_eval);
+    TC_DEFN("vars", tinyclj_rt_vars);
+    TC_DEFN("epoch-nanos", tinyclj_rt_epoch_nanos);
+    TC_DEFN("next-id", tinyclj_rt_nextID);
+    TC_DEFN("symbol", tinyclj_rt_symbol);
+    TC_DEFN("str", tinyclj_rt_str);
+    TC_DEFN("double", tinyclj_rt_double);
+    TC_DEFN("long", tinyclj_rt_long);
+    TC_DEFN("compile-module", tinyclj_rt_compile_module);
+    TC_DEFN("load-module", tinyclj_rt_load_module);
 
     static const std::string core_module = "core";
     try {
         AotEngine &aot_engine = getAotEngine();
         auto ts1 = std::chrono::high_resolution_clock::now();
+        m_DirectLinking = true;
         aot_engine.compileModule(core_module, false);
+        m_DirectLinking = false;
         auto ts2 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = ts2 - ts1;
         // disable this log for now

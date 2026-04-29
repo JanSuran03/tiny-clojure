@@ -38,7 +38,7 @@ class Runtime {
     };
 
     template<CallFn Fn>
-    void defn(const std::string &name);
+    void defn(const std::string &name, const char *nativeFnName);
 
     Runtime();
 
@@ -52,6 +52,7 @@ class Runtime {
 public:
     bool m_CompilingAOT = false;
     bool m_SuppressReplWelcome = false;
+    bool m_DirectLinking = false;
 
     std::filesystem::file_time_type getSourceLastWriteTime() const;
 
