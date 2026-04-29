@@ -18,6 +18,15 @@ class CapturedLocalExpr;
 using Captures = std::unordered_map<std::string, CapturedLocalExpr>;
 
 struct AnalyzerContext {
+    struct RecurContext {
+        size_t m_NumArgs;
+        // the loop doesn't actually be referenced from within its body which allows us to emit direct vars
+        // instead of phi nodes for the loop variables and additional jump instructions
+        bool m_IsReferenced = false;
+
+        RecurContext(size_t numArgs);
+    };
+
     /// A mapping of captured variable name to its index in the closure environment for each stack frame.
     std::vector<Captures> m_CapturesMappingStack;
     /// Whether the current stack frame (function overload) uses captures - the parent function stub
@@ -25,8 +34,8 @@ struct AnalyzerContext {
     std::vector<bool> m_CaptureUsedStack;
     /// A mapping of name -> local variable binding for each stack frame.
     std::vector<std::unordered_map<std::string, std::shared_ptr<BindingExpr>>> m_StackFrameBindings;
-    /// A set of the count of recur arguments for each recur frame.
-    std::vector<size_t> m_NumRecurArgsStack;
+    /// A set of recur frames.
+    std::vector<RecurContext> m_RecurFrames;
     /// A mapping of local variable name to the binding in the current stack frame.
     std::unordered_map<std::string, std::shared_ptr<BindingExpr>> m_ScopeBindings;
     /// A set of all used global variable names for each stack frame.
@@ -40,7 +49,7 @@ struct AnalyzerContext {
 
     std::unordered_map<std::string, std::shared_ptr<BindingExpr>> &currentStackFrameBindings();
 
-    size_t &currentRecurArgCount();
+    RecurContext &currentRecurContext();
 
     unsigned functionDepth() const;
 };

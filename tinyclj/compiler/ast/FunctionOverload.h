@@ -8,6 +8,7 @@ class FunctionOverload {
     std::vector<FnArgExpr> m_Args;
     bool m_IsVariadic;
     bool m_UsesClosureEnv;
+    bool m_IsRecursive;
     Captures m_Captures;
     std::vector<AExpr> m_Body;
 
@@ -21,6 +22,7 @@ public:
     FunctionOverload(std::vector<FnArgExpr> args,
                      bool isVariadic,
                      bool usesClosureEnv,
+                     bool isRecursive,
                      std::vector<AExpr> body);
 
     static FunctionOverload parse(AnalyzerContext &ctx, const Object *form, bool is_eval_wrapper);

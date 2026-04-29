@@ -2,6 +2,9 @@
 
 #include "ast/local-binding/CapturedLocalExpr.h"
 
+AnalyzerContext::RecurContext::RecurContext(size_t numArgs)
+        : m_NumArgs(numArgs) {}
+
 std::unordered_map<std::string, CapturedLocalExpr> &AnalyzerContext::currentCapturesMappings() {
     return m_CapturesMappingStack.back();
 }
@@ -10,8 +13,8 @@ std::unordered_map<std::string, std::shared_ptr<BindingExpr>> &AnalyzerContext::
     return m_StackFrameBindings.back();
 }
 
-size_t &AnalyzerContext::currentRecurArgCount() {
-    return m_NumRecurArgsStack.back();
+AnalyzerContext::RecurContext &AnalyzerContext::currentRecurContext() {
+    return m_RecurFrames.back();
 }
 
 unsigned int AnalyzerContext::functionDepth() const {

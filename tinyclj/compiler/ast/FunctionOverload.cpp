@@ -10,10 +10,12 @@
 FunctionOverload::FunctionOverload(std::vector<FnArgExpr> args,
                                    bool isVariadic,
                                    bool usesClosureEnv,
+                                   bool isRecursive,
                                    std::vector<AExpr> body)
         : m_Args(std::move(args)),
           m_IsVariadic(isVariadic),
           m_UsesClosureEnv(usesClosureEnv),
+          m_IsRecursive(isRecursive),
           m_Body(std::move(body)) {}
 
 llvm::Function *FunctionOverload::compile(const std::string &parent_fn_name,
@@ -50,40 +52,55 @@ llvm::Function *FunctionOverload::compile(const std::string &parent_fn_name,
 
     ctx.m_IRBuilder.SetInsertPoint(entryBlock);
 
-    // Create an implicit tail recursion point
-    BasicBlock *recursion_point = ctx.createBasicBlock("fn_recursion_point");
-    // Create phi nodes for tail recursion arguments
-    std::vector<PHINode *> phi_nodes;
+    // if the argument shadows an existing variable, store the old variable
+    // to restore it later and shadow it with the new argument variable
     std::unordered_map<std::string, Value *> shadowed_context_vars;
-    for (size_t i = 0; i < m_Args.size(); i++) {
-        PHINode *phi_node = PHINode::Create(ctx.pointerType(),
-                                            0,
-                                            "fn_tailrec_phi_" + std::to_string(i),
-                                            recursion_point);
-        phi_nodes.emplace_back(phi_node);
 
-        // bind the function argument to a variable in the context
-        const std::string &arg_name = m_Args[i].name();
-        // if the argument shadows an existing variable (but not another function argument), store
-        // the old variable to restore it later and shadow it with the new argument variable
-        if (ctx.m_VariableMap.contains(arg_name) && !shadowed_context_vars.contains(arg_name)) {
-            shadowed_context_vars.emplace(arg_name, ctx.m_VariableMap[arg_name]);
-        } else {
-            shadowed_context_vars.emplace(arg_name, nullptr);
+    if (m_IsRecursive) {
+        // Create an implicit tail recursion point
+        BasicBlock *recursion_point = ctx.createBasicBlock("fn_recursion_point");
+        // Create phi nodes for tail recursion arguments
+        std::vector<PHINode *> phi_nodes;
+        for (size_t i = 0; i < m_Args.size(); i++) {
+            PHINode *phi_node = PHINode::Create(ctx.pointerType(),
+                                                0,
+                                                "fn_tailrec_phi_" + std::to_string(i),
+                                                recursion_point);
+            phi_nodes.emplace_back(phi_node);
+
+            // bind the function argument to a variable in the context
+            const std::string &arg_name = m_Args[i].name();
+
+            if (ctx.m_VariableMap.contains(arg_name) && !shadowed_context_vars.contains(arg_name)) {
+                shadowed_context_vars.emplace(arg_name, ctx.m_VariableMap[arg_name]);
+            } else {
+                shadowed_context_vars.emplace(arg_name, nullptr);
+            }
+            ctx.m_VariableMap[arg_name] = phi_node;
         }
-        ctx.m_VariableMap[arg_name] = phi_node;
-    }
-    ctx.m_LoopLabels.emplace_back(recursion_point, phi_nodes);
+        ctx.m_LoopLabels.emplace_back(recursion_point, phi_nodes);
 
-    ctx.m_IRBuilder.CreateBr(recursion_point);
-    ctx.m_IRBuilder.SetInsertPoint(recursion_point);
+        ctx.m_IRBuilder.CreateBr(recursion_point);
+        ctx.m_IRBuilder.SetInsertPoint(recursion_point);
 
-    // store the initial function's argument values in the phi nodes
-    // Cannot iterate over function->args() if this overload uses the closure environment! - the closure
-    // environment argument is implicit and cannot be rewritten with recur.
-    for (size_t i = 0; i < m_Args.size(); i++) {
-        Argument *arg = function->getArg(i);
-        phi_nodes[i]->addIncoming(arg, entryBlock);
+        // store the initial function's argument values in the phi nodes
+        // Cannot iterate over function->args() if this overload uses the closure environment! - the closure
+        // environment argument is implicit and cannot be rewritten with recur.
+        for (size_t i = 0; i < m_Args.size(); i++) {
+            Argument *arg = function->getArg(i);
+            phi_nodes[i]->addIncoming(arg, entryBlock);
+        }
+    } else {
+        // bind function arguments to variables in the context
+        for (size_t i = 0; i < m_Args.size(); i++) {
+            const std::string &arg_name = m_Args[i].name();
+            if (ctx.m_VariableMap.contains(arg_name) && !shadowed_context_vars.contains(arg_name)) {
+                shadowed_context_vars.emplace(arg_name, ctx.m_VariableMap[arg_name]);
+            } else {
+                shadowed_context_vars.emplace(arg_name, nullptr);
+            }
+            ctx.m_VariableMap[arg_name] = function->getArg(i);
+        }
     }
 
     Argument *prev_closure_env = ctx.m_ClosureEnv;
@@ -96,7 +113,9 @@ llvm::Function *FunctionOverload::compile(const std::string &parent_fn_name,
     auto function_return_value = CompilerUtils::emitBody(m_Body, "fn", ctx);
     ctx.m_IRBuilder.CreateRet(function_return_value.value());
 
-    ctx.m_LoopLabels.pop_back();
+    if (m_IsRecursive) {
+        ctx.m_LoopLabels.pop_back();
+    }
 
     // restore shadowed variables in the context
     for (const auto &[name, prev_value]: shadowed_context_vars) {
@@ -181,7 +200,7 @@ FunctionOverload FunctionOverload::parse(AnalyzerContext &ctx, const Object *for
     }
 
     if (!is_eval_wrapper) {
-        ctx.m_NumRecurArgsStack.emplace_back(args.size());
+        ctx.m_RecurFrames.emplace_back(args.size());
     }
 
     std::vector<AExpr> body;
@@ -195,9 +214,10 @@ FunctionOverload FunctionOverload::parse(AnalyzerContext &ctx, const Object *for
                 is_last ? last_mode : ExpressionMode::DISCARD, ctx, expr));
     }
 
+    bool is_recursive = !is_eval_wrapper && ctx.currentRecurContext().m_IsReferenced;
 
     if (!is_eval_wrapper) {
-        ctx.m_NumRecurArgsStack.pop_back();
+        ctx.m_RecurFrames.pop_back();
     }
     // erase bindings introduced by the fn expression from the context
     for (const auto &var: new_scope_bindings) {
@@ -218,5 +238,6 @@ FunctionOverload FunctionOverload::parse(AnalyzerContext &ctx, const Object *for
     return FunctionOverload(std::move(args),
                             varargs_state == VA_State::FOUND_VARARG,
                             capture_used,
+                            is_recursive,
                             std::move(body));
 }

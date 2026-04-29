@@ -144,7 +144,7 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
                 .append("_binding_")
                 .append(binding_name)
                 .append("_")
-                .append(std::to_string(Runtime::getInstance().nextId()));
+                .append(std::to_string(Runtime::nextId()));
 
         parsed_bindings.emplace_back(local_binding_expr, SemanticAnalyzer::analyze(
                 ExpressionMode::EXPR,
@@ -158,7 +158,7 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
     std::vector<AExpr> body;
 
     if (is_loop) {
-        ctx.m_NumRecurArgsStack.emplace_back(parsed_bindings.size());
+        ctx.m_RecurFrames.emplace_back(parsed_bindings.size());
     }
 
     for (; form; form = tc_list_next(form)) {
@@ -167,8 +167,12 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
                                                     tc_list_first(form)));
     }
 
+    // If the loop expression does not contain a recur expression, we can treat it as a let expression
+    // and avoid emitting the additional loop machinery in the IR.
+    is_loop = is_loop && ctx.currentRecurContext().m_IsReferenced;
+
     if (is_loop) {
-        ctx.m_NumRecurArgsStack.pop_back();
+        ctx.m_RecurFrames.pop_back();
     }
 
     // erase new bindings introduced in the let expressions

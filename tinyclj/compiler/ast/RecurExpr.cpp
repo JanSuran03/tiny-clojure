@@ -32,13 +32,14 @@ AExpr RecurExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *
     if (mode != ExpressionMode::TAIL) {
         throw std::runtime_error("recur can only be used in tail position");
     }
-    size_t currentRecurArgCount = ctx.currentRecurArgCount();
+    AnalyzerContext::RecurContext &currentRecurContext = ctx.currentRecurContext();
+    currentRecurContext.m_IsReferenced = true;
     std::vector<AExpr> recurArgs;
     form = tc_list_next(form); // skip 'recur symbol
     tc_int_t len = static_cast<TCInteger *>(tc_list_length(form)->m_Data)->m_Value;
-    if (len != currentRecurArgCount) {
+    if (len != currentRecurContext.m_NumArgs) {
         throw std::runtime_error("recur arguments count mismatch - expected "
-                                 + std::to_string(currentRecurArgCount) + " but got " + std::to_string(len));
+                                 + std::to_string(currentRecurContext.m_NumArgs) + " but got " + std::to_string(len));
     }
 
     while (form) {
