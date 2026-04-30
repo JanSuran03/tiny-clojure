@@ -36,7 +36,7 @@ llvm::Function *FunctionOverload::compile(const std::string &parent_fn_name,
 
     FunctionType *funcType = FunctionType::get(ctx.pointerType(), argTypes, false);
     Function *function = Function::Create(funcType,
-                                          Function::ExternalLinkage,
+                                          Function::PrivateLinkage,
                                           overload_name,
                                           *ctx.m_Module);
     for (size_t i = 0; i < m_Args.size(); i++) {

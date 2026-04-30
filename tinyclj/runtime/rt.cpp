@@ -577,8 +577,7 @@ const Object *tinyclj_rt_nextID(const Object *self, size_t argc, const Object **
     if (argc != 0) {
         throw std::runtime_error("gensym requires exactly 0 arguments");
     }
-    Runtime &rt = Runtime::getInstance();
-    size_t id = rt.nextId();
+    size_t id = Runtime::nextId();
     return tc_integer_new(tc_int_t(id));
 }
 

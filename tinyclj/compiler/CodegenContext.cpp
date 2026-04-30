@@ -137,7 +137,7 @@ llvm::Value *CodegenContext::registerGlobalString(const std::string &str) {
         globalStr = it->second.second;
         strId = it->second.first;
     } else {
-        strId = Runtime::getInstance().nextId();
+        strId = Runtime::nextId();
         globalStr = new llvm::GlobalVariable(
                 *m_Module,
                 ArrayType::get(Type::getInt8Ty(*m_LLVMContext), str.size() + 1),

@@ -54,9 +54,9 @@ AExpr FunctionExpr::parse(ExpressionMode mode,
         form = tc_list_next(form); // consume the name if it's present
         name = tc_symbol_valueX(name_sym);
     } else if (nameHint.has_value()) {
-        name = nameHint.value() + "__" + std::to_string(Runtime::getInstance().nextId());
+        name = nameHint.value() + "__" + std::to_string(Runtime::nextId());
     } else {
-        name = "fn__" + std::to_string(Runtime::getInstance().nextId());
+        name = "fn__" + std::to_string(Runtime::nextId());
     }
 
     // (arglist & body) or ((arglist & body) (arglist2 & body2) ...)
@@ -334,10 +334,6 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
             ctx.pointerType(),
             {ctx.pointerType(), Type::getInt64Ty(*ctx.m_LLVMContext), ctx.pointerArrayType()},
             false);
-    llvm::Function *stub_fn = llvm::Function::Create(stub_fn_type,
-                                                     llvm::Function::ExternalLinkage,
-                                                     m_StubName,
-                                                     *ctx.m_Module);
 
     // Object *stub_fn(Object *self, size_t arg, Object **argv)
     FunctionType *call_fn_type = FunctionType::get(
