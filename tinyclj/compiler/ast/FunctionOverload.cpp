@@ -111,7 +111,9 @@ llvm::Function *FunctionOverload::compile(const std::string &parent_fn_name,
     }
 
     auto function_return_value = CompilerUtils::emitBody(m_Body, "fn", ctx);
-    ctx.m_IRBuilder.CreateRet(function_return_value.value());
+    if (function_return_value.has_value()) {
+        ctx.m_IRBuilder.CreateRet(function_return_value.value());
+    }
 
     if (m_IsRecursive) {
         ctx.m_LoopLabels.pop_back();

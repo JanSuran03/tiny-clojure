@@ -18,7 +18,7 @@ EmitResult CompilerUtils::emitBody(const std::vector<AExpr> &body,
 
 llvm::Value *CompilerUtils::emitGlobalVar(CodegenContext &ctx, const std::string &name) {
     using namespace llvm;
-    GlobalVariable *global_var = ctx.m_GlobalVariableMap.at(name);
+    GlobalVariable *global_var = ctx.getOrCreateGlobalVariable(name);
     return ctx.m_IRBuilder.CreateLoad(ctx.pointerType(), global_var, "global_var_" + name);
 }
 

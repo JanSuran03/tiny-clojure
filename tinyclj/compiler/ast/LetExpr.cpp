@@ -67,7 +67,8 @@ EmitResult LetExpr::emitIR(CodegenContext &ctx) const {
     ctx.m_IRBuilder.CreateBr(recursion_point);
     ctx.m_IRBuilder.SetInsertPoint(recursion_point);
 
-    Value *loop_body_result = CompilerUtils::emitBody(m_Body, "loop", ctx).value();
+    auto loop_body_result = CompilerUtils::emitBody(m_Body, "loop", ctx);
+
     ctx.m_LoopLabels.pop_back();
     // restore shadowed variables in the context
     for (const auto &[name, prev_value]: shadowed_context_vars) {
@@ -150,7 +151,7 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
                 ExpressionMode::EXPR,
                 ctx,
                 binding_val,
-                std::string (is_loop ? "loop_" : "let").append("_binding_")));
+                std::string(is_loop ? "loop_" : "let").append("_binding_")));
         // todo: unify value vs shared ptr vs unique ptr
         ctx.currentStackFrameBindings().emplace(binding_name, local_binding_expr);
         ctx.m_ScopeBindings.emplace(binding_name, local_binding_expr);
@@ -169,7 +170,7 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
 
     // If the loop expression does not contain a recur expression, we can treat it as a let expression
     // and avoid emitting the additional loop machinery in the IR.
-    is_loop = is_loop && ctx.currentRecurContext().m_IsReferenced;
+    bool is_loop_with_recur_block = is_loop && ctx.currentRecurContext().m_IsReferenced;
 
     if (is_loop) {
         ctx.m_RecurFrames.pop_back();
@@ -188,5 +189,5 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
 
     return std::make_unique<LetExpr>(std::move(parsed_bindings),
                                      std::move(body),
-                                     is_loop);
+                                     is_loop_with_recur_block);
 }

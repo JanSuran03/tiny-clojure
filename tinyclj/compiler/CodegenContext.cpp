@@ -163,3 +163,20 @@ llvm::Function *CodegenContext::createModuleLoadFunction(const std::string &modu
                                                      *m_Module);
     return load_fn;
 }
+
+llvm::GlobalVariable *CodegenContext::getOrCreateGlobalVariable(const std::string &name) {
+    using namespace llvm;
+    if(auto it = m_GlobalVariableMap.find(name); it != m_GlobalVariableMap.end()) {
+        return it->second;
+    } else {
+        GlobalVariable *global_var = new GlobalVariable(
+                *m_Module,
+                pointerType(),
+                false,
+                GlobalValue::PrivateLinkage,
+                ConstantPointerNull::get(pointerType()),
+                "var_" + name);
+        m_GlobalVariableMap.emplace(name, global_var);
+        return global_var;
+    }
+}

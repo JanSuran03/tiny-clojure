@@ -11,6 +11,5 @@ public:
     const Object *eval() const override;
 
     VarDerefExpr(Object *var,
-                 const std::string &varName,
-                 AnalyzerContext &ctx);
+                 const std::string &varName);
 };

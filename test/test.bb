@@ -35,20 +35,38 @@
   (let [forms-path (fs/path script-dir "forms.clj")
         tinyclj-exe (fs/path project-root "cmake-build-debug" "tiny-clojure")
         forms (slurp (str forms-path))
-        {clojure-out :out} (run-clojure forms)
-        {tinyclj-out :out} (run-tinyclj forms)
+        {clojure-out :out clojure-err :err} (run-clojure forms)
+        {tinyclj-out :out tinyclj-err :err} (run-tinyclj forms)
         clojure-out (trim-clojure-repl-output clojure-out)]
-    (if (= clojure-out tinyclj-out)
+    (cond
+      (or (not (str/blank? clojure-err))
+          (not (str/blank? tinyclj-err)))
+      (do (println "Error: Unexpected error in Clojure or TinyClojure execution!")
+          (when-not (str/blank? clojure-err)
+            (println "Clojure Error Output:")
+            (println clojure-err))
+          (when-not (str/blank? tinyclj-err)
+            (println "TinyClojure Error Output:")
+            (println tinyclj-err))
+          (System/exit 1))
+
+      (= clojure-out tinyclj-out)
       (println "Standard tests succeeded! Clojure and TinyClojure outputs match.")
+
+      :else
       (do
         (println "Clojure and TinyClojure outputs differ!")
-      ; also compare line-by-line
+        ; also compare line-by-line
         (let [clojure-lines (str/split-lines clojure-out)
               tinyclj-lines (str/split-lines tinyclj-out)]
           (if-not (= (count clojure-lines) (count tinyclj-lines))
             (do (println "Number of lines differ!")
                 (println "Clojure Lines:" (count clojure-lines))
-                (println "TinyClojure Lines:" (count tinyclj-lines)))
+                (println "TinyClojure Lines:" (count tinyclj-lines))
+                (println "Full Clojure Output:")
+                (println clojure-out)
+                (println "Full TinyClojure Output:")
+                (println tinyclj-out))
             (doseq [[i [clojure-line tinyclj-line]] (->> (map vector clojure-lines tinyclj-lines)
                                                          (map-indexed vector))]
               (when-not (= clojure-line tinyclj-line)

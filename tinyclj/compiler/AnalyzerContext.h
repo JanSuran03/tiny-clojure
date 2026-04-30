@@ -38,8 +38,6 @@ struct AnalyzerContext {
     std::vector<RecurContext> m_RecurFrames;
     /// A mapping of local variable name to the binding in the current stack frame.
     std::unordered_map<std::string, std::shared_ptr<BindingExpr>> m_ScopeBindings;
-    /// A set of all used global variable names for each stack frame.
-    std::vector<std::unordered_set<std::string>> m_ReferencedGlobalNamesStack;
     /// A set of module imports for each stack frame.
     std::vector<std::unordered_set<std::string>> m_ModuleImportsStack;
 

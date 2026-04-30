@@ -289,8 +289,6 @@ const Object *process_syntax_quote(const Object *form, ReaderEnv &env) {
         return nullptr;
     }
 
-    Runtime &rt = Runtime::getInstance();
-
     if (SemanticAnalyzer::isSpecial(form)) {
         // return the quoted special form: (quote form)
         return tc_list_create2(sym_quote(), form);
@@ -310,7 +308,7 @@ const Object *process_syntax_quote(const Object *form, ReaderEnv &env) {
             if (auto it = env.gensym_table.find(sym_name); it != env.gensym_table.end()) {
                 ret_sym = tc_symbol_new(it->second.c_str());
             } else {
-                size_t id = rt.nextId();
+                size_t id = Runtime::nextId();
                 // strip the trailing '#' for the gensym name
                 std::string gensym_name = sym_name.substr(0, sym_name.size() - 1);
                 gensym_name += "_" + std::to_string(id) + "_auto_";

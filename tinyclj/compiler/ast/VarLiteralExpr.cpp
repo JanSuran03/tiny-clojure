@@ -14,11 +14,8 @@ const Object *VarLiteralExpr::eval() const {
 }
 
 VarLiteralExpr::VarLiteralExpr(const Object *var,
-                               const std::string &varName,
-                               AnalyzerContext &ctx)
-        : m_Var(var) {
-    ctx.m_ReferencedGlobalNamesStack.back().emplace(varName);
-}
+                               const std::string &varName)
+        : m_Var(var) {}
 
 AExpr VarLiteralExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     TCList *list = static_cast<TCList *>(form->m_Data);
@@ -32,7 +29,7 @@ AExpr VarLiteralExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Obj
     }
     const std::string &var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
     if (Object *var = Runtime::getInstance().getVar(var_name)) {
-        return std::make_unique<VarLiteralExpr>(var, var_name, ctx);
+        return std::make_unique<VarLiteralExpr>(var, var_name);
     } else {
         throw std::runtime_error(std::string("Cannot resolve var: ").append(var_name).append(" in the context"));
     }

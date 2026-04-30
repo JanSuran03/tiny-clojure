@@ -8,10 +8,7 @@
 #include "compiler/CodegenContext.h"
 
 namespace ModuleUtil {
-    std::unordered_map<std::string, llvm::GlobalVariable *>
-    declareReferencedGlobals(CodegenContext &ctx, const std::unordered_set<std::string> &global_names);
-
-    llvm::Function *initReferencedGlobals(
+    void createGlobalsInitFunction(
             CodegenContext &ctx,
             const std::string &module_name,
             const std::unordered_map<std::string, llvm::GlobalVariable *> &global_vars);

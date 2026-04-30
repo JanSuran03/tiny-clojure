@@ -46,6 +46,8 @@ struct CodegenContext {
 
     llvm::Function *createModuleLoadFunction(const std::string &moduleName);
 
+    llvm::GlobalVariable *getOrCreateGlobalVariable(const std::string &name);
+
 private:
     void optimizeModule();
 

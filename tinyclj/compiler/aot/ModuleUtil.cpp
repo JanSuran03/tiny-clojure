@@ -1,24 +1,7 @@
 #include "ModuleUtil.h"
 #include "util.h"
 
-std::unordered_map<std::string, llvm::GlobalVariable *>
-ModuleUtil::declareReferencedGlobals(CodegenContext &ctx, const std::unordered_set<std::string> &global_names) {
-    using namespace llvm;
-    std::unordered_map<std::string, GlobalVariable *> global_vars;
-    for (const std::string &global_name: global_names) {
-        GlobalVariable *global_var = new llvm::GlobalVariable(
-                *ctx.m_Module,
-                ctx.pointerType(),
-                false,
-                llvm::GlobalValue::PrivateLinkage,
-                ConstantPointerNull::get(ctx.pointerType()),
-                "var_" + global_name);
-        global_vars.emplace(global_name, global_var);
-    }
-    return global_vars;
-}
-
-llvm::Function *ModuleUtil::initReferencedGlobals(
+void ModuleUtil::createGlobalsInitFunction(
         CodegenContext &ctx,
         const std::string &module_name,
         const std::unordered_map<std::string, llvm::GlobalVariable *> &global_vars) {
@@ -43,10 +26,10 @@ llvm::Function *ModuleUtil::initReferencedGlobals(
     for (const auto &[name, global_var]: global_vars) {
         Value *global_name_global_str = ctx.m_IRBuilder.CreateGlobalStringPtr(
                 name, "global_name_str_" + name);
-        Value *var_obj = ctx.m_IRBuilder.CreateCall(declare_var_fn, {global_name_global_str}, "var_obj");
+        Value *var_obj = ctx.m_IRBuilder.CreateCall(declare_var_fn,
+                                                    {global_name_global_str},
+                                                    "var_obj_" + name);
         ctx.m_IRBuilder.CreateStore(var_obj, global_var);
     }
     ctx.m_IRBuilder.CreateRetVoid();
-
-    return module_init_fn;
 }

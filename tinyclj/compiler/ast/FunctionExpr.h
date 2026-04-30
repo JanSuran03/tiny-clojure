@@ -14,10 +14,6 @@ class FunctionExpr : public Expr {
     std::unordered_map<size_t, FunctionOverload> m_Overloads;
     std::optional<FunctionOverload> m_VariadicOverload;
     Captures m_Captures;
-    /** A set of all global variables referenced by this function that need to be emitted as global variables
-     * for the function's LLVM module.
-     */
-    std::unordered_set<std::string> m_ReferencedGlobalNames;
     std::unordered_set<std::string> m_ModuleImports;
 
     std::string compile() const;
@@ -33,7 +29,6 @@ public:
                  std::unordered_map<size_t, FunctionOverload> overloads,
                  std::optional<FunctionOverload> variadic_overload,
                  Captures captures,
-                 std::unordered_set<std::string> referenced_global_names,
                  std::unordered_set<std::string> module_imports);
 
     static AExpr parse(ExpressionMode mode,

@@ -20,13 +20,11 @@ FunctionExpr::FunctionExpr(std::string name,
                            std::unordered_map<size_t, FunctionOverload> overloads,
                            std::optional<FunctionOverload> variadic_overload,
                            Captures captures,
-                           std::unordered_set<std::string> referenced_global_names,
                            std::unordered_set<std::string> module_imports)
         : m_Name(std::move(name)),
           m_Overloads(std::move(overloads)),
           m_VariadicOverload(std::move(variadic_overload)),
           m_Captures(std::move(captures)),
-          m_ReferencedGlobalNames(std::move(referenced_global_names)),
           m_ModuleImports(std::move(module_imports)) {}
 
 std::string ambiguousOverload(const std::string &fn_name, size_t variadic_fixed_argcnt, size_t other_fixed_argcnt) {
@@ -84,7 +82,6 @@ AExpr FunctionExpr::parse(ExpressionMode mode,
     // overloads, the capture scope needs to be created before parsing the overloads
     // and the capture scope is the union of the captures from all overloads
     ctx.m_CapturesMappingStack.emplace_back();
-    ctx.m_ReferencedGlobalNamesStack.emplace_back();
     ctx.m_ModuleImportsStack.emplace_back();
     // if there exists a variadic overload with m_Args = N (i.e. N-1 fixed args), then there can exist
     // a (non-variadic) overload with m_Args <= N-1 (i.e. m_Args < N)
@@ -127,20 +124,12 @@ AExpr FunctionExpr::parse(ExpressionMode mode,
 
     auto captures = std::move(ctx.m_CapturesMappingStack.back());
     ctx.m_CapturesMappingStack.pop_back();
-    auto referenced_global_names = std::move(ctx.m_ReferencedGlobalNamesStack.back());
-    ctx.m_ReferencedGlobalNamesStack.pop_back();
     auto module_imports = std::move(ctx.m_ModuleImportsStack.back());
     ctx.m_ModuleImportsStack.pop_back();
 
-    /*
-    // register a reference to this function in the parent scope
-    if (!ctx.m_ReferencedGlobalNamesStack.empty()) {
-        ctx.m_ReferencedGlobalNamesStack.back().insert(name);
-    }
-    */
     // register import of this module in the parent scope
     if (!ctx.m_ModuleImportsStack.empty()) {
-        ctx.m_ModuleImportsStack.back().insert(name);
+        ctx.m_ModuleImportsStack.back().emplace(name);
     }
 
     auto fn_expr = std::make_unique<FunctionExpr>(
@@ -148,7 +137,6 @@ AExpr FunctionExpr::parse(ExpressionMode mode,
             std::move(overloads),
             std::move(variadic_overload),
             std::move(captures),
-            std::move(referenced_global_names),
             std::move(module_imports));
 
     fn_expr->compile();
@@ -165,10 +153,8 @@ std::string FunctionExpr::compile() const {
     CodegenContext ctx(m_Name);
     FunctionModule function_module(m_Name, m_ModuleImports);
 
-    std::unordered_map<std::string, GlobalVariable *> global_vars = ModuleUtil::declareReferencedGlobals
-            (ctx, m_ReferencedGlobalNames);
-
-    ctx.m_GlobalVariableMap = global_vars;
+    //std::unordered_map<std::string, GlobalVariable *> global_vars = ModuleUtil::declareReferencedGlobals
+    //        (ctx, m_ReferencedGlobalNames);
 
     if (Runtime::getInstance().m_CompilingAOT) {
         function_module.emitImportsFile();
@@ -313,7 +299,7 @@ std::string FunctionExpr::compile() const {
     //Value *fn_name_msg = ctx.registerGlobalString(m_Name);
     CompilerUtils::emitThrow(wrong_argcnt_msg, ctx);
 
-    Function *module_init_fn = ModuleUtil::initReferencedGlobals(ctx, m_Name, global_vars);
+    ModuleUtil::createGlobalsInitFunction(ctx, m_Name, ctx.m_GlobalVariableMap);
     function_module.createModuleVtable(ctx, stub_fn);
 
     if (Runtime::getInstance().m_CompilingAOT) {

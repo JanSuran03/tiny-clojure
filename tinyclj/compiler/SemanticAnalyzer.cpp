@@ -112,11 +112,7 @@ AExpr resolveSymbol(AnalyzerContext &ctx, const Object *form) {
         if (static_cast<TCVar *>(var->m_Data)->m_IsMacro) {
             throw std::runtime_error(std::string("Cannot take value of a macro: #'").append(name));
         }
-        // todo: same as with def - this should be needed for codegen, not semantic analysis
-        if (!ctx.m_ReferencedGlobalNamesStack.empty()) {
-            ctx.m_ReferencedGlobalNamesStack.back().emplace(name);
-        }
-        return std::make_unique<VarDerefExpr>(var, name, ctx);
+        return std::make_unique<VarDerefExpr>(var, name);
     }
     throw std::runtime_error(std::string("Cannot resolve symbol: ").append(name).append(" in the context"));
 }

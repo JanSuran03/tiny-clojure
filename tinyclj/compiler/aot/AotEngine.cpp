@@ -82,7 +82,6 @@ std::string AotEngine::compileModule(const std::string &moduleName, bool forceRe
     // we need a single context for the entire file since the file is loaded by invoking the generated load function,
     // thus, all top-level expressions share the same context
     AnalyzerContext analyzer_ctx;
-    analyzer_ctx.m_ReferencedGlobalNamesStack.emplace_back();
     analyzer_ctx.m_ModuleImportsStack.emplace_back();
     std::vector<AExpr> top_level_exprs;
     while (true) {
@@ -96,8 +95,6 @@ std::string AotEngine::compileModule(const std::string &moduleName, bool forceRe
         top_level_exprs.emplace_back(std::move(expr));
     }
 
-    auto globals_names = std::move(analyzer_ctx.m_ReferencedGlobalNamesStack.back());
-    analyzer_ctx.m_ReferencedGlobalNamesStack.pop_back();
     auto module_imports = std::move(analyzer_ctx.m_ModuleImportsStack.back());
     analyzer_ctx.m_ModuleImportsStack.pop_back();
 
@@ -107,18 +104,12 @@ std::string AotEngine::compileModule(const std::string &moduleName, bool forceRe
 
     FileModule module(moduleName, module_imports);
 
-    //module.declareReferencedGlobals(codegen_ctx);
-    auto llvm_globals = ModuleUtil::declareReferencedGlobals(codegen_ctx, globals_names);
-    auto init_fn = ModuleUtil::initReferencedGlobals(codegen_ctx, moduleName, llvm_globals);
-    //module.initReferencedGlobals(codegen_ctx, llvm_globals);
-
     if (Runtime::getInstance().m_CompilingAOT) {
         module.emitImportsFile();
     }
 
     llvm::Function *load_fn = codegen_ctx.createModuleLoadFunction(moduleName);
 
-    codegen_ctx.m_GlobalVariableMap = std::move(llvm_globals);
     codegen_ctx.m_CurrentFunctionStack.emplace_back(load_fn);
 
     llvm::BasicBlock *entry_block = llvm::BasicBlock::Create(*codegen_ctx.m_LLVMContext, "entry", load_fn);
@@ -130,6 +121,8 @@ std::string AotEngine::compileModule(const std::string &moduleName, bool forceRe
     }
 
     codegen_ctx.m_IRBuilder.CreateRetVoid();
+
+    ModuleUtil::createGlobalsInitFunction(codegen_ctx, moduleName, codegen_ctx.m_GlobalVariableMap);
 
     rt.m_CompilingAOT = old_compiling_aot;
 

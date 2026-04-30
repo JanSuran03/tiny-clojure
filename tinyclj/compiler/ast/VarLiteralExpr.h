@@ -11,8 +11,7 @@ public:
     const Object *eval() const override;
 
     VarLiteralExpr(const Object *var,
-                   const std::string &varName,
-                   AnalyzerContext &ctx);
+                   const std::string &varName);
 
     static AExpr parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form);
 };

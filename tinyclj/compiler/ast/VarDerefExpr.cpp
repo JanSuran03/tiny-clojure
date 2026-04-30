@@ -14,11 +14,5 @@ const Object *VarDerefExpr::eval() const {
 }
 
 VarDerefExpr::VarDerefExpr(Object *var,
-                           const std::string &varName,
-                           AnalyzerContext &ctx)
-        : m_Var(var) {
-    // todo: pretty hacky, refactor for codegen
-    if (!ctx.m_ReferencedGlobalNamesStack.empty()) {
-        ctx.m_ReferencedGlobalNamesStack.back().emplace(varName);
-    }
-}
+                           const std::string &varName)
+        : m_Var(var) {}
