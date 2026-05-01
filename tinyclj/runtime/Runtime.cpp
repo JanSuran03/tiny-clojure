@@ -123,6 +123,8 @@ void clear_directory(const std::filesystem::path &path) {
 }
 
 void Runtime::init() {
+    TCBoolean::init();
+
     // Todo: clear the compiled directory if the source files have been updated since the last compilation.
     //clear_directory(std::filesystem::path(m_AotEngine.m_CompiledRoot));
 

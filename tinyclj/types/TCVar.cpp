@@ -6,7 +6,7 @@
 #include "compiler/CodegenContext.h"
 #include "runtime/Runtime.h"
 
-const Object *tc_var_invoke(const Object *self, size_t argc, const Object **argv) {
+const Object *tc_var_invoke(const Object *self, unsigned argc, const Object **argv) {
     const TCVar *var = static_cast<const TCVar *>(self->m_Data);
     const Object *root = var->m_Root;
     if (root == nullptr) {

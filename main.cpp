@@ -79,8 +79,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    Runtime &runtime = Runtime::getInstance();
-    runtime.repl();
+    Runtime::repl();
 
     return 0;
 }

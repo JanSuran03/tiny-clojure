@@ -48,6 +48,8 @@ struct CodegenContext {
 
     llvm::GlobalVariable *getOrCreateGlobalVariable(const std::string &name);
 
+    llvm::IntegerType *getArgcType() const;
+
 private:
     void optimizeModule();
 

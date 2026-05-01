@@ -4,6 +4,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <llvm/Passes/OptimizationLevel.h>
+
 class AotEngine {
 public: //todo
     std::unordered_set<std::string> m_LoadedFiles;
@@ -12,6 +14,8 @@ public: //todo
     std::string m_SourceRoot = std::string(TINYCLJ_PROJECT_SOURCE_DIR) + "/src";
     std::string m_CompiledRoot = std::string(TINYCLJ_PROJECT_SOURCE_DIR) + "/modules";
 public:
+    llvm::OptimizationLevel m_OptimizationLevel = llvm::OptimizationLevel::O0;
+
     std::string fullSourcePath(const std::string &moduleName) const;
 
     std::string fullCompiledPath(const std::string &moduleName, bool optimized = false) const;

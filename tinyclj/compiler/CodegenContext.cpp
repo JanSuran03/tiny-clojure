@@ -1,7 +1,5 @@
 #include <fstream>
 
-#include <llvm/Analysis/CGSCCPassManager.h>
-#include <llvm/Analysis/LoopAnalysisManager.h>
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include <llvm/IR/PassManager.h>
 #include "llvm/IR/Verifier.h"
@@ -62,7 +60,8 @@ void CodegenContext::optimizeModule() {
                             cgscc_analysis_manager,
                             module_analysis_manager);
 
-    llvm::ModulePassManager module_pass_manager = pb.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
+    llvm::OptimizationLevel opt_level = Runtime::getInstance().getAotEngine().m_OptimizationLevel;
+    llvm::ModulePassManager module_pass_manager = pb.buildPerModuleDefaultPipeline(opt_level);
 
     module_pass_manager.run(*m_Module, module_analysis_manager);
     m_Optimized = true;
@@ -179,4 +178,8 @@ llvm::GlobalVariable *CodegenContext::getOrCreateGlobalVariable(const std::strin
         m_GlobalVariableMap.emplace(name, global_var);
         return global_var;
     }
+}
+
+llvm::IntegerType *CodegenContext::getArgcType() const {
+    return llvm::Type::getInt32Ty(*m_LLVMContext);
 }

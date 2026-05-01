@@ -7,7 +7,6 @@
 #include "types/TCBoolean.h"
 #include "types/TCChar.h"
 #include "types/TCDouble.h"
-#include "types/TCFunction.h"
 #include "types/TCInteger.h"
 #include "types/TCList.h"
 #include "types/TCString.h"
@@ -15,7 +14,7 @@
 #include "types/TCVar.h"
 
 extern "C" {
-const Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_add(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("add function requires exactly 2 arguments");
     }
@@ -59,7 +58,7 @@ const Object *tinyclj_rt_add(const Object *self, size_t argc, const Object **arg
     }
 }
 
-const Object *tinyclj_rt_sub(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_sub(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("add function requires exactly 2 arguments");
     }
@@ -103,7 +102,7 @@ const Object *tinyclj_rt_sub(const Object *self, size_t argc, const Object **arg
     }
 }
 
-const Object *tinyclj_rt_mul(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_mul(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("add function requires exactly 2 arguments");
     }
@@ -147,7 +146,7 @@ const Object *tinyclj_rt_mul(const Object *self, size_t argc, const Object **arg
     }
 }
 
-const Object *tinyclj_rt_div(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_div(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("add function requires exactly 2 arguments");
     }
@@ -195,19 +194,19 @@ const Object *tinyclj_rt_div(const Object *self, size_t argc, const Object **arg
     }
 }
 
-const Object *tinyclj_rt_print(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_print(const Object *self, unsigned argc, const Object **argv) {
     const Object *a = argv[0];
     std::cout << static_cast<TCString *>(tc_object_to_string(a)->m_Data)->m_Value;
     return nullptr;
 }
 
-const Object *tinyclj_rt_flush(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_flush(const Object *self, unsigned argc, const Object **argv) {
     // probably skip argcnt check here to make flushing more efficient
     std::cout << std::flush;
     return nullptr;
 }
 
-const Object *tinyclj_rt_to_edn(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_to_edn(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("to-edn requires exactly 1 argument");
     }
@@ -215,7 +214,7 @@ const Object *tinyclj_rt_to_edn(const Object *self, size_t argc, const Object **
     return tc_object_to_edn(a);
 }
 
-const Object *tinyclj_rt_setmacro(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_setmacro(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("setmacro requires exactly 1 argument");
     }
@@ -228,32 +227,32 @@ const Object *tinyclj_rt_setmacro(const Object *self, size_t argc, const Object 
     return var_obj;
 }
 
-const Object *tinyclj_rt_list(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_list(const Object *self, unsigned argc, const Object **argv) {
     return tc_list_from_array(argc, argv);
 }
 
-const Object *tinyclj_rt_cons(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_cons(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("cons requires exactly 2 arguments");
     }
     return tc_list_cons(argv[0], argv[1]);
 }
 
-const Object *tinyclj_rt_next(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_next(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("next requires exactly 1 argument");
     }
     return tc_list_next(argv[0]);
 }
 
-const Object *tinyclj_rt_seq(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_seq(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("seq requires exactly 1 argument");
     }
     return tc_list_seq(argv[0]);
 }
 
-const Object *tinyclj_rt_list_STAR(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_list_STAR(const Object *self, unsigned argc, const Object **argv) {
     if (argc == 0) {
         throw std::runtime_error("list* requires at least 1 argument");
     }
@@ -265,7 +264,7 @@ const Object *tinyclj_rt_list_STAR(const Object *self, size_t argc, const Object
     return result;
 }
 
-const Object *tinyclj_rt_count(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_count(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("count requires exactly 1 argument");
     }
@@ -273,14 +272,14 @@ const Object *tinyclj_rt_count(const Object *self, size_t argc, const Object **a
     return tc_list_length(argv[0]);
 }
 
-const Object *tinyclj_rt_first(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_first(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("first requires exactly 1 argument");
     }
     return tc_list_first(argv[0]);
 }
 
-const Object *tinyclj_rt_error(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_error(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("error requires exactly 1 argument");
     }
@@ -292,126 +291,126 @@ const Object *tinyclj_rt_error(const Object *self, size_t argc, const Object **a
     throw std::runtime_error(message);
 }
 
-const Object *tinyclj_rt_is_nil(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_nil(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("nil? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg == nullptr);
+    return TCBoolean::getStatic(arg == nullptr);
 }
 
-const Object *tinyclj_rt_is_string(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_string(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("string? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::STRING);
+    return TCBoolean::getStatic(arg != nullptr && arg->m_Type == ObjectType::STRING);
 }
 
-const Object *tinyclj_rt_is_symbol(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_symbol(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("symbol? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::SYMBOL);
+    return TCBoolean::getStatic(arg != nullptr && arg->m_Type == ObjectType::SYMBOL);
 }
 
-const Object *tinyclj_rt_is_list(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_list(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("list? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::LIST);
+    return TCBoolean::getStatic(arg != nullptr && arg->m_Type == ObjectType::LIST);
 }
 
-const Object *tinyclj_rt_is_function(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_function(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("function? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && (arg->m_Type == ObjectType::FUNCTION
-                                             || arg->m_Type == ObjectType::CLOSURE));
+    return TCBoolean::getStatic(arg != nullptr && (arg->m_Type == ObjectType::FUNCTION
+                                                   || arg->m_Type == ObjectType::CLOSURE));
 }
 
-const Object *tinyclj_rt_is_integer(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_integer(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("integer? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::INTEGER);
+    return TCBoolean::getStatic(arg != nullptr && arg->m_Type == ObjectType::INTEGER);
 }
 
-const Object *tinyclj_rt_is_double(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_double(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("double? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::DOUBLE);
+    return TCBoolean::getStatic(arg != nullptr && arg->m_Type == ObjectType::DOUBLE);
 }
 
-const Object *tinyclj_rt_is_boolean(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_boolean(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("boolean? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::BOOLEAN);
+    return TCBoolean::getStatic(arg != nullptr && arg->m_Type == ObjectType::BOOLEAN);
 }
 
-const Object *tinyclj_rt_is_var(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_var(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("var? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::VAR);
+    return TCBoolean::getStatic(arg != nullptr && arg->m_Type == ObjectType::VAR);
 }
 
-const Object *tinyclj_rt_is_character(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_is_character(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("character? requires exactly 1 argument");
     }
     const Object *arg = argv[0];
-    return tc_boolean_new(arg != nullptr && arg->m_Type == ObjectType::CHARACTER);
+    return TCBoolean::getStatic(arg != nullptr && arg->m_Type == ObjectType::CHARACTER);
 }
 
-const Object *tinyclj_rt_binary_equal(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_binary_equal(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("binary= requires exactly 2 arguments");
     }
     const Object *a = argv[0];
     const Object *b = argv[1];
     if (a == b) {
-        return tc_boolean_new(true); // same pointer or both nil
+        return TCBoolean::getStatic(true); // same pointer or both nil
     }
     if (a == nullptr || b == nullptr) {
-        return tc_boolean_new(false); // one is nil and the other is not
+        return TCBoolean::getStatic(false); // one is nil and the other is not
     }
     if (a->m_Type != b->m_Type) {
-        return tc_boolean_new(false);
+        return TCBoolean::getStatic(false);
     }
     switch (a->m_Type) {
         case ObjectType::BOOLEAN:
-            return tc_boolean_new(static_cast<TCBoolean *>(a->m_Data)->m_Value ==
-                                  static_cast<TCBoolean *>(b->m_Data)->m_Value);
+            return TCBoolean::getStatic(static_cast<TCBoolean *>(a->m_Data)->m_Value ==
+                                        static_cast<TCBoolean *>(b->m_Data)->m_Value);
         case ObjectType::INTEGER:
-            return tc_boolean_new(static_cast<TCInteger *>(a->m_Data)->m_Value ==
-                                  static_cast<TCInteger *>(b->m_Data)->m_Value);
+            return TCBoolean::getStatic(static_cast<TCInteger *>(a->m_Data)->m_Value ==
+                                        static_cast<TCInteger *>(b->m_Data)->m_Value);
         case ObjectType::DOUBLE:
-            return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value ==
-                                  static_cast<TCDouble *>(b->m_Data)->m_Value);
+            return TCBoolean::getStatic(static_cast<TCDouble *>(a->m_Data)->m_Value ==
+                                        static_cast<TCDouble *>(b->m_Data)->m_Value);
         case ObjectType::STRING:
-            return tc_boolean_new(strcmp(static_cast<TCString *>(a->m_Data)->m_Value,
-                                         static_cast<TCString *>(b->m_Data)->m_Value) == 0);
+            return TCBoolean::getStatic(strcmp(static_cast<TCString *>(a->m_Data)->m_Value,
+                                               static_cast<TCString *>(b->m_Data)->m_Value) == 0);
         case ObjectType::SYMBOL:
-            return tc_boolean_new(strcmp(static_cast<TCSymbol *>(a->m_Data)->m_Name,
-                                         static_cast<TCSymbol *>(b->m_Data)->m_Name) == 0);
+            return TCBoolean::getStatic(strcmp(static_cast<TCSymbol *>(a->m_Data)->m_Name,
+                                               static_cast<TCSymbol *>(b->m_Data)->m_Name) == 0);
         case ObjectType::CHARACTER:
-            return tc_boolean_new(static_cast<TCChar *>(a->m_Data)->m_Value ==
-                                  static_cast<TCChar *>(b->m_Data)->m_Value);
+            return TCBoolean::getStatic(static_cast<TCChar *>(a->m_Data)->m_Value ==
+                                        static_cast<TCChar *>(b->m_Data)->m_Value);
         case ObjectType::LIST: {
             const Object *a_seq = tc_list_seq(a);
             const Object *b_seq = tc_list_seq(b);
             if (static_cast<TCList *>(a->m_Data)->m_Length != static_cast<TCList *>(b->m_Data)->m_Length) {
-                return tc_boolean_new(false); // different lengths, can't be equal
+                return TCBoolean::getStatic(false); // different lengths, can't be equal
             }
 
             while (a_seq && b_seq) {
@@ -420,28 +419,28 @@ const Object *tinyclj_rt_binary_equal(const Object *self, size_t argc, const Obj
                 const Object *arglist[2] = {a_first, b_first};
                 const Object *elem_equal = tinyclj_rt_binary_equal(nullptr, 2, arglist);
                 if (!static_cast<TCBoolean *>(elem_equal->m_Data)->m_Value) {
-                    return tc_boolean_new(false);
+                    return TCBoolean::getStatic(false);
                 }
                 a_seq = tc_list_next(a_seq);
                 b_seq = tc_list_next(b_seq);
             }
-            return tc_boolean_new(a_seq == nullptr && b_seq == nullptr); // both should be nil at the end
+            return TCBoolean::getStatic(a_seq == nullptr && b_seq == nullptr); // both should be nil at the end
         }
         default:
-            return tc_boolean_new(false); // other types could only be equal by pointer identity
+            return TCBoolean::getStatic(false); // other types could only be equal by pointer identity
     }
 }
 
-const Object *tinyclj_rt_identical(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_identical(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("identical? requires exactly 2 arguments");
     }
     const Object *a = argv[0];
     const Object *b = argv[1];
-    return tc_boolean_new(a == b); // identical? is pointer identity
+    return TCBoolean::getStatic(a == b); // identical? is pointer identity
 }
 
-const Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_apply(const Object *self, unsigned argc, const Object **argv) {
     if (argc < 2) {
         throw std::runtime_error("apply requires at least 2 arguments");
     }
@@ -469,14 +468,14 @@ const Object *tinyclj_rt_apply(const Object *self, size_t argc, const Object **a
     return result;
 }
 
-const Object *tinyclj_rt_read(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_read(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 0) {
         throw std::runtime_error("read requires exactly 0 arguments");
     }
     return Runtime::read();
 }
 
-const Object *tinyclj_rt_read_string(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_read_string(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("read-string requires exactly 1 argument");
     }
@@ -488,7 +487,7 @@ const Object *tinyclj_rt_read_string(const Object *self, size_t argc, const Obje
     return Runtime::readString(input);
 }
 
-const Object *tinyclj_rt_slurp(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_slurp(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("slurp requires exactly 1 argument");
     }
@@ -500,7 +499,7 @@ const Object *tinyclj_rt_slurp(const Object *self, size_t argc, const Object **a
     return Runtime::slurp(filename);
 }
 
-const Object *tinyclj_rt_spit(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_spit(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("spit requires exactly 2 arguments");
     }
@@ -518,7 +517,7 @@ const Object *tinyclj_rt_spit(const Object *self, size_t argc, const Object **ar
     return nullptr;
 }
 
-const Object *tinyclj_rt_macroexpand(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_macroexpand(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("macroexpand requires exactly 1 argument");
     }
@@ -531,7 +530,7 @@ const Object *tinyclj_rt_macroexpand(const Object *self, size_t argc, const Obje
     return SemanticAnalyzer::macroexpand(rt, form);
 }
 
-const Object *tinyclj_rt_macroexpand1(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_macroexpand1(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("macroexpand1 requires exactly 1 argument");
     }
@@ -544,7 +543,7 @@ const Object *tinyclj_rt_macroexpand1(const Object *self, size_t argc, const Obj
     return SemanticAnalyzer::macroexpand1(rt, form);
 }
 
-const Object *tinyclj_rt_eval(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_eval(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("eval requires exactly 1 argument");
     }
@@ -556,7 +555,7 @@ const Object *tinyclj_rt_eval(const Object *self, size_t argc, const Object **ar
     return Runtime::eval(form);
 }
 
-const Object *tinyclj_rt_vars(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_vars(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 0) {
         throw std::runtime_error("vars requires exactly 0 arguments");
     }
@@ -573,7 +572,7 @@ const Object *tinyclj_rt_vars(const Object *self, size_t argc, const Object **ar
     return list;
 }
 
-const Object *tinyclj_rt_nextID(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_nextID(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 0) {
         throw std::runtime_error("gensym requires exactly 0 arguments");
     }
@@ -581,7 +580,7 @@ const Object *tinyclj_rt_nextID(const Object *self, size_t argc, const Object **
     return tc_integer_new(tc_int_t(id));
 }
 
-const Object *tinyclj_rt_epoch_nanos(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_epoch_nanos(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 0) {
         throw std::runtime_error("systime requires exactly 0 arguments");
     }
@@ -591,7 +590,7 @@ const Object *tinyclj_rt_epoch_nanos(const Object *self, size_t argc, const Obje
     return tc_integer_new(nanos);
 }
 
-const Object *tinyclj_rt_symbol(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_symbol(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("symbol requires exactly 1 argument");
     }
@@ -611,7 +610,7 @@ const Object *tinyclj_rt_symbol(const Object *self, size_t argc, const Object **
     }
 }
 
-const Object *tinyclj_rt_str(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_str(const Object *self, unsigned argc, const Object **argv) {
     if (argc == 0) {
         return tc_string_new("");
     }
@@ -623,7 +622,7 @@ const Object *tinyclj_rt_str(const Object *self, size_t argc, const Object **arg
     return tc_string_new(result.c_str());
 }
 
-const Object *tinyclj_rt_double(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_double(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("double requires exactly 1 argument");
     }
@@ -645,7 +644,7 @@ const Object *tinyclj_rt_double(const Object *self, size_t argc, const Object **
     }
 }
 
-const Object *tinyclj_rt_long(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_long(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("long requires exactly 1 argument");
     }
@@ -672,7 +671,7 @@ const Object *tinyclj_rt_long(const Object *self, size_t argc, const Object **ar
     }
 }
 
-const Object *tinyclj_rt_lt(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_lt(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("builtin < requires exactly 2 arguments");
     }
@@ -685,12 +684,13 @@ const Object *tinyclj_rt_lt(const Object *self, size_t argc, const Object **argv
         case ObjectType::INTEGER:
             switch (b->m_Type) {
                 case ObjectType::INTEGER: {
-                    return tc_boolean_new(static_cast<TCInteger *>(a->m_Data)->m_Value <
-                                          static_cast<TCInteger *>(b->m_Data)->m_Value);
+                    return TCBoolean::getStatic(static_cast<TCInteger *>(a->m_Data)->m_Value <
+                                                static_cast<TCInteger *>(b->m_Data)->m_Value);
                 }
                 case ObjectType::DOUBLE: {
-                    return tc_boolean_new(static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) <
-                                          static_cast<TCDouble *>(b->m_Data)->m_Value);
+                    return TCBoolean::getStatic(
+                            static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) <
+                            static_cast<TCDouble *>(b->m_Data)->m_Value);
                 }
                 default:
                     throw std::runtime_error("Cannot compare integer with non-numeric type using <");
@@ -698,11 +698,11 @@ const Object *tinyclj_rt_lt(const Object *self, size_t argc, const Object **argv
         case ObjectType::DOUBLE:
             switch (b->m_Type) {
                 case ObjectType::INTEGER:
-                    return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value <
-                                          static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
+                    return TCBoolean::getStatic(static_cast<TCDouble *>(a->m_Data)->m_Value <
+                                                static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
                 case ObjectType::DOUBLE:
-                    return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value <
-                                          static_cast<TCDouble *>(b->m_Data)->m_Value);
+                    return TCBoolean::getStatic(static_cast<TCDouble *>(a->m_Data)->m_Value <
+                                                static_cast<TCDouble *>(b->m_Data)->m_Value);
                 default:
                     throw std::runtime_error("Cannot compare double with non-numeric type using <");
             }
@@ -711,7 +711,7 @@ const Object *tinyclj_rt_lt(const Object *self, size_t argc, const Object **argv
     }
 }
 
-const Object *tinyclj_rt_lte(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_lte(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 2) {
         throw std::runtime_error("builtin <= requires exactly 2 arguments");
     }
@@ -724,12 +724,13 @@ const Object *tinyclj_rt_lte(const Object *self, size_t argc, const Object **arg
         case ObjectType::INTEGER:
             switch (b->m_Type) {
                 case ObjectType::INTEGER: {
-                    return tc_boolean_new(static_cast<TCInteger *>(a->m_Data)->m_Value <=
-                                          static_cast<TCInteger *>(b->m_Data)->m_Value);
+                    return TCBoolean::getStatic(static_cast<TCInteger *>(a->m_Data)->m_Value <=
+                                                static_cast<TCInteger *>(b->m_Data)->m_Value);
                 }
                 case ObjectType::DOUBLE: {
-                    return tc_boolean_new(static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) <=
-                                          static_cast<TCDouble *>(b->m_Data)->m_Value);
+                    return TCBoolean::getStatic(
+                            static_cast<tc_double_t>(static_cast<TCInteger *>(a->m_Data)->m_Value) <=
+                            static_cast<TCDouble *>(b->m_Data)->m_Value);
                 }
                 default:
                     throw std::runtime_error("Cannot compare integer with non-numeric type using <=");
@@ -737,11 +738,11 @@ const Object *tinyclj_rt_lte(const Object *self, size_t argc, const Object **arg
         case ObjectType::DOUBLE:
             switch (b->m_Type) {
                 case ObjectType::INTEGER:
-                    return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value <=
-                                          static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
+                    return TCBoolean::getStatic(static_cast<TCDouble *>(a->m_Data)->m_Value <=
+                                                static_cast<tc_double_t>(static_cast<TCInteger *>(b->m_Data)->m_Value));
                 case ObjectType::DOUBLE:
-                    return tc_boolean_new(static_cast<TCDouble *>(a->m_Data)->m_Value <=
-                                          static_cast<TCDouble *>(b->m_Data)->m_Value);
+                    return TCBoolean::getStatic(static_cast<TCDouble *>(a->m_Data)->m_Value <=
+                                                static_cast<TCDouble *>(b->m_Data)->m_Value);
                 default:
                     throw std::runtime_error("Cannot compare double with non-numeric type using <=");
             }
@@ -750,7 +751,7 @@ const Object *tinyclj_rt_lte(const Object *self, size_t argc, const Object **arg
     }
 }
 
-const Object *tinyclj_rt_compile_module(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_compile_module(const Object *self, unsigned argc, const Object **argv) {
     if (argc != 1) {
         throw std::runtime_error("compile-file requires exactly 1 argument");
     }
@@ -764,7 +765,7 @@ const Object *tinyclj_rt_compile_module(const Object *self, size_t argc, const O
 }
 
 
-const Object *tinyclj_rt_load_module(const Object *self, size_t argc, const Object **argv) {
+const Object *tinyclj_rt_load_module(const Object *self, unsigned argc, const Object **argv) {
     if (argc < 1 || argc > 2) {
         throw std::runtime_error("load-file requires exactly 1 argument");
     }

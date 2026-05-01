@@ -42,16 +42,24 @@ const Object *TCBoolean::toEDN(const Object *self) {
     return tc_string_new(value ? "true" : "false");
 }
 
-MethodTable TCBoolean::st_MethodTable = MethodTable {
-    .m_CallFn = nullptr,
-    .m_ToStringFn = TCBoolean::toString,
-    .m_ToEdnFn = TCBoolean::toEDN,
+MethodTable TCBoolean::st_MethodTable = MethodTable{
+        .m_CallFn = nullptr,
+        .m_ToStringFn = TCBoolean::toString,
+        .m_ToEdnFn = TCBoolean::toEDN,
 };
 
-extern "C" {
-Object *tc_boolean_new(bool value) {
+Object *tc_boolean_create_static(bool value) {
     TCBoolean *bool_data = new TCBoolean{.m_Value = value};
 
-    return Runtime::getInstance().createObject(ObjectType::BOOLEAN, bool_data, &TCBoolean::st_MethodTable);
+    return Runtime::getInstance().createObject(ObjectType::BOOLEAN, bool_data, &TCBoolean::st_MethodTable, true);
 }
+
+void TCBoolean::init() {
+    tc_boolean_const_true = tc_boolean_create_static(true);
+    tc_boolean_const_false = tc_boolean_create_static(false);
+}
+
+extern "C" {
+Object *tc_boolean_const_true = nullptr;
+Object *tc_boolean_const_false = nullptr;
 }

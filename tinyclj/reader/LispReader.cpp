@@ -171,9 +171,9 @@ const Object *read_symbol(BufferedReader &rdr) {
     if (token == "nil") {
         return nullptr;
     } else if (token == "true") {
-        return tc_boolean_new(true);
+        return tc_boolean_const_true;
     } else if (token == "false") {
-        return tc_boolean_new(false);
+        return tc_boolean_const_false;
     } else {
         return tc_symbol_new(token.c_str());
     }

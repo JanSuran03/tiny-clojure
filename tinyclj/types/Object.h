@@ -24,7 +24,7 @@ struct Object;
 struct TCString;
 
 using CallFn = const Object *(*)(const Object *self,
-                                 size_t argc,
+                                 unsigned argc,
                                  const struct Object **argv);
 
 using UnaryFn = const Object *(*)(const Object *self);

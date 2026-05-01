@@ -161,7 +161,7 @@ std::string FunctionExpr::compile() const {
     }
 
     auto arglist_type = ctx.pointerArrayType(); // array of Object *
-    auto argcnt_type = Type::getInt64Ty(*ctx.m_LLVMContext);
+    auto argcnt_type = ctx.getArgcType();
     auto return_type = ctx.pointerType();
     // the stub type is Object *stub(Object *self, size_t llvm_argcnt, Object **argv)
     FunctionType *stub_type = llvm::FunctionType::get(return_type, {ctx.pointerType(),
@@ -226,7 +226,7 @@ std::string FunctionExpr::compile() const {
         BasicBlock *variadic_block = ctx.createBasicBlock("variadic_case");
         size_t variadic_fixed_argcnt = m_VariadicOverload->m_Args.size() - 1;
         Value *is_enough_args = ctx.m_IRBuilder.CreateICmpUGE(argc_arg,
-                                                              ctx.m_IRBuilder.getInt64(variadic_fixed_argcnt),
+                                                              ctx.m_IRBuilder.getInt32(variadic_fixed_argcnt),
                                                               "is_enough_args_for_variadic_case");
         ctx.m_IRBuilder.CreateCondBr(is_enough_args, variadic_block, wrong_argcnt_block);
         ctx.m_IRBuilder.SetInsertPoint(variadic_block);
@@ -245,10 +245,10 @@ std::string FunctionExpr::compile() const {
         BasicBlock *varargs_empty_block = ctx.createBasicBlock("varargs_empty");
         BasicBlock *merge_block = ctx.createBasicBlock("varargs_merge");
         Value *extra_argcnt = ctx.m_IRBuilder.CreateSub(argc_arg,
-                                                        ctx.m_IRBuilder.getInt64(variadic_fixed_argcnt),
+                                                        ctx.m_IRBuilder.getInt32(variadic_fixed_argcnt),
                                                         "extra_argcnt");
         Value *has_extra_args = ctx.m_IRBuilder.CreateICmpUGT(extra_argcnt,
-                                                              ctx.m_IRBuilder.getInt64(0),
+                                                              ctx.m_IRBuilder.getInt32(0),
                                                               "has_extra_args");
         ctx.m_IRBuilder.CreateCondBr(has_extra_args, build_varargs_array_block, varargs_empty_block);
 
@@ -262,7 +262,7 @@ std::string FunctionExpr::compile() const {
         ctx.m_IRBuilder.SetInsertPoint(build_varargs_array_block);
         Value *varargs_array_ptr = ctx.m_IRBuilder.CreateGEP(ctx.pointerType(),
                                                              argv_arg,
-                                                             ctx.m_IRBuilder.getInt64(variadic_fixed_argcnt),
+                                                             ctx.m_IRBuilder.getInt32(variadic_fixed_argcnt),
                                                              "extra_arglist_ptr");
         FunctionType *list_from_array_fn_type = FunctionType::get(ctx.pointerType(),
                                                                   {argcnt_type, arglist_type}, false);
@@ -330,15 +330,9 @@ EmitResult FunctionExpr::emitIR(CodegenContext &ctx) const {
 
     // For closures, the compiler needs to emit instructions to create an environment struct from the captured
     // variables, then create a closure object that points to the stub and store it into dst
-    FunctionType *stub_fn_type = FunctionType::get(
-            ctx.pointerType(),
-            {ctx.pointerType(), Type::getInt64Ty(*ctx.m_LLVMContext), ctx.pointerArrayType()},
-            false);
-
-    // Object *stub_fn(Object *self, size_t arg, Object **argv)
     FunctionType *call_fn_type = FunctionType::get(
             ctx.pointerType(),
-            {ctx.pointerType(), Type::getInt64Ty(*ctx.m_LLVMContext), ctx.pointerArrayType()},
+            {ctx.pointerType(), ctx.getArgcType(), ctx.pointerArrayType()},
             false);
 
     // load vtable from m_VtableName global variable
