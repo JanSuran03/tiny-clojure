@@ -258,7 +258,7 @@ void Runtime::repl() {
         std::cout << "user=> " << std::flush;
         BufferedReader reader(std::cin);
         try {
-            const Object *form = LispReader::read(reader);
+            const Object *form = LispReader::read(reader, false);
             if (form == LispReader::eof_object()
                 || (form != nullptr
                     && form->m_Type == ObjectType::SYMBOL
@@ -284,7 +284,7 @@ const Object *Runtime::loadStream(std::istream &stream) {
     BufferedReader reader(stream);
     const Object *res = nullptr;
     while (true) {
-        const Object *form = LispReader::read(reader);
+        const Object *form = LispReader::read(reader, false);
         if (form == LispReader::eof_object()) {
             break;
         }

@@ -34,6 +34,24 @@
         #_todo]
     {:opt-level opt-level}))
 
+(def predefs-start "; predefs start")
+(def predefs-end "; predefs end")
+
+(defn extract-line [s]
+  (str/split s #"\r?\n" 2))
+
+(defn parse-bench-input [input]
+  (let [[test-name input] (str/split input #"\r?\n" 2)]
+    (if (str/starts-with? input predefs-start)
+      (let [[_ input] (extract-line input)
+            end-index (str/index-of input predefs-end)
+            _ (when-not end-index
+                (throw (ex-info "Predefs end marker not found in input!" {:input input})))
+            predefs (subs input 0 end-index)
+            input (subs input (+ end-index (count predefs-end)))]
+        [test-name input predefs])
+      [test-name input nil])))
+
 (defn report-benchmark [test-name config repl-output]
   (let [repl-output-lines (str/split repl-output #"\r?\n")
         filtered-output-lines (->> repl-output-lines
@@ -54,7 +72,7 @@
     (println (format (str "Benchmark '%s' with config %s:\n"
                           "  Number of runs     = %d,\n"
                           "  Average time       = %.4f ms,\n"
-                          "  Standard deviation = %.4f ms")
+                          "  Standard deviation = %.4f ms\n")
                      test-name
                      (str config)
                      (count times)
@@ -67,18 +85,19 @@
                                opts)
         input (slurp (str input-file))
         input-file-name (fs/file-name input-file)
-        [test-name input] (str/split input #"\r?\n" 2)
+        [test-name input predefs] (parse-bench-input input)
         test-name (subs test-name 2) ; drop the leading "; "
-        wrapped-input (str "(bench-and-report " input ")")
+        wrapped-input (str predefs "\n"
+                           "(bench-and-report " input ")")
         input-with-predefs (str common-predefs "\n" (replace-for-tinyclj wrapped-input))
         sh-args (concat [(str tinyclj-exe) "--suppress-repl-welcome"]
                         processed-opts
                         ["-compiled-dir" (str (fs/path script-dir dump-dir input-file-name))]
                         [:in input-with-predefs])
         {:keys [out err exit]} (apply sh/sh sh-args)]
-    (if (or (= exit 0) (not (str/blank? err)))
+    (if (and (= exit 0) (str/blank? err))
       (report-benchmark test-name opts out)
-      (do (println "Error: TinyClojure execution failed with exit code " exit "!")
+      (do (println (format "Error: TinyClojure execution failed with exit code %d!" exit))
           (when-not (str/blank? out)
             (println "TinyClojure Output:")
             (println out))

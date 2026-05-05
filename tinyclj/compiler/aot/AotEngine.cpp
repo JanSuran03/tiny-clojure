@@ -95,7 +95,7 @@ std::filesystem::path AotEngine::compileModule(const std::string &moduleName, bo
     analyzer_ctx.m_ModuleImportsStack.emplace_back();
     std::vector<AExpr> top_level_exprs;
     while (true) {
-        const Object *form = LispReader::read(reader);
+        const Object *form = LispReader::read(reader, false);
         if (form == LispReader::eof_object()) {
             break;
         }

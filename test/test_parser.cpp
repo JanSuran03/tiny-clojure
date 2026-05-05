@@ -69,6 +69,7 @@ bool run_error_cases(const std::vector<ErrorTestCase> &cases) {
                       << "Error: " << *error << "\n\n";
         } else {
             num_passed++;
+            std::cout << "Test passed: " << test_case.description << std::endl;
         }
     }
     std::cout << num_passed << " out of " << cases.size() << " error tests passed.\n";
@@ -108,6 +109,9 @@ int main() {
             {.input = "(1 2", .description = "Parse list with missing closing parenthesis"},
             {.input = "3.14.15", .description = "Parse invalid float with multiple dots"},
             {.input = "(+ 1 {2 3})", .description = "Parse invalid list with unexpected character"},
+            {.input = "`", .description = "EOF while parsing syntax quote"},
+            {.input = "~", .description = "EOF while parsing unquote"},
+            {.input = "~@", .description = "EOF while parsing unquote-splicing"},
     };
 
     if (run_cases(test_cases) && run_error_cases(error_cases)) {

@@ -15,4 +15,6 @@ namespace LispReader {
     const Object *eof_object();
 
     const Object *read(BufferedReader &rdr);
+
+    const Object *read(BufferedReader &rdr, bool eof_is_error);
 }

@@ -32,7 +32,7 @@ std::string readToken(BufferedReader &rdr);
 
 bool is_symbol_char(char c);
 
-const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env);
+const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env, bool eof_is_error);
 
 const Object *LispReader::eof_object() {
     static Object eof_obj = Object::createStaticObject(ObjectType::SYMBOL, new TCSymbol{.m_Name = strdup("<EOF>")},
@@ -54,11 +54,9 @@ const Object *read_list(BufferedReader &rdr, ReaderEnv &env) {
     rdr.read(); // consume '('
     std::vector<const Object *> elements;
     while (true) {
-        const Object *elem = read(rdr, ')', env);
+        const Object *elem = read(rdr, ')', env, true);
 
-        if (elem == LispReader::eof_object()) {
-            throw std::runtime_error("Error: Unterminated list");
-        } else if (elem == delimiter_object()) {
+        if (elem == delimiter_object()) {
             break; // end of list
         }
 
@@ -274,11 +272,11 @@ const Object *read_unquote(BufferedReader &rdr, ReaderEnv &env) {
     int next_c = rdr.peek();
     if (next_c == '@') {
         rdr.read(); // consume '@'
-        const Object *obj = read(rdr, 0, env);
+        const Object *obj = read(rdr, 0, env, true);
         // Create the unquote-splicing form: (unquote-splicing obj)
         return tc_list_create2(sym_unquote_splicing(), obj);
     } else {
-        const Object *obj = read(rdr, 0, env);
+        const Object *obj = read(rdr, 0, env, true);
         // Create the unquote form: (unquote obj)
         return tc_list_create2(sym_unquote(), obj);
     }
@@ -355,13 +353,16 @@ const Object *read_syntax_quote(const Object *form, ReaderEnv &env) {
     }
 }
 
-const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env) {
+const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env, bool eof_is_error) {
     int c = rdr.peek();
     while (is_whitespace(c)) {
         rdr.read();
         c = rdr.peek();
     }
     if (rdr.eof()) {
+        if (eof_is_error) {
+            throw std::runtime_error("Error: Unexpected EOF while reading");
+        }
         return LispReader::eof_object();
     } else if (c == closingDelimiter) {
         rdr.read(); // consume the closing delimiter
@@ -376,11 +377,11 @@ const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env) {
             rdr.read();
             c = rdr.peek();
         }
-        return read(rdr, closingDelimiter, env); // read the next form after the comment
+        return read(rdr, closingDelimiter, env, eof_is_error); // read the next form after the comment
     } else if (c == '`') {
         // syntax-quote reader
         rdr.read(); // consume '`'
-        const Object *obj = read(rdr, 0, env);
+        const Object *obj = read(rdr, 0, env, true);
         return read_syntax_quote(obj, env);
     } else if (c == '~') {
         // unquote reader
@@ -389,7 +390,7 @@ const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env) {
         return read_number(rdr);
     } else if (c == '\'') {
         rdr.read(); // consume '\''
-        const Object *obj = read(rdr, 0, env);
+        const Object *obj = read(rdr, 0, env, true);
         // Create a list (quote obj)
         return tc_list_create2(sym_quote(), obj);
     } else if (c == '-') {
@@ -412,5 +413,10 @@ const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env) {
 
 const Object *LispReader::read(BufferedReader &rdr) {
     ReaderEnv env;
-    return read(rdr, '\0', env);
+    return read(rdr, '\0', env, true);
+}
+
+const Object *LispReader::read(BufferedReader &rdr, bool eof_is_error) {
+    ReaderEnv env;
+    return read(rdr, '\0', env, eof_is_error);
 }
