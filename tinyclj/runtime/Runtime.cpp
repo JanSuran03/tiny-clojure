@@ -12,7 +12,9 @@
 #include "compiler/SemanticAnalyzer.h"
 #include "reader/LispReader.h"
 #include "runtime/rt.h"
+#include "types/TCBoolean.h"
 #include "types/TCFunction.h"
+#include "types/TCInteger.h"
 #include "types/TCSymbol.h"
 
 std::unique_ptr<llvm::orc::LLJIT> Runtime::createJIT() {
@@ -112,6 +114,7 @@ void clear_directory(const std::filesystem::path &path) {
 
 void Runtime::init() {
     TCBoolean::init();
+    TCInteger::init();
 
     // Todo: clear the compiled directory if the source files have been updated since the last compilation.
     //clear_directory(std::filesystem::path(m_AotEngine.m_CompiledRoot));

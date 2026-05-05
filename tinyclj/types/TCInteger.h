@@ -13,6 +13,14 @@ struct TCInteger {
     static const Object *toEDN(const Object *self);
 
     static MethodTable st_MethodTable;
+
+    static void init();
+
+    static constexpr tc_int_t PREALLOCATED_MIN = -128;
+    static constexpr tc_int_t PREALLOCATED_MAX = 127;
+    static Object st_PreallocatedIntegers[PREALLOCATED_MAX - PREALLOCATED_MIN + 1];
+
+    static Object *allocate_integer(tc_int_t value);
 };
 
 extern "C" {
