@@ -16,6 +16,8 @@
 #include "types/TCList.h"
 #include "types/TCSymbol.h"
 
+const char *FunctionExpr::st_EvalWrapperName = "__eval_fn_wrapper";
+
 FunctionExpr::FunctionExpr(std::string name,
                            std::unordered_map<size_t, FunctionOverload> overloads,
                            std::optional<FunctionOverload> variadic_overload,
@@ -39,8 +41,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode,
                           const Object *form,
                           const std::optional<std::string> &nameHint) {
     bool is_eval_wrapper = strcmp(static_cast<const TCSymbol *>(tc_list_first(form)->m_Data)->m_Name,
-                                  "__eval_fn_wrapper") == 0;
-    const Object *original_form = form;
+                                  st_EvalWrapperName) == 0;
     form = tc_list_next(form); // consume 'fn
 
     // (fn name (args...) body...)
@@ -54,7 +55,7 @@ AExpr FunctionExpr::parse(ExpressionMode mode,
         form = tc_list_next(form); // consume the name if it's present
         name = tc_symbol_valueX(name_sym);
     } else if (nameHint.has_value()) {
-        name = nameHint.value() + "__" + std::to_string(Runtime::nextId());
+        name = nameHint.value() + "_" + std::to_string(Runtime::nextId());
     } else {
         name = "fn__" + std::to_string(Runtime::nextId());
     }

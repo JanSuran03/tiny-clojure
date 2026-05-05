@@ -18,20 +18,30 @@
 #include "compiler/ast/local-binding/CapturedLocalExpr.h"
 #include "reader/LispReader.h"
 
-std::string AotEngine::fullSourcePath(const std::string &moduleName) const {
-    return m_SourceRoot + "/" + moduleName + ".clj";
+AotEngine::AotEngine() {
+    if (!std::filesystem::exists(m_CompiledDir)) {
+        std::filesystem::create_directories(m_CompiledDir);
+    }
 }
 
-std::string AotEngine::fullCompiledPath(const std::string &moduleName, bool optimized) const {
-    return m_CompiledRoot + "/" + moduleName + (optimized ? "-opt" : "") + ".bc";
+std::filesystem::path AotEngine::fullSourcePath(const std::string &moduleName) const {
+    std::string munged_module_name = util::munge_symbol(moduleName);
+    return m_SourceDir / (munged_module_name + ".clj");
 }
 
-std::string AotEngine::fullCompiledDebugPath(const std::string &moduleName, bool optimized) const {
-    return m_CompiledRoot + "/" + moduleName + +(optimized ? "-opt" : "") + ".ll";
+std::filesystem::path AotEngine::fullCompiledPath(const std::string &moduleName, bool optimized) const {
+    std::string munged_module_name = util::munge_symbol(moduleName);
+    return m_CompiledDir / (munged_module_name + (optimized ? "-opt" : "") + ".bc");
 }
 
-std::string AotEngine::fullDepsFileName(const std::string &moduleName) const {
-    return m_CompiledRoot + "/" + util::module_dependency_file_name(moduleName);
+std::filesystem::path AotEngine::fullCompiledDebugPath( const std::string &moduleName, bool optimized) const {
+    std::string munged_module_name = util::munge_symbol(moduleName);
+    return m_CompiledDir / (munged_module_name + (optimized ? "-opt" : "") + ".ll");
+}
+
+std::filesystem::path AotEngine::fullDepsFile(const std::string &moduleName) const {
+    std::string munged_module_name = util::munge_symbol(moduleName);
+    return m_CompiledDir / util::module_dependency_file_name(munged_module_name);
 }
 
 bool shouldRecompile(const std::string &source_filename,
@@ -60,7 +70,7 @@ bool shouldRecompile(const std::string &source_filename,
     return true;
 }
 
-std::string AotEngine::compileModule(const std::string &moduleName, bool forceRecompile) {
+std::filesystem::path AotEngine::compileModule(const std::string &moduleName, bool forceRecompile) {
     using namespace std;
 
     std::string source_filename = fullSourcePath(moduleName);
@@ -178,4 +188,33 @@ void AotEngine::finishLoading(const std::string &moduleName) {
 
 void AotEngine::loadCompiledModule(const std::string &moduleName, bool forceReload) {
     ModuleLoader::loadCompiledModule(moduleName, forceReload, true);
+}
+
+bool AotEngine::setCompiledDir(const std::string &path) {
+    std::filesystem::path p = util::resolve_file_path(path);
+
+    if (!std::filesystem::exists(p)) {
+        std::filesystem::create_directories(p);
+    }
+    if (std::filesystem::is_directory(p)) {
+        m_CompiledDir = p;
+        return true;
+    }
+    return false;
+}
+
+std::unordered_set<std::string> AotEngine::loadedFiles() const {
+    return m_LoadedFiles;
+}
+
+std::unordered_set<std::string> AotEngine::loadingSet() const {
+    return m_LoadingSet;
+}
+
+std::vector<std::string> AotEngine::loadingStack() const {
+    return m_LoadingStack;
+}
+
+std::filesystem::path AotEngine::getCompiledDir() {
+    return m_CompiledDir;
 }

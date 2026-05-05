@@ -21,6 +21,7 @@ class FunctionExpr : public Expr {
     bool isClosure() const;
 
 public:
+    static const char *st_EvalWrapperName;
     EmitResult emitIR(CodegenContext &ctx) const override;
 
     const Object *eval() const override;

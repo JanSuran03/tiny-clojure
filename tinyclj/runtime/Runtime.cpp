@@ -6,6 +6,7 @@
 #include "llvm/Support/TargetSelect.h"
 
 #include "Runtime.h"
+#include "compiler/ast/FunctionExpr.h"
 #include "compiler/ast/local-binding/CapturedLocalExpr.h"
 #include "compiler/AnalyzerContext.h"
 #include "compiler/SemanticAnalyzer.h"
@@ -13,20 +14,6 @@
 #include "runtime/rt.h"
 #include "types/TCFunction.h"
 #include "types/TCSymbol.h"
-
-void Runtime::ensureInitialized() {
-    if (m_Initialized) return;
-
-    if (m_InitInProgress) {
-        // maybe allow this for now?
-        return;
-    }
-
-    m_InitInProgress = true;
-    init();
-    m_InitInProgress = false;
-    m_Initialized = true;
-}
 
 std::unique_ptr<llvm::orc::LLJIT> Runtime::createJIT() {
     llvm::InitializeNativeTarget();
@@ -81,10 +68,11 @@ Object *Runtime::getVar(const std::string &name) const {
 
 template<CallFn Fn>
 void Runtime::defn(const std::string &name, const char *nativeFnName) {
-    getAotEngine().startLoading(name);
-    auto var = declareVar(name);
+    Runtime &rt = Runtime::getInstance();
+    rt.getAotEngine().startLoading(name);
+    auto var = rt.declareVar(name);
     tc_var_bind_root(var, tc_function_new(&BuiltinFunctionVTable<Fn>::value, nativeFnName));
-    getAotEngine().finishLoading(name);
+    rt.getAotEngine().finishLoading(name);
 }
 
 #define TC_DEFN(name, nativeFn) defn<nativeFn>(name, #nativeFn)
@@ -114,7 +102,7 @@ Object *Runtime::createObject(ObjectType type, void *data, const MethodTable *me
 /// Creates the directory if it doesn't exist and clears all its contests.
 void clear_directory(const std::filesystem::path &path) {
     namespace fs = std::filesystem;
-
+    printf("Create d %s %s %d\n", path.c_str(), __FILE__, __LINE__), fflush(stdout);
     fs::create_directories(path);
 
     for (const auto &entry: fs::directory_iterator(path)) {
@@ -178,11 +166,12 @@ void Runtime::init() {
 
     static const std::string core_module = "core";
     try {
-        AotEngine &aot_engine = getAotEngine();
+        Runtime &rt = Runtime::getInstance();
+        AotEngine &aot_engine = rt.getAotEngine();
         auto ts1 = std::chrono::high_resolution_clock::now();
-        m_DirectLinking = true;
+        rt.m_DirectLinking = true;
         aot_engine.compileModule(core_module, false);
-        m_DirectLinking = false;
+        rt.m_DirectLinking = false;
         auto ts2 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = ts2 - ts1;
         // disable this log for now
@@ -201,7 +190,6 @@ Runtime::Runtime()
 
 Runtime &Runtime::getInstance() {
     static Runtime instance;
-    instance.ensureInitialized();
     return instance;
 }
 
@@ -238,7 +226,7 @@ const Object *Runtime::eval(const Object *form) {
             }
         }
     }
-    form = tc_list_create3(tc_symbol_new("__eval_fn_wrapper"), empty_list(), form);
+    form = tc_list_create3(tc_symbol_new(FunctionExpr::st_EvalWrapperName), empty_list(), form);
     is_wrapped = true;
 
     not_wrapped:

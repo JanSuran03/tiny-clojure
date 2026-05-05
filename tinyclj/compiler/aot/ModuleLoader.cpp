@@ -1,6 +1,5 @@
 #include <fstream>
 #include <iostream>
-#include <memory>
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IRReader/IRReader.h"
@@ -12,26 +11,27 @@
 #include "runtime/Runtime.h"
 
 void ModuleLoader::loadCompiledModule(const std::string &moduleName, bool forceReload, bool isMainModule) {
+
     AotEngine &aot_engine = Runtime::getInstance().getAotEngine();
-    if (!aot_engine.m_LoadingStack.empty() && moduleName == aot_engine.m_LoadingStack.back()) {
-        // allow reentrant load of the same module (todo: is this correct?)
+    if (!aot_engine.loadingStack().empty() && moduleName == aot_engine.loadingStack().back()) {
+        // allow reentrant load of the same module
         return;
     }
-    if (aot_engine.m_LoadingSet.contains(moduleName)) {
+    if (aot_engine.loadingSet().contains(moduleName)) {
         size_t cycle_start_index = 0;
-        for (size_t i = 0; i < aot_engine.m_LoadingStack.size(); i++) {
-            if (aot_engine.m_LoadingStack[i] == moduleName) {
+        for (size_t i = 0; i < aot_engine.loadingStack().size(); i++) {
+            if (aot_engine.loadingStack()[i] == moduleName) {
                 cycle_start_index = i;
                 break;
             }
         }
         std::string cycle = moduleName;
-        for (size_t i = cycle_start_index + 1; i < aot_engine.m_LoadingStack.size(); i++) {
-            cycle += " -> " + aot_engine.m_LoadingStack[i];
+        for (size_t i = cycle_start_index + 1; i < aot_engine.loadingStack().size(); i++) {
+            cycle += " -> " + aot_engine.loadingStack()[i];
         }
         throw std::runtime_error("cyclic dependency detected while loading module: " + cycle);
     }
-    if (!forceReload && aot_engine.m_LoadedFiles.contains(moduleName)) {
+    if (!forceReload && aot_engine.loadedFiles().contains(moduleName)) {
         if constexpr (Runtime::st_DebugFlags & Runtime::DEBUG_LOADER) {
             std::cerr << "FileModule has already been loaded, skipping: " << moduleName << std::endl;
         }
@@ -45,7 +45,7 @@ void ModuleLoader::loadCompiledModule(const std::string &moduleName, bool forceR
     aot_engine.startLoading(moduleName);
 
     try {
-        std::string full_deps_path = aot_engine.fullDepsFileName(moduleName);
+        std::string full_deps_path = aot_engine.fullDepsFile(moduleName);
         std::ifstream deps_ifs(full_deps_path);
         if (!deps_ifs.is_open()) {
             throw std::runtime_error("Failed to open dependencies module: " + full_deps_path);

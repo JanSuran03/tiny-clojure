@@ -20,8 +20,12 @@ using Captures = std::unordered_map<std::string, CapturedLocalExpr>;
 struct AnalyzerContext {
     struct RecurContext {
         size_t m_NumArgs;
-        // the loop doesn't actually be referenced from within its body which allows us to emit direct vars
+        /**
+         * The loop doesn't actually be referenced from within its body which allows us to emit direct vars
+         */
         // instead of phi nodes for the loop variables and additional jump instructions
+
+
         bool m_IsReferenced = false;
 
         RecurContext(size_t numArgs);
@@ -40,6 +44,8 @@ struct AnalyzerContext {
     std::unordered_map<std::string, std::shared_ptr<BindingExpr>> m_ScopeBindings;
     /// A set of module imports for each stack frame.
     std::vector<std::unordered_set<std::string>> m_ModuleImportsStack;
+    std::string m_RestArg;
+    bool m_RestArgUsed = false;
 
     AnalyzerContext() = default;
 

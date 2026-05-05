@@ -9,7 +9,7 @@ Module::Module(std::string name,
           m_Imports(std::move(imports)) {}
 
 void Module::emitImportsFile() {
-    std::string deps_file_name = Runtime::getInstance().getAotEngine().fullDepsFileName(m_Name);
+    std::string deps_file_name = Runtime::getInstance().getAotEngine().fullDepsFile(m_Name);
     std::ofstream ofs(deps_file_name);
     if (!ofs.is_open()) {
         throw std::runtime_error("Failed to open dependencies file for writing: " + deps_file_name);

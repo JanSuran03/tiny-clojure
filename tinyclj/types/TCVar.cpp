@@ -22,12 +22,12 @@ const Object *tc_var_invoke(const Object *self, unsigned argc, const Object **ar
 
 const Object *TCVar::toString(const Object *self) {
     const TCVar *var = static_cast<const TCVar *>(self->m_Data);
-    return tc_string_new((std::string("(var") + var->m_Name + ")").c_str());
+    return tc_string_new((std::string("(var ") + var->m_Name + ")").c_str());
 }
 
 const Object *TCVar::toEDN(const Object *self) {
     const TCVar *var = static_cast<const TCVar *>(self->m_Data);
-    return tc_string_new((std::string("(var") + var->m_Name + ")").c_str());
+    return tc_string_new((std::string("(var ") + var->m_Name + ")").c_str());
 }
 
 MethodTable TCVar::st_MethodTable = MethodTable{

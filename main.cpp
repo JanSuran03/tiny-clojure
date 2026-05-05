@@ -40,6 +40,31 @@ std::vector<CLIOption> cli_options = {
                           Runtime::getInstance().m_SuppressReplWelcome = true;
                       }
                   }),
+        CLIOption("disable-gc", "Disables garbage collection (not recommended)", "false",
+                  [](const std::string &value) {
+                      if (value == "true") {
+                          Runtime::getInstance().m_DisableGC = true;
+                      }
+                  }),
+        CLIOption("opt-level", "Sets the optimization level for AOT compilation (O0, O1, O2, O3)", "O0",
+                  [](const std::string &value) {
+                      if (value == "O0") {
+                          Runtime::getInstance().getAotEngine().m_OptimizationLevel = llvm::OptimizationLevel::O0;
+                      } else if (value == "O1") {
+                          Runtime::getInstance().getAotEngine().m_OptimizationLevel = llvm::OptimizationLevel::O1;
+                      } else if (value == "O2") {
+                          Runtime::getInstance().getAotEngine().m_OptimizationLevel = llvm::OptimizationLevel::O2;
+                      } else if (value == "O3") {
+                          Runtime::getInstance().getAotEngine().m_OptimizationLevel = llvm::OptimizationLevel::O3;
+                      } else {
+                          std::cerr << "Warning: Unrecognized optimization level: " << value
+                                    << ". Valid values are O0, O1, O2, O3." << std::endl;
+                      }
+                  }),
+        CLIOption("compiled-dir", "Sets the directory where compiled AOT modules are stored", "compiled",
+                  [](const std::string &value) {
+                      Runtime::getInstance().getAotEngine().setCompiledDir(value);
+                  }),
 };
 
 std::map<std::string, std::string> parse_args(int argc, char *argv[]) {
@@ -50,7 +75,7 @@ std::map<std::string, std::string> parse_args(int argc, char *argv[]) {
         std::string arg = argv[i];
 
         if (pending_key.has_value()) {
-            args[pending_key.value()];
+            args[pending_key.value()] = arg;
             pending_key = std::nullopt;
         } else if (arg.starts_with("--")) {
             args[arg.substr(2)] = "true";
@@ -63,7 +88,8 @@ std::map<std::string, std::string> parse_args(int argc, char *argv[]) {
     return args;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+try {
     auto args = parse_args(argc, argv);
     if (args.contains("help")) {
         cli_options[0].m_Handler("");
@@ -79,7 +105,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    Runtime::repl();
+    Runtime::init();
 
+    Runtime::repl();
     return 0;
+} catch (const std::exception &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+    return 1;
 }

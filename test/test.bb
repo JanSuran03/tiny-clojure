@@ -20,13 +20,13 @@
       (str/replace #"\[" "(")
       (str/replace #"\]" ")")))
 
-(defn ensure-successful-run [{:keys [exit our err] :as result} command-name]
+(defn ensure-successful-run [{:keys [exit out err] :as result} command-name]
   (if (= exit 0)
     result
     (do (println (str "Error: " command-name " execution failed with exit code " exit "!"))
-        (when-not (str/blank? our)
+        (when-not (str/blank? out)
           (println command-name " Output:")
-          (println our))
+          (println out))
         (when-not (str/blank? err)
           (println command-name " Error Output:")
           (println err))
@@ -34,15 +34,15 @@
 
 (defn run-clojure [clojure-form]
   (ensure-successful-run
-    (sh/sh "clojure" "--repl" :in clojure-form)
-    "Clojure"))
+   (sh/sh "clojure" "--repl" :in clojure-form)
+   "Clojure"))
 
 (defn run-tinyclj
   ([clojure-form] (run-tinyclj clojure-form {:no-transform false}))
   ([clojure-form {:keys [no-transform]}]
    (cond-> clojure-form
      (not no-transform) replace-for-tinyclj
-     true (#(sh/sh (str tinyclj-exe) "--suppress-repl-welcome" :in %))
+     true (#(sh/sh (str tinyclj-exe) "--suppress-repl-welcome" "-compiled-dir" "test-bb" :in %))
      true (ensure-successful-run "TinyClojure"))))
 
 (defn run-standard-tests []

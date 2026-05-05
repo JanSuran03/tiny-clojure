@@ -284,7 +284,7 @@ const Object *read_unquote(BufferedReader &rdr, ReaderEnv &env) {
     }
 }
 
-const Object *process_syntax_quote(const Object *form, ReaderEnv &env) {
+const Object *read_syntax_quote(const Object *form, ReaderEnv &env) {
     if (form == nullptr) {
         return nullptr;
     }
@@ -335,13 +335,13 @@ const Object *process_syntax_quote(const Object *form, ReaderEnv &env) {
             for (const Object *l = tc_list_seq(form); l; l = tc_list_next(l)) {
                 const Object *elem = tc_list_first(l);
                 if (is_unquote_form(elem)) {
-                    // (unquote elem) => (list elem)
+                    // ~elem => ( elem )
                     expanded_concat_builder.emplace_back(tc_list_create2(sym_list(), tc_list_second(elem)));
                 } else if (is_unquote_splicing_form(elem)) {
-                    // (unquote-splicing elem) => elem
+                    // ~@elem => elem
                     expanded_concat_builder.emplace_back(tc_list_second(elem));
                 } else {
-                    expanded_concat_builder.emplace_back(tc_list_create2(sym_list(), process_syntax_quote(elem, env)));
+                    expanded_concat_builder.emplace_back(tc_list_create2(sym_list(), read_syntax_quote(elem, env)));
                 }
             }
             const Object *expanded_concat = tc_list_from_array(
@@ -381,7 +381,7 @@ const Object *read(BufferedReader &rdr, char closingDelimiter, ReaderEnv &env) {
         // syntax-quote reader
         rdr.read(); // consume '`'
         const Object *obj = read(rdr, 0, env);
-        return process_syntax_quote(obj, env);
+        return read_syntax_quote(obj, env);
     } else if (c == '~') {
         // unquote reader
         return read_unquote(rdr, env);

@@ -69,7 +69,9 @@ void CodegenContext::optimizeModule() {
 
 void CodegenContext::writeDebugModuleToFile() {
     std::error_code ec;
-    llvm::raw_fd_ostream dest(Runtime::getInstance().getAotEngine().fullCompiledDebugPath(m_ModuleName, m_Optimized),
+    llvm::raw_fd_ostream dest(Runtime::getInstance().getAotEngine()
+                                      .fullCompiledDebugPath(m_ModuleName, m_Optimized)
+                                      .string(),
                               ec,
                               llvm::sys::fs::OF_None);
     if (ec) {
@@ -165,7 +167,7 @@ llvm::Function *CodegenContext::createModuleLoadFunction(const std::string &modu
 
 llvm::GlobalVariable *CodegenContext::getOrCreateGlobalVariable(const std::string &name) {
     using namespace llvm;
-    if(auto it = m_GlobalVariableMap.find(name); it != m_GlobalVariableMap.end()) {
+    if (auto it = m_GlobalVariableMap.find(name); it != m_GlobalVariableMap.end()) {
         return it->second;
     } else {
         GlobalVariable *global_var = new GlobalVariable(

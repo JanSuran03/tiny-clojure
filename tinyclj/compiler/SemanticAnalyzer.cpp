@@ -45,7 +45,7 @@ bool SemanticAnalyzer::isSpecial(const Object *obj) {
            && obj->m_Type == ObjectType::SYMBOL
            && (m_SpecialAnalyzers.contains(tc_symbol_valueX(obj))
                || !strcmp(tc_symbol_valueX(obj), "fn*")
-               || !strcmp(tc_symbol_valueX(obj), "__eval_fn_wrapper"));
+               || !strcmp(tc_symbol_valueX(obj), FunctionExpr::st_EvalWrapperName));
 }
 
 // Returns the local binding for the captured variable, which can be used to resolve the variable
@@ -193,7 +193,7 @@ AExpr SemanticAnalyzer::analyze(ExpressionMode mode,
 
             if (head->m_Type == ObjectType::SYMBOL) {
                 const char *sym = tc_symbol_valueX(head);
-                if (!strcmp(sym, "fn*") || !strcmp(sym, "__eval_fn_wrapper")) {
+                if (!strcmp(sym, "fn*") || !strcmp(sym, FunctionExpr::st_EvalWrapperName)) {
                     return FunctionExpr::parse(mode, ctx, form, nameHint);
                 }
 

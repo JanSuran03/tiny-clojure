@@ -14,13 +14,6 @@
 #include "types/TCVar.h"
 
 class Runtime {
-    bool m_Initialized = false;
-    bool m_InitInProgress = false;
-
-    void init();
-
-    void ensureInitialized();
-
     std::unique_ptr<llvm::orc::LLJIT> m_JIT;
     std::atomic<size_t> m_IdCounter = 0;
     std::unordered_map<std::string, Object *> m_GlobalVarStorage;
@@ -38,7 +31,7 @@ class Runtime {
     };
 
     template<CallFn Fn>
-    void defn(const std::string &name, const char *nativeFnName);
+    static void defn(const std::string &name, const char *nativeFnName);
 
     Runtime();
 
@@ -50,9 +43,12 @@ class Runtime {
     static std::filesystem::file_time_type computeLastSourceWriteTime();
 
 public:
+    static void init();
+
     bool m_CompilingAOT = false;
     bool m_SuppressReplWelcome = false;
     bool m_DirectLinking = false;
+    bool m_DisableGC = false;
 
     std::filesystem::file_time_type getSourceLastWriteTime() const;
 
