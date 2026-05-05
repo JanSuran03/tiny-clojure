@@ -60,8 +60,9 @@
 
 (def run-configs
   (for [opt-level ["O0" "O2"]
-        #_todo]
-    {:opt-level opt-level}))
+        direct-linking [false true]]
+    {:opt-level      opt-level
+     :direct-linking direct-linking}))
 
 (def predefs-start "; predefs start")
 (def predefs-end "; predefs end")
@@ -118,7 +119,10 @@
          :as             tinyclj-bench-report} (process-benchmark-output tinyclj-output)
         tinyclj-std-dev% (if (zero? tinyclj-avg)
                            0.0
-                           (* 100.0 (/ tinyclj-std-dev tinyclj-avg)))]
+                           (* 100.0 (/ tinyclj-std-dev tinyclj-avg)))
+        tinyclj-clj-ratio (if (zero? clj-avg)
+                            0.0
+                            (/ tinyclj-avg clj-avg))]
     (println (format (str "Benchmark '%s' with config %s:\n"
                           "  Number of runs       = %d,\n"
                           "  Clojure:\n"
@@ -126,16 +130,18 @@
                           "    Standard deviation = %.4f ms (~%.2f %%),\n"
                           "  TinyClojure:\n"
                           "    Average time       = %.4f ms,\n"
-                          "    Standard deviation = %.4f ms (~%.2f %%)\n")
+                          "    Standard deviation = %.4f ms (~%.2f %%)\n"
+                          "  TinyClojure is %.2f of Clojure time\n")
                      test-name
                      (str config)
                      run-runs
                      clj-avg clj-std-dev clj-std-dev%
-                     tinyclj-avg tinyclj-std-dev tinyclj-std-dev%))))
+                     tinyclj-avg tinyclj-std-dev tinyclj-std-dev%
+                     tinyclj-clj-ratio))))
 
 (defn run-benchmark [input-file opts]
   (let [processed-opts (mapcat (fn [[k v]]
-                                 [(str "-" (name k)) v])
+                                 [(str "-" (name k)) (str v)])
                                opts)
         input (slurp (str input-file))
         input-file-name (fs/file-name input-file)

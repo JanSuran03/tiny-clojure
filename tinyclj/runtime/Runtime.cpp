@@ -169,9 +169,10 @@ void Runtime::init() {
         Runtime &rt = Runtime::getInstance();
         AotEngine &aot_engine = rt.getAotEngine();
         auto ts1 = std::chrono::high_resolution_clock::now();
+        bool previous_direct_linking = rt.m_DirectLinking;
         rt.m_DirectLinking = true;
         aot_engine.compileModule(core_module, false);
-        rt.m_DirectLinking = false;
+        rt.m_DirectLinking = previous_direct_linking;
         auto ts2 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = ts2 - ts1;
         // disable this log for now

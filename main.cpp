@@ -65,6 +65,12 @@ std::vector<CLIOption> cli_options = {
                   [](const std::string &value) {
                       Runtime::getInstance().getAotEngine().setCompiledDir(value);
                   }),
+        CLIOption("direct-linking", "Enables direct linking of AOT-compiled functions (experimental)", "false",
+                  [](const std::string &value) {
+                      if (value == "true") {
+                          Runtime::getInstance().m_DirectLinking = true;
+                      }
+                  })
 };
 
 std::map<std::string, std::string> parse_args(int argc, char *argv[]) {
