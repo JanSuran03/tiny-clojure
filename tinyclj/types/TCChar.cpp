@@ -1,6 +1,13 @@
 #include "runtime/Runtime.h"
+#include "TCBoolean.h"
 #include "TCChar.h"
 #include "TCString.h"
+
+const Object *TCChar::equals(const Object *self, const Object *other) {
+    char selfValue = static_cast<const TCChar *>(self->m_Data)->m_Value;
+    char otherValue = static_cast<const TCChar *>(other->m_Data)->m_Value;
+    return TCBoolean::getStatic(selfValue == otherValue);
+}
 
 const Object *TCChar::toString(const Object *self) {
     char value = static_cast<TCChar *>(self->m_Data)->m_Value;
@@ -30,6 +37,7 @@ const Object *TCChar::toEDN(const Object *self) {
 
 MethodTable TCChar::st_MethodTable = MethodTable{
         .m_CallFn = nullptr,
+        .m_EqualsFn = TCChar::equals,
         .m_ToStringFn = TCChar::toString,
         .m_ToEdnFn = TCChar::toEDN,
 };

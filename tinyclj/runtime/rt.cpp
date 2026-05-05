@@ -378,57 +378,8 @@ const Object *tinyclj_rt_binary_equal(const Object *self, unsigned argc, const O
     }
     const Object *a = argv[0];
     const Object *b = argv[1];
-    if (a == b) {
-        return TCBoolean::getStatic(true); // same pointer or both nil
-    }
-    if (a == nullptr || b == nullptr) {
-        return TCBoolean::getStatic(false); // one is nil and the other is not
-    }
-    if (a->m_Type != b->m_Type) {
-        return TCBoolean::getStatic(false);
-    }
-    switch (a->m_Type) {
-        case ObjectType::BOOLEAN:
-            return TCBoolean::getStatic(static_cast<TCBoolean *>(a->m_Data)->m_Value ==
-                                        static_cast<TCBoolean *>(b->m_Data)->m_Value);
-        case ObjectType::INTEGER:
-            return TCBoolean::getStatic(static_cast<TCInteger *>(a->m_Data)->m_Value ==
-                                        static_cast<TCInteger *>(b->m_Data)->m_Value);
-        case ObjectType::DOUBLE:
-            return TCBoolean::getStatic(static_cast<TCDouble *>(a->m_Data)->m_Value ==
-                                        static_cast<TCDouble *>(b->m_Data)->m_Value);
-        case ObjectType::STRING:
-            return TCBoolean::getStatic(strcmp(static_cast<TCString *>(a->m_Data)->m_Value,
-                                               static_cast<TCString *>(b->m_Data)->m_Value) == 0);
-        case ObjectType::SYMBOL:
-            return TCBoolean::getStatic(strcmp(static_cast<TCSymbol *>(a->m_Data)->m_Name,
-                                               static_cast<TCSymbol *>(b->m_Data)->m_Name) == 0);
-        case ObjectType::CHARACTER:
-            return TCBoolean::getStatic(static_cast<TCChar *>(a->m_Data)->m_Value ==
-                                        static_cast<TCChar *>(b->m_Data)->m_Value);
-        case ObjectType::LIST: {
-            const Object *a_seq = tc_list_seq(a);
-            const Object *b_seq = tc_list_seq(b);
-            if (static_cast<TCList *>(a->m_Data)->m_Length != static_cast<TCList *>(b->m_Data)->m_Length) {
-                return TCBoolean::getStatic(false); // different lengths, can't be equal
-            }
 
-            while (a_seq && b_seq) {
-                const Object *a_first = tc_list_first(a_seq);
-                const Object *b_first = tc_list_first(b_seq);
-                const Object *arglist[2] = {a_first, b_first};
-                const Object *elem_equal = tinyclj_rt_binary_equal(nullptr, 2, arglist);
-                if (!static_cast<TCBoolean *>(elem_equal->m_Data)->m_Value) {
-                    return TCBoolean::getStatic(false);
-                }
-                a_seq = tc_list_next(a_seq);
-                b_seq = tc_list_next(b_seq);
-            }
-            return TCBoolean::getStatic(a_seq == nullptr && b_seq == nullptr); // both should be nil at the end
-        }
-        default:
-            return TCBoolean::getStatic(false); // other types could only be equal by pointer identity
-    }
+    return tc_object_equals(a, b);
 }
 
 const Object *tinyclj_rt_identical(const Object *self, unsigned argc, const Object **argv) {

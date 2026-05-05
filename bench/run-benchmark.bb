@@ -42,7 +42,7 @@
                                    (take-while #(not= % "--bench end--")))
         times (map #(Double/parseDouble %) filtered-output-lines)
         ; drop the first 2 runs: JIT warmup & optimizations
-        times (drop 2 times)
+        times (drop 1 times)
         ; calculate the average of the remaining runs
         average-time (double (/ (reduce + times) (count times)))
         ; calculate the standard deviation

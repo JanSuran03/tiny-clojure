@@ -1,6 +1,23 @@
 #include "Object.h"
+#include "TCBoolean.h"
 #include "TCString.h"
 #include "compiler/CodegenContext.h"
+
+const Object *tc_object_equals(const Object *obj1, const Object *obj2) {
+    if (obj1 == obj2) {
+        return tc_boolean_const_true;
+    }
+    if (obj1 == nullptr || obj2 == nullptr || obj1->m_Type != obj2->m_Type) {
+        return tc_boolean_const_false;
+    }
+    EqualsFn equalsFn = obj1->m_MethodTable->m_EqualsFn;
+    if (equalsFn) {
+        return equalsFn(obj1, obj2);
+    } else {
+        // default equals implementation if no method is provided: pointer equality
+        return tc_boolean_const_false;
+    }
+}
 
 const Object *tc_object_to_string(const Object *obj) {
     if (obj == nullptr) {
@@ -103,6 +120,7 @@ llvm::StructType *Object::getMethodTableStructType(llvm::LLVMContext &llvmContex
     return llvm::StructType::create(
             llvmContext,
             {llvm::PointerType::get(llvmContext, 0), // m_CallFn
+             llvm::PointerType::get(llvmContext, 0), // m_EqualsFn
              llvm::PointerType::get(llvmContext, 0), // m_ToStringFn
              llvm::PointerType::get(llvmContext, 0)}, // m_ToEdnFn
             structName);

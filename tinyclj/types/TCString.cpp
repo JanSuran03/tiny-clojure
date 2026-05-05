@@ -1,7 +1,22 @@
 #include <cstring>
 
 #include "runtime/Runtime.h"
+#include "TCBoolean.h"
 #include "TCString.h"
+
+const Object *TCString::equals(const Object *self, const Object *other) {
+    if (self == other) {
+        return tc_boolean_const_true;
+    }
+
+    if (other->m_Type != ObjectType::STRING) {
+        return tc_boolean_const_false;
+    }
+
+    const char *selfValue = static_cast<const TCString *>(self->m_Data)->m_Value;
+    const char *otherValue = static_cast<const TCString *>(other->m_Data)->m_Value;
+    return TCBoolean::getStatic(strcmp(selfValue, otherValue) == 0);
+}
 
 const Object *TCString::toString(const Object *self) {
     // strings are immutable, so we can just return self
@@ -33,6 +48,7 @@ const Object *TCString::toEDN(const Object *self) {
 
 MethodTable TCString::st_MethodTable = MethodTable {
     .m_CallFn = nullptr,
+    .m_EqualsFn = TCString::equals,
     .m_ToStringFn = TCString::toString,
     .m_ToEdnFn = TCString::toEDN,
 };

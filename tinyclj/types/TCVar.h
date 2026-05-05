@@ -11,6 +11,8 @@ struct TCVar {
 
     static llvm::Value *emitGetRoot(CodegenContext &ctx, llvm::Value *varObjPtr);
 
+    static const Object *equals(const Object *self, const Object *other);
+
     static const Object *toString(const Object *self);
 
     static const Object *toEDN(const Object *self);

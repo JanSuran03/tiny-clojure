@@ -32,6 +32,10 @@ llvm::Value *TCBoolean::emitGetValue(CodegenContext &ctx, llvm::Value *boolDataP
     return ctx.m_IRBuilder.CreateLoad(ctx.m_IRBuilder.getInt8Ty(), valueFieldPtr, "bool_value");
 }
 
+const Object *TCBoolean::equals(const Object *self, const Object *other) {
+    return getStatic(self == other);
+}
+
 const Object *TCBoolean::toString(const Object *self) {
     bool value = static_cast<TCBoolean *>(self->m_Data)->m_Value;
     return tc_string_new(value ? "true" : "false");
@@ -44,6 +48,7 @@ const Object *TCBoolean::toEDN(const Object *self) {
 
 MethodTable TCBoolean::st_MethodTable = MethodTable{
         .m_CallFn = nullptr,
+        .m_EqualsFn = TCBoolean::equals,
         .m_ToStringFn = TCBoolean::toString,
         .m_ToEdnFn = TCBoolean::toEDN,
 };

@@ -25,6 +25,7 @@ class Runtime {
     struct BuiltinFunctionVTable {
         static constexpr MethodTable value = {
                 .m_CallFn = Fn,
+                .m_EqualsFn = nullptr,
                 .m_ToStringFn = nullptr,
                 .m_ToEdnFn = nullptr
         };

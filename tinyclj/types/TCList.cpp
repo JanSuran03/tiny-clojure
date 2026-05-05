@@ -1,9 +1,34 @@
 #include <stdexcept>
 
 #include "runtime/Runtime.h"
-#include "TCList.h"
+#include "TCBoolean.h"
 #include "TCInteger.h"
+#include "TCList.h"
 #include "TCString.h"
+
+const Object *TCList::equals(const Object *self, const Object *other) {
+    if (static_cast<const TCList *>(self->m_Data)->m_Length != static_cast<const TCList *>(other->m_Data)->m_Length) {
+        return tc_boolean_const_false;
+    }
+
+    const Object *self_seq = tc_list_seq(self);
+    const Object *other_seq = tc_list_seq(other);
+
+    while (self_seq && other_seq) {
+        const Object *self_first = tc_list_first(self_seq);
+        const Object *other_first = tc_list_first(other_seq);
+
+        const Object *elem_equal = tc_object_equals(self_first, other_first);
+        if (elem_equal != tc_boolean_const_true) {
+            return tc_boolean_const_false;
+        }
+
+        self_seq = tc_list_next(self_seq);
+        other_seq = tc_list_next(other_seq);
+    }
+
+    return tc_boolean_const_true;
+}
 
 const Object *TCList::toString(const Object *self) {
     std::string str = "(";
@@ -39,6 +64,7 @@ const Object *TCList::toEDN(const Object *self) {
 
 MethodTable TCList::st_MethodTable = MethodTable {
     .m_CallFn = nullptr,
+    .m_EqualsFn = TCList::equals,
     .m_ToStringFn = TCList::toString,
     .m_ToEdnFn = TCList::toEDN,
 };

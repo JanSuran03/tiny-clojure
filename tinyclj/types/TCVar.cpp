@@ -1,6 +1,7 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "TCBoolean.h"
 #include "TCString.h"
 #include "TCVar.h"
 #include "compiler/CodegenContext.h"
@@ -20,6 +21,10 @@ const Object *tc_var_invoke(const Object *self, unsigned argc, const Object **ar
     }
 }
 
+const Object *TCVar::equals(const Object *self, const Object *other) {
+    return TCBoolean::getStatic(self == other);
+}
+
 const Object *TCVar::toString(const Object *self) {
     const TCVar *var = static_cast<const TCVar *>(self->m_Data);
     return tc_string_new((std::string("(var ") + var->m_Name + ")").c_str());
@@ -32,6 +37,7 @@ const Object *TCVar::toEDN(const Object *self) {
 
 MethodTable TCVar::st_MethodTable = MethodTable{
         .m_CallFn = tc_var_invoke,
+        .m_EqualsFn = TCVar::equals,
         .m_ToStringFn = TCVar::toString,
         .m_ToEdnFn = TCVar::toEDN,
 };

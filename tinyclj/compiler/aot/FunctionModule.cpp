@@ -24,9 +24,13 @@ void FunctionModule::createModuleVtable(CodegenContext &ctx, llvm::Function *cal
     // create a global variable for the vtable and initialize it with the call function pointer
     llvm::StructType *vtableStructType = Object::getMethodTableStructType(*ctx.m_LLVMContext);
     llvm::Constant *callFnPtr = llvm::ConstantExpr::getBitCast(callFn, llvm::PointerType::get(*ctx.m_LLVMContext, 0));
+    llvm::Constant *equalsFnPtr = llvm::ConstantPointerNull::get(llvm::PointerType::get(*ctx.m_LLVMContext, 0));
     llvm::Constant *toStringFnPtr = llvm::ConstantPointerNull::get(llvm::PointerType::get(*ctx.m_LLVMContext, 0));
     llvm::Constant *toEdnFnPtr = llvm::ConstantPointerNull::get(llvm::PointerType::get(*ctx.m_LLVMContext, 0));
-    llvm::Constant *vtableInit = llvm::ConstantStruct::get(vtableStructType, {callFnPtr, toStringFnPtr, toEdnFnPtr});
+    llvm::Constant *vtableInit = llvm::ConstantStruct::get(vtableStructType, {callFnPtr,
+                                                                              equalsFnPtr,
+                                                                              toStringFnPtr,
+                                                                              toEdnFnPtr});
     llvm::GlobalVariable *vtableGlobalVar = new llvm::GlobalVariable(
             *ctx.m_Module,
             vtableStructType,

@@ -17,6 +17,8 @@ struct TCBoolean {
 
     static llvm::Value *emitGetValue(CodegenContext &ctx, llvm::Value *boolDataPtr);
 
+    static const Object *equals(const Object *self, const Object *other);
+
     static const Object *toString(const Object *self);
 
     static const Object *toEDN(const Object *self);

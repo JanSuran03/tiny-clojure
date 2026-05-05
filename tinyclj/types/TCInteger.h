@@ -6,6 +6,8 @@
 struct TCInteger {
     tc_int_t m_Value;
 
+    static const Object *equals(const Object *self, const Object *other);
+
     static const Object *toString(const Object *self);
 
     static const Object *toEDN(const Object *self);

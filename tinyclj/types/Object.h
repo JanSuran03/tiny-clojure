@@ -25,9 +25,14 @@ struct TCString;
 
 using CallFn = const Object *(*)(const Object *self,
                                  unsigned argc,
-                                 const struct Object **argv);
+                                 const Object **argv);
 
 using UnaryFn = const Object *(*)(const Object *self);
+
+using EqualsFn = const Object *(*)(const Object *self,
+                                   const Object *other);
+
+const Object *tc_object_equals(const Object *obj1, const Object *obj2);
 
 const Object *tc_object_to_string(const Object *obj);
 
@@ -35,6 +40,7 @@ const Object *tc_object_to_edn(const Object *obj);
 
 struct MethodTable {
     CallFn m_CallFn;
+    EqualsFn m_EqualsFn;
     UnaryFn m_ToStringFn;
     UnaryFn m_ToEdnFn;
 };
