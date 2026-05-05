@@ -1,6 +1,6 @@
 #!/usr/bin/env bb
 
-(println "Running benchmark...")
+(println "Running benchmarks...\n")
 
 (require '[clojure.string :as str]
          '[clojure.java.io :as io]
@@ -25,7 +25,7 @@
                         slurp))
 
 (defn ensure-successful-run [{:keys [exit out err] :as result} command-name]
-  (if (= exit 0)
+  (if (and (= exit 0) (str/blank? err))
     result
     (do (println (str "Error: " command-name " execution failed with exit code " exit "!"))
         (when-not (str/blank? out)
@@ -42,18 +42,16 @@
       (str/replace #"\]" ")")))
 
 (defn run-clojure [clojure-form]
-  (let [form-with-predefs (str clojure-predefs "\n" common-predefs "\n" clojure-form)]
-    (ensure-successful-run
-     (sh/sh "clojure" "--repl" :in form-with-predefs)
-     "Clojure")))
+  (ensure-successful-run
+   (sh/sh "clojure" "--repl" :in clojure-form)
+   "Clojure"))
 
 (defn run-tinyclj
   ([clojure-form extra-opts]
-   (let [form-with-predefs (str common-predefs "\n"
-                                (replace-for-tinyclj clojure-form))
+   (let [replaced-form (replace-for-tinyclj clojure-form)
          sh-args (concat [(str tinyclj-exe) "--suppress-repl-welcome"]
                          extra-opts
-                         [:in (replace-for-tinyclj form-with-predefs)])]
+                         [:in (replace-for-tinyclj replaced-form)])]
      (ensure-successful-run
       (apply sh/sh sh-args)
       "TinyClojure"))))
@@ -70,8 +68,11 @@
 (defn extract-line [s]
   (str/split s #"\r?\n" 2))
 
+; test-name maybe-predefs? form
 (defn parse-bench-input [input]
-  (let [[test-name input] (str/split input #"\r?\n" 2)]
+  (let [[test-name input] (str/split input #"\r?\n" 2)
+        ; drop the leading "; "
+        test-name (subs test-name 2)]
     (if (str/starts-with? input predefs-start)
       (let [[_ input] (extract-line input)
             end-index (str/index-of input predefs-end)
@@ -89,7 +90,7 @@
          next
          (take-while #(not (str/includes? % "--bench end--"))))))
 
-(defn process-benchmark-output [output]
+(defn process-benchmark [output]
   (let [filtered-output-lines (parse-benchmark-output output)
         times (map #(Double/parseDouble %) filtered-output-lines)
         ; drop the first 2 runs: JIT warmup & optimizations
@@ -103,59 +104,96 @@
         std-dev (Math/sqrt (/ (reduce + squared-diffs)
                               (count times)))]
     {:average-time average-time
-     :std-dev std-dev
-     :num-runs (count times)}))
+     :std-dev      std-dev
+     :num-runs     (count times)}))
 
-(defn report-benchmark [test-name config clj-output tinyclj-output]
-  (let [{clj-avg     :average-time
+(defn run-with-clojure [input]
+  (let [wrapped-input (str clojure-predefs "\n" input)]
+    (:out (run-clojure wrapped-input))))
+
+(defn run-benchmark [input config]
+  (let [processed-opts (mapcat (fn [[k v]]
+                                 [(str "-" (name k)) (str v)])
+                               config)]
+    (:out (run-tinyclj input processed-opts))))
+
+(defn format-benchmark-report [{:keys [average-time std-dev]} clojure-time]
+  (let [tinyclj-clj-ratio (if (zero? clojure-time)
+                            0.0
+                            (/ average-time clojure-time))
+        std-dev% (if (zero? average-time)
+                   0.0
+                   (* 100 (/ std-dev average-time)))]
+    [(format "%.4f ms" average-time)
+     (format "%.4f ms (~%.2f %%)" std-dev std-dev%)
+     (format "%.2fx" tinyclj-clj-ratio)]))
+
+(defn column-width [results index]
+  (->> results (map #(nth % index))
+       (map count)
+       (apply max)))
+
+(defn str-of [width char]
+  (apply str (repeat width char)))
+
+(defn blank-str [width]
+  (str-of width " "))
+
+(defn center-label [label width]
+  (let [padding (max 0 (- width (count label)))
+        left-padding (Math/floor (/ padding 2))
+        right-padding (- padding left-padding)]
+    (str (blank-str left-padding) label (blank-str right-padding))))
+
+(defn run-benchmarks [input-file configs]
+  (let [input (slurp (str input-file))
+        [test-name input predefs] (parse-bench-input input)
+        input-with-predefs (str common-predefs "\n"
+                                predefs "\n"
+                                "(bench-and-report " input ")")
+        clojure-out (run-with-clojure input-with-predefs)
+        {clj-avg     :average-time
          clj-std-dev :std-dev
-         run-runs    :num-runs
-         :as         clj-bench-report} (process-benchmark-output clj-output)
+         :keys       [num-runs]
+         :as         clj-res} (process-benchmark clojure-out)
+        formatted-clj-report (format-benchmark-report clj-res clj-avg)
         clj-std-dev% (if (zero? clj-avg)
                        0.0
                        (* 100.0 (/ clj-std-dev clj-avg)))
-        {tinyclj-avg     :average-time
-         tinyclj-std-dev :std-dev
-         :as             tinyclj-bench-report} (process-benchmark-output tinyclj-output)
-        tinyclj-std-dev% (if (zero? tinyclj-avg)
-                           0.0
-                           (* 100.0 (/ tinyclj-std-dev tinyclj-avg)))
-        tinyclj-clj-ratio (if (zero? clj-avg)
-                            0.0
-                            (/ tinyclj-avg clj-avg))]
-    (println (format (str "Benchmark '%s' with config %s:\n"
-                          "  Number of runs       = %d,\n"
-                          "  Clojure:\n"
-                          "    Average time       = %.4f ms,\n"
-                          "    Standard deviation = %.4f ms (~%.2f %%),\n"
-                          "  TinyClojure:\n"
-                          "    Average time       = %.4f ms,\n"
-                          "    Standard deviation = %.4f ms (~%.2f %%)\n"
-                          "  TinyClojure is %.2f of Clojure time\n")
-                     test-name
-                     (str config)
-                     run-runs
-                     clj-avg clj-std-dev clj-std-dev%
-                     tinyclj-avg tinyclj-std-dev tinyclj-std-dev%
-                     tinyclj-clj-ratio))))
-
-(defn run-benchmark [input-file opts]
-  (let [processed-opts (mapcat (fn [[k v]]
-                                 [(str "-" (name k)) (str v)])
-                               opts)
-        input (slurp (str input-file))
-        input-file-name (fs/file-name input-file)
-        [test-name input predefs] (parse-bench-input input)
-        test-name (subs test-name 2) ; drop the leading "; "
-        wrapped-input (str predefs "\n"
-                           "(bench-and-report " input ")")
-        {tinyclj-out :out} (run-tinyclj wrapped-input processed-opts)
-        {clojure-out :out} (run-clojure wrapped-input)]
-    (report-benchmark test-name opts clojure-out tinyclj-out)))
+        formatted-reports (map #(-> (run-benchmark input-with-predefs %)
+                                    process-benchmark
+                                    (format-benchmark-report clj-avg))
+                               configs)
+        ; for printing the report in a tabular format
+        formatted-reports' (list* ["Average Time" "Standard deviation" "Slowdown vs Clojure"]
+                                  formatted-clj-report
+                                  formatted-reports)
+        configs' (list* "Config" "JVM Clojure" (map str configs))
+        max-config-len (->> configs (map str) (map count) (apply max))
+        max-time-len (column-width formatted-reports' 0)
+        max-std-dev-len (column-width formatted-reports' 1)
+        max-ratio-len (column-width formatted-reports' 2)
+        sep-str (str "+-" (str-of max-config-len "-") "-+-"
+                     (str-of max-time-len "-") "-+-"
+                     (str-of max-std-dev-len "-") "-+-"
+                     (str-of max-ratio-len "-") "-+\n")]
+    ; print the benchmark header
+    (printf "=== Benchmark: '%s' (%d iterations) === \n" test-name num-runs)
+    (doseq [[config [avg-time std-dev slowdown-ratio]] (map vector configs' formatted-reports')
+            :let [config-padding (- max-config-len (count (str config)))
+                  avg-pading  (- max-time-len (count avg-time))
+                  std-dev-padding  (- max-std-dev-len (count std-dev))
+                  ratio-padding (- max-ratio-len (count slowdown-ratio))]]
+      (print sep-str)
+      (print (str "| " (center-label config max-config-len) " | "
+                  (center-label avg-time max-time-len) " | "
+                  (center-label std-dev max-std-dev-len) " | "
+                  (center-label slowdown-ratio max-ratio-len) " |\n")))
+    ; flush the entire report for this benchmark before printing the next one
+    (println sep-str "\n")))
 
 ; clear the dump directory first
 (fs/delete-tree dump-dir)
-; run all benchmarks now
-(doseq [test-file (fs/list-dir test-run-directory)
-        config run-configs]
-  (run-benchmark test-file config))
+
+(doseq [test-file (fs/list-dir test-run-directory)]
+  (run-benchmarks test-file run-configs))
