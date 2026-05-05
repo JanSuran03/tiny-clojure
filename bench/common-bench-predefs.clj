@@ -1,6 +1,6 @@
-(defmacro bench-and-report (form)
+(defmacro bench-and-report [form]
   `(do (println "--bench start--")
-       (dotimes (i# 10)
-         (let (time# (bench ~form))
+       (dotimes [i# 10]
+         (let [time# (bench ~form)]
            (println time#)))
        (println "--bench end--")))
