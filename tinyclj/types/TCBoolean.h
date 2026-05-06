@@ -1,6 +1,5 @@
 #pragma once
 
-#include "compiler/CodegenContext.h"
 #include "llvm/IR/IRBuilder.h"
 
 #include "Object.h"
@@ -12,10 +11,6 @@ extern Object *tc_boolean_const_false;
 
 struct TCBoolean {
     bool m_Value;
-
-    static llvm::StructType *getBooleanStructType(CodegenContext &ctx);
-
-    static llvm::Value *emitGetValue(CodegenContext &ctx, llvm::Value *boolDataPtr);
 
     static const Object *equals(const Object *self, const Object *other);
 

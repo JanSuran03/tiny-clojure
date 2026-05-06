@@ -1,3 +1,4 @@
+#include "BooleanExpr.h"
 #include "IfExpr.h"
 #include "compiler/SemanticAnalyzer.h"
 #include "types/TCBoolean.h"
@@ -19,33 +20,24 @@ EmitResult IfExpr::emitIR(CodegenContext &ctx) const {
     BasicBlock *check_null_block = BasicBlock::Create(*ctx.m_LLVMContext, "check_null", ctx.currentFunction());
     BasicBlock *check_is_boolean_else_block = BasicBlock::Create(*ctx.m_LLVMContext,
                                                                  "check_bool_else", ctx.currentFunction());
-    BasicBlock *check_raw_else_block = BasicBlock::Create(*ctx.m_LLVMContext, "check_else", ctx.currentFunction());
 
     // 1. Evaluate condition
     Value *cond_res = m_CondExpr->emitIR(ctx).value();
 
-    // 2. If null => jump to else, otherwise check (bool)->value
+    // 2. if (cond_res == null) goto else_block
     ctx.m_IRBuilder.CreateBr(check_null_block);
     ctx.m_IRBuilder.SetInsertPoint(check_null_block);
     Value *cmp_null_res = ctx.m_IRBuilder.CreateICmpEQ(cond_res, ConstantPointerNull::get(ctx.pointerType()));
     ctx.m_IRBuilder.CreateCondBr(cmp_null_res, else_block, check_is_boolean_else_block);
 
-    // 3. Check (bool) cast, if not bool, jump to then directly (truthy)
+    // 3. if (cond_res == false) goto else_block
     ctx.m_IRBuilder.SetInsertPoint(check_is_boolean_else_block);
-    Value *obj_type = Object::emitGetType(ctx, cond_res);
-    Value *is_bool_res = ctx.m_IRBuilder.CreateICmpEQ(obj_type,
-                                                      ConstantInt::get(Type::getInt32Ty(*ctx.m_LLVMContext),
-                                                                       static_cast<int32_t>(ObjectType::BOOLEAN)));
-    ctx.m_IRBuilder.CreateCondBr(is_bool_res, check_raw_else_block, then_block);
+    llvm::Value *falseBoolConstant = BooleanExpr(false).emitIR(ctx).value();
+    Value *is_false_bool = ctx.m_IRBuilder.CreateICmpEQ(cond_res, falseBoolConstant);
+    ctx.m_IRBuilder.CreateCondBr(is_false_bool, else_block, then_block);
+    // goto then_block otherwise
 
-    // 4. Extract bool value, if false, jump to else, otherwise jump to then
-    ctx.m_IRBuilder.SetInsertPoint(check_raw_else_block);
-    Value *bool_value = TCBoolean::emitGetValue(ctx, cond_res);
-    Value *is_false = ctx.m_IRBuilder.CreateICmpEQ(bool_value, ConstantInt::get(Type::getInt8Ty(*ctx.m_LLVMContext),
-                                                                                APInt(8, 0, true)));
-    ctx.m_IRBuilder.CreateCondBr(is_false, else_block, then_block);
-
-    // 5. emit then, else and jump to merge at the end
+    // 4. emit then, else and jump to merge at the end
     ctx.m_IRBuilder.SetInsertPoint(then_block);
     auto then_res = m_ThenExpr->emitIR(ctx);
     BasicBlock *then_end = ctx.m_IRBuilder.GetInsertBlock();
