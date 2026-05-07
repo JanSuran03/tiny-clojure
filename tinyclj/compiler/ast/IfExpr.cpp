@@ -17,27 +17,17 @@ EmitResult IfExpr::emitIR(CodegenContext &ctx) const {
     BasicBlock *then_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.then", ctx.currentFunction());
     BasicBlock *else_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.else", ctx.currentFunction());
     BasicBlock *merge_block = BasicBlock::Create(*ctx.m_LLVMContext, "if.merge", ctx.currentFunction());
-    BasicBlock *check_null_block = BasicBlock::Create(*ctx.m_LLVMContext, "check_null", ctx.currentFunction());
-    BasicBlock *check_is_boolean_else_block = BasicBlock::Create(*ctx.m_LLVMContext,
-                                                                 "check_bool_else", ctx.currentFunction());
-
     // 1. Evaluate condition
     Value *cond_res = m_CondExpr->emitIR(ctx).value();
 
-    // 2. if (cond_res == null) goto else_block
-    ctx.m_IRBuilder.CreateBr(check_null_block);
-    ctx.m_IRBuilder.SetInsertPoint(check_null_block);
+    // 2. Compare to null or else
     Value *cmp_null_res = ctx.m_IRBuilder.CreateICmpEQ(cond_res, ConstantPointerNull::get(ctx.pointerType()));
-    ctx.m_IRBuilder.CreateCondBr(cmp_null_res, else_block, check_is_boolean_else_block);
-
-    // 3. if (cond_res == false) goto else_block
-    ctx.m_IRBuilder.SetInsertPoint(check_is_boolean_else_block);
     llvm::Value *falseBoolConstant = BooleanExpr(false).emitIR(ctx).value();
-    Value *is_false_bool = ctx.m_IRBuilder.CreateICmpEQ(cond_res, falseBoolConstant);
-    ctx.m_IRBuilder.CreateCondBr(is_false_bool, else_block, then_block);
-    // goto then_block otherwise
+    Value *cmp_false_res = ctx.m_IRBuilder.CreateICmpEQ(cond_res, falseBoolConstant);
+    Value *is_falsey_res = ctx.m_IRBuilder.CreateOr(cmp_null_res, cmp_false_res);
+    ctx.m_IRBuilder.CreateCondBr(is_falsey_res, else_block, then_block);
 
-    // 4. emit then, else and jump to merge at the end
+    // 3. Emit then, else and jump to merge at the end
     ctx.m_IRBuilder.SetInsertPoint(then_block);
     auto then_res = m_ThenExpr->emitIR(ctx);
     BasicBlock *then_end = ctx.m_IRBuilder.GetInsertBlock();
