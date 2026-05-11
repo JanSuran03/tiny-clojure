@@ -194,6 +194,26 @@ const Object *read_character(BufferedReader &rdr) {
         return tc_char_new('\r');
     } else if (token == "backspace") {
         return tc_char_new('\b');
+    } else if (token.starts_with("o")) {
+        if (token.size() == 1) {
+            return tc_char_new('o');
+        }
+        // octal character literal
+        errno = 0; // reset errno before calling strtol
+        const char *octal_start = token.c_str() + 1; // skip the leading 'o'
+        char *octal_end = nullptr;
+
+        long char_code = strtol(octal_start, &octal_end, 8);
+
+        if (octal_end == octal_start
+            || *octal_end != '\0'
+            || errno == ERANGE) {
+            throw std::runtime_error("Error: Invalid octal character literal: " + token);
+        } else if (char_code < 0 || char_code > 255) {
+            throw std::runtime_error(
+                    "Error: Octal character literal out of range (must be between \\o0 and \\o377): " + token);
+        }
+        return tc_char_new((char) char_code);
     } else {
         throw std::runtime_error("Error: Invalid character literal: " + token);
     }
