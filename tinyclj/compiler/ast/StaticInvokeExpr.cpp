@@ -64,7 +64,6 @@ EmitResult StaticInvokeExpr::emitIR(CodegenContext &ctx) const {
             native_func_ptr,
             {self_ptr, argc_val, argv},
             "invoke_" + std::to_string(invokeIndex) + "_result");
-
 }
 
 const Object *StaticInvokeExpr::eval() const {

@@ -166,6 +166,7 @@ void Runtime::init() {
     TC_DEFN("long", tinyclj_rt_long);
     TC_DEFN("compile-module", tinyclj_rt_compile_module);
     TC_DEFN("load-module", tinyclj_rt_load_module);
+    TC_DEFN("deref", tinyclj_rt_deref);
 
     static const std::string core_module = "core";
     try {

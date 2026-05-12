@@ -1,6 +1,7 @@
 #include <utility>
 
 #include "DefExpr.h"
+#include "VarLiteralExpr.h"
 #include "compiler/CompilerUtils.h"
 #include "compiler/SemanticAnalyzer.h"
 #include "runtime/Runtime.h"
@@ -22,9 +23,9 @@ EmitResult DefExpr::emitIR(CodegenContext &ctx) const {
     FunctionCallee bind_var_fn = ctx.m_Module->getOrInsertFunction("tc_var_bind_root", bind_var_fn_type);
 
     EmitResult value_to_bind = m_Value->emitIR(ctx);
-    // todo: instead use the var name directly lol, why use static cast
+
     Value *llvm_var_ptr = CompilerUtils::emitGlobalVar(ctx, static_cast<TCVar *>(m_Var->m_Data)->m_Name);
-    // todo: make tc_Var_bind_root not void and return its result directly
+
     ctx.m_IRBuilder.CreateCall(bind_var_fn, {llvm_var_ptr, value_to_bind.value()});
     return llvm_var_ptr;
 }
@@ -59,10 +60,15 @@ AExpr DefExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
             auto var_name = static_cast<TCSymbol *>(name->m_Data)->m_Name;
             Runtime::getInstance().getAotEngine().startLoading(var_name);
             auto var = Runtime::getInstance().declareVar(var_name);
-            AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init, var_name);
-            Runtime::getInstance().getAotEngine().finishLoading(var_name);
 
-            return std::make_unique<DefExpr>(var, std::move(init_expr));
+            if (has_init) {
+                AExpr init_expr = SemanticAnalyzer::analyze(mode, ctx, init, var_name);
+                Runtime::getInstance().getAotEngine().finishLoading(var_name);
+                return std::make_unique<DefExpr>(var, std::move(init_expr));
+            } else { // (def name) - no initializer = just reference the var instead of creating a def-expression.
+                Runtime::getInstance().getAotEngine().finishLoading(var_name);
+                return std::make_unique<VarLiteralExpr>(var, var_name);
+            }
         }
         default:
             throw std::runtime_error("'def form must contain 2 or 3 items: (def name) or (def name value)");

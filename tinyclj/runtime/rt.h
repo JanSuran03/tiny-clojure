@@ -52,4 +52,5 @@ const Object *tinyclj_rt_lt(const Object *self, unsigned argc, const Object **ar
 const Object *tinyclj_rt_lte(const Object *self, unsigned argc, const Object **argv);
 const Object *tinyclj_rt_compile_module(const Object *self, unsigned argc, const Object **argv);
 const Object *tinyclj_rt_load_module(const Object *self, unsigned argc, const Object **argv);
+const Object *tinyclj_rt_deref(const Object *self, unsigned argc, const Object **argv);
 }

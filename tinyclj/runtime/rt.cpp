@@ -736,4 +736,15 @@ const Object *tinyclj_rt_load_module(const Object *self, unsigned argc, const Ob
     Runtime::getInstance().getAotEngine().loadCompiledModule(moduleName, force_reload);
     return nullptr;
 }
+
+const Object *tinyclj_rt_deref(const Object *self, unsigned argc, const Object **argv) {
+    if (argc != 1) {
+        throw std::runtime_error("deref requires exactly 1 argument");
+    }
+    const Object *arg = argv[0];
+    if (arg == nullptr || arg->m_Type != ObjectType::VAR) {
+        throw std::runtime_error("deref requires a var argument");
+    }
+    return static_cast<const TCVar *>(arg->m_Data)->m_Root;
+}
 } // extern "C"
