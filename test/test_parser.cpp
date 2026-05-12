@@ -107,6 +107,15 @@ int main() {
             {.input = "\\o377",
                     .expected = tc_char_new((char) 255), // octal 377 = decimal 255
                     .description = "Read octal character literal with max value"},
+            {.input = "\\x41",
+                    .expected = tc_char_new('A'), // hexadecimal 41 = decimal 65 = 'A'
+                    .description = "Read hexadecimal character literal"},
+            {.input = "\\x00",
+                    .expected = tc_char_new('\0'),
+                    .description = "Read hexadecimal character literal with value 0"},
+            {.input = "\\xFF",
+                    .expected = tc_char_new((char) 255), // hexadecimal FF = decimal 255
+                    .description = "Read hexadecimal character literal with max value"},
             {.input = "true", .expected = tc_boolean_const_true, .description = "Read boolean true"},
             {.input = "false", .expected = tc_boolean_const_false, .description = "Read boolean false"},
             {.input = "nil", .expected = nullptr, .description = "Read nil literal"},
@@ -127,11 +136,16 @@ int main() {
 
     std::vector<ErrorTestCase> error_cases = {
             {.input = "\\", .description = "Read character literal with missing token"},
+            {.input = "\\ a", .description = "Read character literal with space before token"},
             {.input = "\\o8", .description = "Read octal character literal with invalid digit"},
             {.input = "\\o400", // octal 400 = decimal 256, which is out of range for a char
                     .description = "Read octal character literal with value out of range"},
             {.input = "\\o4ab", .description = "Read octal character literal with invalid octal digits"},
             {.input = "\\o-10", .description = "Read octal character literal with negative value"},
+            {.input = "\\xG1", .description = "Read hexadecimal character literal with invalid digit"},
+            {.input = "\\x100", // hexadecimal 100 = decimal 256, which is out of range for a char
+                    .description = "Read hexadecimal character literal with value out of range"},
+            {.input = "\\x-1", .description = "Read hexadecimal character literal with negative value"},
             {.input = "\"Unterminated string", .description = "Read unterminated string literal"},
             {.input = R"("Invalid escape \x")", .description = "Read string with invalid escape sequence"},
             {.input = "123abc", .description = "Read invalid number literal"},
