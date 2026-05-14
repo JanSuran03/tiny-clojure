@@ -4,13 +4,34 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
 INPUT_DIR = Path("dump")
 OUT_DIR = Path("figures")
 OUT_DIR.mkdir(exist_ok=True)
 
 REMOVE_EMPTY_LOOP = False
 MAKE_LOG_GRAPHS = True
+
+
+def add_bar_labels(ax, suffix="", decimals=1, fontsize=7):
+    for container in ax.containers:
+        # Skip error-bar containers. Only bar containers have datavalues.
+        if not hasattr(container, "datavalues"):
+            continue
+
+        labels = []
+        for value in container.datavalues:
+            if pd.isna(value):
+                labels.append("")
+            else:
+                labels.append(f"{value:.{decimals}f}{suffix}")
+
+        ax.bar_label(
+            container,
+            labels=labels,
+            padding=3,
+            fontsize=fontsize,
+            rotation=90,
+        )
 
 
 def read_results(filename: str) -> pd.DataFrame:
@@ -116,16 +137,47 @@ def plot_grouped_bars(
     if pivot_avg.empty:
         raise RuntimeError(f"Pivot table for {output_name} is empty.")
 
+    variant_count = len(pivot_avg.columns)
+
+    if variant_count <= 2:
+        label_fontsize = 12
+        error_capsize = 6
+        error_linewidth = 1.4
+        error_capthick = 1.4
+        figure_size = (8, 4.2)
+    else:
+        label_fontsize = 7
+        error_capsize = 4
+        error_linewidth = 1.0
+        error_capthick = 1.0
+        figure_size = (9, 4.2)
+
     ax = pivot_avg.plot(
         kind="bar",
-        figsize=(8, 4),
+        figsize=figure_size,
         yerr=pivot_std,
-        capsize=4,
+        capsize=error_capsize,
+        error_kw={
+            "elinewidth": error_linewidth,
+            "capthick": error_capthick,
+        },
     )
+
+    add_bar_labels(
+        ax,
+        suffix=" ms",
+        decimals=1,
+        fontsize=label_fontsize,
+    )
+
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
     ax.legend(title=legend_title)
     plt.xticks(rotation=20, ha="right")
+
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(ymin, ymax * 1.18)
+
     plt.tight_layout()
     plt.savefig(OUT_DIR / output_name)
     plt.close()
@@ -135,11 +187,16 @@ def plot_grouped_bars(
 
         ax = pivot_avg.plot(
             kind="bar",
-            figsize=(8, 4),
+            figsize=figure_size,
             yerr=pivot_std,
-            capsize=4,
+            capsize=error_capsize,
+            error_kw={
+                "elinewidth": error_linewidth,
+                "capthick": error_capthick,
+            },
             logy=True,
         )
+
         ax.set_ylabel(f"{ylabel}, log scale")
         ax.set_xlabel(xlabel)
         ax.legend(title=legend_title)
@@ -147,6 +204,57 @@ def plot_grouped_bars(
         plt.tight_layout()
         plt.savefig(OUT_DIR / log_name)
         plt.close()
+
+
+def plot_best_slowdown(all_tc: pd.DataFrame):
+    best = (
+        all_tc.sort_values("slowdown-vs-clojure")
+        .groupby("benchmark", as_index=False)
+        .first()
+    )
+
+    if REMOVE_EMPTY_LOOP:
+        best = best[~best["benchmark"].str.contains("empty", case=False, na=False)]
+
+    if best.empty:
+        raise RuntimeError("No rows available for best slowdown graph.")
+
+    slowdown_err = (
+            best["std-dev-ms"]
+            / best["avg-ms"]
+            * best["slowdown-vs-clojure"]
+    ).fillna(0.0)
+
+    fig, ax = plt.subplots(figsize=(8, 4.2))
+
+    bars = ax.bar(
+        best["benchmark"],
+        best["slowdown-vs-clojure"],
+        yerr=slowdown_err,
+        capsize=6,
+        error_kw={
+            "elinewidth": 1.4,
+            "capthick": 1.4,
+        },
+    )
+
+    ax.bar_label(
+        bars,
+        labels=[f"{value:.1f}x" for value in best["slowdown-vs-clojure"]],
+        padding=3,
+        fontsize=20,
+    )
+
+    ax.set_ylabel("Slowdown vs JVM Clojure")
+    ax.set_xlabel("Benchmark")
+    plt.xticks(rotation=20, ha="right")
+
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(ymin, ymax * 1.18)
+
+    plt.tight_layout()
+    plt.savefig(OUT_DIR / "benchmark-best-slowdown.pdf")
+    plt.close()
 
 
 # ------------------------------------------------------------
@@ -175,7 +283,6 @@ plot_grouped_bars(
     output_name="benchmark-integer-cache-effect.pdf",
 )
 
-
 # ------------------------------------------------------------
 # Graph 2: LLVM optimization level
 #
@@ -202,7 +309,6 @@ plot_grouped_bars(
     legend_title="LLVM optimization level",
     output_name="benchmark-llvm-optimization-effect.pdf",
 )
-
 
 # ------------------------------------------------------------
 # Graph 3: direct linking
@@ -231,5 +337,21 @@ plot_grouped_bars(
     output_name="benchmark-direct-linking-effect.pdf",
 )
 
+# ------------------------------------------------------------
+# Graph 4: best slowdown vs JVM Clojure
+#
+#
+# Intended benchmark configuration:
+#   integer cache: any range
+#   LLVM optimizations: any level
+#   direct linking: any setting
+# ------------------------------------------------------------
+
+all_tc = pd.concat(
+    [cache_df, llvm_df, direct_df],
+    ignore_index=True,
+)
+
+plot_best_slowdown(all_tc)
 
 print(f"Wrote figures to {OUT_DIR.resolve()}")
