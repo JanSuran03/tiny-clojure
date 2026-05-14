@@ -14,5 +14,5 @@ struct FunctionModule : public Module {
 
     void writeModule(CodegenContext &ctx);
 
-    void createModuleVtable(CodegenContext &ctx, llvm::Function *callFn);
+    void createModuleVtable(CodegenContext &ctx, llvm::Function *callFn) const;
 };

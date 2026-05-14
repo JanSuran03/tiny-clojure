@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "Object.h"
 #include "TCBoolean.h"
 #include "TCInteger.h"
@@ -27,7 +29,10 @@ MethodTable TCInteger::st_MethodTable = MethodTable{
         .m_ToEdnFn = TCInteger::toEDN,
 };
 
-Object TCInteger::st_PreallocatedIntegers[PREALLOCATED_MAX - PREALLOCATED_MIN + 1];
+tc_int_t TCInteger::st_PreallocatedMin = -128;
+tc_int_t TCInteger::st_PreallocatedMax = 127;
+bool TCInteger::st_PreallocationEnabled = true;
+Object *TCInteger::st_PreallocatedIntegers = nullptr;
 
 Object *TCInteger::allocate_integer(tc_int_t value) {
     TCInteger *int_data = new TCInteger{.m_Value = value};
@@ -36,17 +41,30 @@ Object *TCInteger::allocate_integer(tc_int_t value) {
 }
 
 void TCInteger::init() {
-    for (tc_int_t i = PREALLOCATED_MIN; i <= PREALLOCATED_MAX; i++) {
+    if (!st_PreallocationEnabled) {
+        return;
+    } else if (st_PreallocatedMax < st_PreallocatedMin) {
+
+        std::cerr << "Warning: Invalid integer cache range: [" << st_PreallocatedMin << ", " << st_PreallocatedMax
+                  << "]. Preallocation disabled." << std::endl;
+        return;
+    }
+
+    st_PreallocatedIntegers = new Object[st_PreallocatedMax - st_PreallocatedMin + 1];
+
+    for (tc_int_t i = st_PreallocatedMin; i <= st_PreallocatedMax; i++) {
         TCInteger *int_data = new TCInteger{.m_Value = i};
-        st_PreallocatedIntegers[i - PREALLOCATED_MIN] =
+        st_PreallocatedIntegers[i - st_PreallocatedMin] =
                 Object::createStaticObject(ObjectType::INTEGER, int_data, &TCInteger::st_MethodTable);
     }
 }
 
 extern "C" {
 Object *tc_integer_new(tc_int_t value) {
-    if (value >= TCInteger::PREALLOCATED_MIN && value <= TCInteger::PREALLOCATED_MAX) {
-        return &TCInteger::st_PreallocatedIntegers[value - TCInteger::PREALLOCATED_MIN];
+    if (TCInteger::st_PreallocationEnabled
+        && value >= TCInteger::st_PreallocatedMin
+        && value <= TCInteger::st_PreallocatedMax) {
+        return &TCInteger::st_PreallocatedIntegers[value - TCInteger::st_PreallocatedMin];
     } else {
         return TCInteger::allocate_integer(value);
     }

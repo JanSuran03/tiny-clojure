@@ -20,7 +20,7 @@ void FunctionModule::writeModule(CodegenContext &ctx) {
     }
 }
 
-void FunctionModule::createModuleVtable(CodegenContext &ctx, llvm::Function *callFn) {
+void FunctionModule::createModuleVtable(CodegenContext &ctx, llvm::Function *callFn) const {
     // create a global variable for the vtable and initialize it with the call function pointer
     llvm::StructType *vtableStructType = Object::getMethodTableStructType(*ctx.m_LLVMContext);
     llvm::Constant *callFnPtr = llvm::ConstantExpr::getBitCast(callFn, llvm::PointerType::get(*ctx.m_LLVMContext, 0));

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -13,13 +14,14 @@ private:
     std::unordered_set<std::string> m_LoadingSet;
     std::vector<std::string> m_LoadingStack;
     std::filesystem::path m_SourceDir = std::filesystem::path(TINYCLJ_PROJECT_SOURCE_DIR) / "clj";
+    std::optional<std::filesystem::path> m_AdditionalSourceDir;
     std::filesystem::path m_CompiledDir = std::filesystem::path(TINYCLJ_PROJECT_SOURCE_DIR) / "compiled";
 public:
     AotEngine();
 
     llvm::OptimizationLevel m_OptimizationLevel = llvm::OptimizationLevel::O0;
 
-    std::filesystem::path fullSourcePath(const std::string &moduleName) const;
+    std::optional<std::filesystem::path> fullSourcePath(const std::string &moduleName) const;
 
     std::filesystem::path fullCompiledPath(const std::string &moduleName, bool optimized = false) const;
 
@@ -44,4 +46,6 @@ public:
     std::vector<std::string> loadingStack() const;
 
     std::filesystem::path getCompiledDir();
+
+    void setAdditionalSourceDir(const std::string &path);
 };

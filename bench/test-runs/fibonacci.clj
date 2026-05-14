@@ -1,4 +1,4 @@
-; Loop: Fibonacci of 27
+; fib(27); recursive
 ; predefs start
 (defn fib [n]
   (if (<= n 1)

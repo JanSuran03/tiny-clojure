@@ -16,9 +16,10 @@ struct TCInteger {
 
     static void init();
 
-    static constexpr tc_int_t PREALLOCATED_MIN = -128;
-    static constexpr tc_int_t PREALLOCATED_MAX = 127;
-    static Object st_PreallocatedIntegers[PREALLOCATED_MAX - PREALLOCATED_MIN + 1];
+    static tc_int_t st_PreallocatedMin;
+    static tc_int_t st_PreallocatedMax;
+    static bool st_PreallocationEnabled;
+    static Object *st_PreallocatedIntegers;
 
     static Object *allocate_integer(tc_int_t value);
 };

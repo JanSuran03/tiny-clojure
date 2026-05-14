@@ -24,9 +24,22 @@ AotEngine::AotEngine() {
     }
 }
 
-std::filesystem::path AotEngine::fullSourcePath(const std::string &moduleName) const {
+std::optional<std::filesystem::path> AotEngine::fullSourcePath(const std::string &moduleName) const {
     std::string munged_module_name = util::munge_symbol(moduleName);
-    return m_SourceDir / (munged_module_name + ".clj");
+
+    std::filesystem::path source_path = m_SourceDir / (munged_module_name + ".clj");
+    if (std::filesystem::exists(source_path)) {
+        return source_path;
+    }
+    if (m_AdditionalSourceDir.has_value()) {
+        std::filesystem::path additional_source_path =
+                m_AdditionalSourceDir.value() / (util::munge_symbol(moduleName) + ".clj");
+        if (std::filesystem::exists(additional_source_path)) {
+            return additional_source_path;
+        }
+    }
+
+    return std::nullopt;
 }
 
 std::filesystem::path AotEngine::fullCompiledPath(const std::string &moduleName, bool optimized) const {
@@ -34,7 +47,7 @@ std::filesystem::path AotEngine::fullCompiledPath(const std::string &moduleName,
     return m_CompiledDir / (munged_module_name + (optimized ? "-opt" : "") + ".bc");
 }
 
-std::filesystem::path AotEngine::fullCompiledDebugPath( const std::string &moduleName, bool optimized) const {
+std::filesystem::path AotEngine::fullCompiledDebugPath(const std::string &moduleName, bool optimized) const {
     std::string munged_module_name = util::munge_symbol(moduleName);
     return m_CompiledDir / (munged_module_name + (optimized ? "-opt" : "") + ".ll");
 }
@@ -73,17 +86,22 @@ bool shouldRecompile(const std::string &source_filename,
 std::filesystem::path AotEngine::compileModule(const std::string &moduleName, bool forceRecompile) {
     using namespace std;
 
-    std::string source_filename = fullSourcePath(moduleName);
+    std::optional<std::string> source_filename = fullSourcePath(moduleName);
+
+    if (!source_filename.has_value()) {
+        throw runtime_error("Source file not found for module: " + moduleName);
+    }
+
     string output_filename = fullCompiledPath(moduleName);
     string debug_ll_filename = fullCompiledDebugPath(moduleName);
-    if (!shouldRecompile(source_filename, output_filename, forceRecompile)) {
+    if (!shouldRecompile(source_filename.value(), output_filename, forceRecompile)) {
         loadCompiledModule(moduleName);
         return output_filename;
     }
 
-    ifstream ifs(source_filename);
+    ifstream ifs(source_filename.value());
     if (!ifs.is_open()) {
-        throw runtime_error("Failed to open file: " + source_filename);
+        throw runtime_error("Failed to open file: " + source_filename.value());
     }
     BufferedReader reader(ifs);
     Runtime &rt = Runtime::getInstance();
@@ -110,7 +128,7 @@ std::filesystem::path AotEngine::compileModule(const std::string &moduleName, bo
 
     // create a new codegen context for the module and emit IR for all top-level expressions
     CodegenContext codegen_ctx(moduleName);
-    codegen_ctx.m_Module->setSourceFileName(source_filename);
+    codegen_ctx.m_Module->setSourceFileName(source_filename.value());
 
     FileModule module(moduleName, module_imports);
 
@@ -217,4 +235,8 @@ std::vector<std::string> AotEngine::loadingStack() const {
 
 std::filesystem::path AotEngine::getCompiledDir() {
     return m_CompiledDir;
+}
+
+void AotEngine::setAdditionalSourceDir(const std::string &path) {
+    m_AdditionalSourceDir = util::resolve_file_path(path);
 }

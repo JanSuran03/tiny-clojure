@@ -98,3 +98,16 @@ false
                    sum
                    (recur (inc x) (+ sum x))))]
       (recur (inc x) (+ sum sum2)))))
+(do (def a 1)
+    (defn f [] a)
+    (println (f))
+    (def a 2)
+    (println (f)))
+(let [f (fn
+          ([] 1)
+          ([a] 2)
+          ([a & args] 3))]
+  (println (f))
+  (println (f 1))
+  (println (f 1 2))
+  (println (f 1 2 3)))

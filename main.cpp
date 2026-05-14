@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "runtime/Runtime.h"
+#include "types/TCInteger.h"
 
 struct CLIOption {
     std::string m_Mame;
@@ -70,7 +71,46 @@ std::vector<CLIOption> cli_options = {
                       if (value == "true") {
                           Runtime::getInstance().m_DirectLinking = true;
                       }
-                  })
+                  }),
+        CLIOption("int-cache-range", "Sets the range of preallocated integers (e.g. -128:127)", "-128:127",
+                  [](const std::string &value) {
+                      if (value == "off") {
+                          TCInteger::st_PreallocationEnabled = false;
+                          return;
+                      }
+
+                      size_t colon_pos = value.find(':');
+                      static constexpr int MIN_RANGE = -65536;
+                      static constexpr int MAX_RANGE = 65535;
+                      if (colon_pos != std::string::npos) {
+                          try {
+                              tc_int_t min = std::stoll(value.substr(0, colon_pos));
+                              tc_int_t max = std::stoll(value.substr(colon_pos + 1));
+                              if (min <= max) {
+                                  TCInteger::st_PreallocatedMin = min;
+                                  TCInteger::st_PreallocatedMax = max;
+                                  TCInteger::init();
+                              } else if (min < MIN_RANGE || max > MAX_RANGE) {
+                                  std::cerr << "Warning: Integer cache range out of bounds: " << value
+                                            << ". Valid range is from " << MIN_RANGE << " to " << MAX_RANGE
+                                            << "." << std::endl;
+                              } else {
+                                  std::cerr << "Warning: Invalid integer cache range: " << value
+                                            << ". Min should be less than or equal to max." << std::endl;
+                              }
+                          } catch (const std::exception &e) {
+                              std::cerr << "Warning: Failed to parse integer cache range: " << value
+                                        << ". Error: " << e.what() << std::endl;
+                          }
+                      } else {
+                          std::cerr << "Warning: Invalid integer cache range format: " << value
+                                    << ". Expected format is min:max (e.g. -128:127)." << std::endl;
+                      }
+                  }),
+        CLIOption("user-code-dir", "Sets the directory where user code is located for AOT compilation", "src",
+                  [](const std::string &value) {
+                      Runtime::getInstance().getAotEngine().setAdditionalSourceDir(value);
+                  }),
 };
 
 std::map<std::string, std::string> parse_args(int argc, char *argv[]) {

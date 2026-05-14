@@ -5,7 +5,9 @@
 (require '[clojure.string :as str]
          '[clojure.java.io :as io]
          '[babashka.fs :as fs]
-         '[clojure.java.shell :as sh])
+         '[clojure.java.shell :as sh]
+         '[clojure.data.csv :as csv]
+         '[selmer.parser :as selmer])
 
 (defn trim-clojure-repl-output [output]
   ; Clojure REPL outputs the Clojure version "Clojure 1.11.1" and similar on the first line => skip this line
@@ -17,7 +19,7 @@
 (def clojure-predefs-path (fs/path script-dir "clj-bench-predefs.clj"))
 (def common-predefs-path (fs/path script-dir "common-bench-predefs.clj"))
 (def test-run-directory (fs/path script-dir "test-runs"))
-(def dump-dir "dump")
+(def dump-dir (fs/path script-dir "dump"))
 
 (def clojure-predefs (-> (str clojure-predefs-path)
                          slurp))
@@ -57,10 +59,17 @@
       "TinyClojure"))))
 
 (def run-configs
-  (for [opt-level ["O0" "O2"]
-        direct-linking [false true]]
-    {:opt-level      opt-level
-     :direct-linking direct-linking}))
+  (for [#_#_opt-level ["O0" "O2"]
+        #_#_direct-linking [false true]
+        int-cache-range ["off"
+                         "-1:1"
+                         "-2:2"
+                         "-4:4"
+                         "-8:8"
+                         "-16:16"]]
+    {:opt-level "O2" #_opt-level
+     :direct-linking true #_direct-linking
+     :int-cache-range int-cache-range}))
 
 (def predefs-start "; predefs start")
 (def predefs-end "; predefs end")
@@ -94,7 +103,7 @@
   (let [filtered-output-lines (parse-benchmark-output output)
         times (map #(Double/parseDouble %) filtered-output-lines)
         ; drop the first 2 runs: JIT warmup & optimizations
-        times (drop 1 times)
+        #_#_times (drop 1 times)
         ; calculate the average of the remaining runs
         average-time (double (/ (reduce + times) (count times)))
         ; calculate the standard deviation
@@ -117,17 +126,6 @@
                                config)]
     (:out (run-tinyclj input processed-opts))))
 
-(defn format-benchmark-report [{:keys [average-time std-dev]} clojure-time]
-  (let [tinyclj-clj-ratio (if (zero? clojure-time)
-                            0.0
-                            (/ average-time clojure-time))
-        std-dev% (if (zero? average-time)
-                   0.0
-                   (* 100 (/ std-dev average-time)))]
-    [(format "%.4f ms" average-time)
-     (format "%.4f ms (~%.2f %%)" std-dev std-dev%)
-     (format "%.2fx" tinyclj-clj-ratio)]))
-
 (defn column-width [results index]
   (->> results (map #(nth % index))
        (map count)
@@ -145,9 +143,22 @@
         right-padding (- padding left-padding)]
     (str (blank-str left-padding) label (blank-str right-padding))))
 
-(defn run-benchmarks [input-file configs]
+(def csv-columns [:benchmark
+                  :implementation
+                  :opt-level
+                  :direct-linking
+                  :int-cache-range
+                  :avg-ms
+                  :std-dev-ms
+                  :std-dev-pct
+                  :slowdown-vs-clojure])
+
+(def csv-rows (atom []))
+
+(defn run-benchmarks [input-file configs num-tests]
   (let [input (slurp (str input-file))
         [test-name input predefs] (parse-bench-input input)
+        common-predefs (selmer/render common-predefs {:num-runs num-tests})
         input-with-predefs (str common-predefs "\n"
                                 predefs "\n"
                                 "(bench-and-report " input ")")
@@ -156,44 +167,89 @@
          clj-std-dev :std-dev
          :keys       [num-runs]
          :as         clj-res} (process-benchmark clojure-out)
-        formatted-clj-report (format-benchmark-report clj-res clj-avg)
         clj-std-dev% (if (zero? clj-avg)
                        0.0
                        (* 100.0 (/ clj-std-dev clj-avg)))
-        formatted-reports (map #(-> (run-benchmark input-with-predefs %)
-                                    process-benchmark
-                                    (format-benchmark-report clj-avg))
-                               configs)
-        ; for printing the report in a tabular format
-        formatted-reports' (list* ["Average Time" "Standard deviation" "Slowdown vs Clojure"]
-                                  formatted-clj-report
-                                  formatted-reports)
-        configs' (list* "Config" "JVM Clojure" (map str configs))
-        max-config-len (->> configs (map str) (map count) (apply max))
-        max-time-len (column-width formatted-reports' 0)
-        max-std-dev-len (column-width formatted-reports' 1)
-        max-ratio-len (column-width formatted-reports' 2)
-        sep-str (str "+-" (str-of max-config-len "-") "-+-"
-                     (str-of max-time-len "-") "-+-"
-                     (str-of max-std-dev-len "-") "-+-"
-                     (str-of max-ratio-len "-") "-+\n")]
-    ; print the benchmark header
-    (printf "=== Benchmark: '%s' (%d iterations) === \n" test-name num-runs)
-    (doseq [[config [avg-time std-dev slowdown-ratio]] (map vector configs' formatted-reports')
-            :let [config-padding (- max-config-len (count (str config)))
-                  avg-pading  (- max-time-len (count avg-time))
-                  std-dev-padding  (- max-std-dev-len (count std-dev))
-                  ratio-padding (- max-ratio-len (count slowdown-ratio))]]
-      (print sep-str)
-      (print (str "| " (center-label config max-config-len) " | "
-                  (center-label avg-time max-time-len) " | "
-                  (center-label std-dev max-std-dev-len) " | "
-                  (center-label slowdown-ratio max-ratio-len) " |\n")))
-    ; flush the entire report for this benchmark before printing the next one
-    (println sep-str "\n")))
+        reports (map #(-> (run-benchmark input-with-predefs %)
+                          process-benchmark)
+                     configs)]
+    (swap! csv-rows conj {:benchmark test-name
+                          :implementation "JVM Clojure"
+                          :opt-level "N/A"
+                          :direct-linking "N/A"
+                          :int-cache-range "N/A"
+                          :avg-ms clj-avg
+                          :std-dev-ms clj-std-dev
+                          :std-dev-pct clj-std-dev%
+                          :slowdown-vs-clojure 1.0})
+    (doseq [[{:keys [opt-level direct-linking int-cache-range] :as config} {:keys [average-time std-dev] :as report}]
+            (map vector configs reports)
+
+            :let [avg-time-fmt (format "%.4f ms" average-time)
+                  std-dev-pct (if (zero? average-time)
+                                0.0
+                                (* 100 (/ std-dev average-time)))
+                  slowdown-ratio (if (zero? clj-avg)
+                                   0.0
+                                   (/ average-time clj-avg))]]
+      (swap! csv-rows conj {:benchmark test-name
+                            :implementation "TinyClojure"
+                            :opt-level opt-level
+                            :direct-linking direct-linking
+                            :int-cache-range int-cache-range
+                            :avg-ms average-time
+                            :std-dev-ms std-dev
+                            :std-dev-pct clj-std-dev%
+                            :slowdown-vs-clojure slowdown-ratio}))))
+
+(defn write-csv! [path rows]
+  (with-open [writer (io/writer (str path))]
+    (csv/write-csv writer
+                   (cons (map name csv-columns)
+                         (map (fn [row]
+                                (map #(get row %) csv-columns))
+                              rows))))
+  (reset! csv-rows []))
 
 ; clear the dump directory first
 (fs/delete-tree dump-dir)
+(fs/create-dirs dump-dir)
 
-(doseq [test-file (fs/list-dir test-run-directory)]
-  (run-benchmarks test-file run-configs))
+(defn filter-files [files s]
+  (filter #(str/includes? (str %) s) files))
+
+; focus on integer cache ranges
+(let [configs (for [int-cache-range ["off"
+                                     "-1:1"
+                                     "-2:2"
+                                     "-4:4"
+                                     "-8:8"
+                                     "-16:16"]]
+                {:opt-level       "O2"
+                 :direct-linking  true
+                 :int-cache-range int-cache-range})]
+  (doseq [test-file (fs/list-dir test-run-directory)]
+    (run-benchmarks test-file configs 15)))
+
+(write-csv! (fs/path dump-dir "integer-caching.csv") @csv-rows)
+
+; focus on LLVM optimizations; keep the default integer cache range & direct linking
+(let [configs (for [opt-level ["O0" "O2"]]
+                {:opt-level      opt-level
+                 :direct-linking true})]
+  (doseq [test-file (fs/list-dir test-run-directory)]
+    (run-benchmarks test-file configs 15)))
+
+(write-csv! (fs/path dump-dir "llvm-optimizations.csv") @csv-rows)
+
+; focus on direct linking optimizations; keep the default integer cache range & LLVM optimizations
+(let [configs (for [direct-linking [false true]]
+                {:direct-linking direct-linking})]
+  (doseq [test-file (fs/list-dir test-run-directory)]
+    (run-benchmarks test-file configs 15)))
+
+(write-csv! (fs/path dump-dir "direct-linking.csv") @csv-rows)
+
+
+
+

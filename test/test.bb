@@ -39,11 +39,21 @@
 
 (defn run-tinyclj
   ([clojure-form] (run-tinyclj clojure-form {:no-transform false}))
-  ([clojure-form {:keys [no-transform]}]
-   (cond-> clojure-form
-     (not no-transform) replace-for-tinyclj
-     true (#(sh/sh (str tinyclj-exe) "--suppress-repl-welcome" "-compiled-dir" "test-bb" :in %))
-     true (ensure-successful-run "TinyClojure"))))
+  ([clojure-form {:keys [no-transform] :as options}]
+   (let [default-args {:suppress-repl-welcome true
+                       :compiled-dir          "test-bb"}
+         additional-args (dissoc options :no-transform)
+         args (merge default-args additional-args)
+         args-seq (->> args
+                       (mapcat (fn [[k v]]
+                                 [(str "-" (name k)) (str v)])))
+         transformed-form (if no-transform
+                            clojure-form
+                            (replace-for-tinyclj clojure-form))
+         sh-args (concat [(str tinyclj-exe)] args-seq [:in transformed-form])]
+     (ensure-successful-run
+      (apply sh/sh sh-args)
+      "TinyClojure"))))
 
 (defn run-standard-tests []
   (println "Running standard tests...")
@@ -120,5 +130,58 @@
             (println " - " (fs/file-name file) ":" res))
           (System/exit 1)))))
 
+(def aot-root (fs/path script-dir "aot"))
+(def aot-dump-dir (fs/path aot-root "dump"))
+
+(defn run-aot-tests []
+  ; Clear the copiled dirs!
+  (println "Running AOT tests...")
+  (fs/delete-tree aot-dump-dir)
+  (fs/create-dirs aot-dump-dir)
+
+  (let [run-1-input "(compile-module \"example\")"
+        run-2-input "(load-module \"example\")"
+        macro-output "Macro called"
+        common-output "hello world"
+        ; 1) Run TinyClojure with the 1. input and check that the macro output and then the common output are printed
+        ; 2) Run TinyClojure with the 2. input and check that only the common output is printed
+        {run-1-out :out run-1-err :err} (run-tinyclj run-1-input {:no-transform  true
+                                                                  :compiled-dir  (str aot-dump-dir)
+                                                                  :user-code-dir (str aot-root)})
+        {run-2-out :out run-2-err :err} (run-tinyclj run-2-input {:no-transform  true
+                                                                  :compiled-dir  (str aot-dump-dir)
+                                                                  :user-code-dir (str aot-root)})]
+    (cond (or (not (str/blank? run-1-err))
+              (not (str/blank? run-2-err)))
+          (do (println "Error: Unexpected error in TinyClojure execution!")
+              (when-not (str/blank? run-1-err)
+                (println "Run 1 Error Output:")
+                (println run-1-err))
+              (when-not (str/blank? run-2-err)
+                (println "Run 2 Error Output:")
+                (println run-2-err))
+              (System/exit 1))
+
+          (and (str/includes? run-1-out macro-output)
+               (str/includes? run-1-out common-output)
+               (not (str/includes? run-2-out macro-output))
+               (str/includes? run-2-out common-output))
+          (println "AOT tests succeeded! Macro output and common output are as expected in both runs.")
+
+          :else
+          (do (println "AOT test outputs did not match expectations!")
+              (println (str "The expected behavior is that the first run should include\n"
+                            "both the macro output and the common output, while the second run\n"
+                            "should only include the common output without the macro output."))
+              (println "Run 1 Output:")
+              (println run-1-out)
+              (println "Run 2 Output:")
+              (println run-2-out)
+              (System/exit 1)))))
+
 (run-standard-tests)
+(newline)
 (run-failing-tests)
+(newline)
+(run-aot-tests)
+(newline)

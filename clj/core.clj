@@ -328,3 +328,7 @@
 
 (defn dec (x)
   (- x 1))
+
+(defmacro assert (test)
+  `(if-not ~test
+     (error (str "Assertion failed: " (pr-str '~test)))))
