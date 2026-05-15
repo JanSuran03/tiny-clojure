@@ -24,13 +24,29 @@ cmake --build build # Build the project using the generated build files in the '
 
 ```shell
 ./build/tiny-clojure <command-line-arguments>
+```[main.cpp](main.cpp)
 ```
 
 ### Additional command-line arguments:
 
 - `--help`: Shows help message with available command-line arguments and exits.
 - `--suppress-repl-welcome`: Suppresses the REPL welcome message when starting the REPL,
-  making it more suitable for automated testing for example.
+   making it more suitable for automated testing for example.
+- `--disable-gc`: Disables garbage collection, which can be useful for debugging or testing purposes.
+- `-opt-level <level>`: Sets the optimization level for code generation.
+   Valid levels are `O0`, `O1`, `O2` and `O3`. The default level is `O2`.
+- `-compiled-dir <directory>`: Specifies the directory where compiled code will be stored. 
+   The default directory is `compiled`.
+- `--direct-linking`: Enables direct linking of compiled code, which can improve performance
+   by avoiding the overhead of dynamic linking. This option is always enabled when compiling
+   the standard library; otherwise it is disabled by default and experimental.
+- `-int-cache-range <from:to>`: Specifies the range of integers to cache for optimization purposes.
+The default range is `-128:127`, the limits are `-65536:65535`. Caching integers can improve
+   performance by avoiding the overhead of creating new integer objects for frequently used values.
+- `-user-code-dir <directory>`: Specifies the directory where additional user code is located.
+   The module loader first searches in the source directory for the standard library, then in the
+   user code directory. This allows users to easily add their own code without modifying the standard
+   library.
 
 ## Testing:
 
@@ -45,6 +61,18 @@ cmake --build build # Build the project using the generated build files in the '
 ```shell
 ctest --test-dir build --output-on-failure # Run tests and output results on failure
 ```
+
+### Benchmarking
+Benchmarking is performed together with testing. Benchmark results are stored in the
+`bench/dump` directory.
+
+After these dump files are generated, inside the `bench` directory, you can run
+
+```shell
+python3 visualize.py
+```
+This will generate graphs from the benchmark results and save them in the `bench/figures` directory.
+
 ### License
 Distributed under the Eclipse Public License (EPL-2.0), the same one as Clojure.
 
