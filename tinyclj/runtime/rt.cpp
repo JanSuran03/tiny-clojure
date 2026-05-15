@@ -5,7 +5,6 @@
 #include "Runtime.h"
 #include "compiler/SemanticAnalyzer.h"
 #include "types/TCBoolean.h"
-#include "types/TCChar.h"
 #include "types/TCDouble.h"
 #include "types/TCInteger.h"
 #include "types/TCList.h"

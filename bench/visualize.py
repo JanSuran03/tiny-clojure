@@ -13,6 +13,10 @@ MAKE_LOG_GRAPHS = False
 GROUPED_FIGURE_HEIGHT = 5.6
 DENSE_GROUPED_FIGURE_HEIGHT = 6.2
 BEST_SLOWDOWN_FIGURE_HEIGHT = 5.2
+AXIS_LABEL_FONTSIZE = 15
+TICK_LABEL_FONTSIZE = 13
+LEGEND_FONTSIZE = 11
+LEGEND_TITLE_FONTSIZE = 12
 
 
 def add_bar_labels(ax, suffix="", decimals=1, fontsize=7):
@@ -123,10 +127,12 @@ def plot_grouped_bars(
         group_column: str,
         group_order,
         ylabel: str,
-        xlabel: str,
         legend_title: str,
         output_name: str,
         display_names=None,
+        legend_fontsize=LEGEND_FONTSIZE,
+        legend_title_fontsize=LEGEND_TITLE_FONTSIZE,
+        loc="best",
 ):
     if display_names is None:
         display_names = {
@@ -180,16 +186,22 @@ def plot_grouped_bars(
     variant_count = len(pivot_avg.columns)
 
     if variant_count <= 2:
-        label_fontsize = 17
+        label_fontsize = 19
         error_capsize = 6
-        error_linewidth = 1.4
+        error_linewidth = 1.6
+        x_tick_fontsize = 11
+        y_tick_fontsize = 13
+        axis_label_fontsize = 15
         error_capthick = 1.4
         figure_size = (8, GROUPED_FIGURE_HEIGHT)
         y_headroom = 1.35
     else:
-        label_fontsize = 14
+        label_fontsize = 17
         error_capsize = 4
-        error_linewidth = 1.0
+        error_linewidth = 1.2
+        x_tick_fontsize = 15
+        y_tick_fontsize = 15
+        axis_label_fontsize = 17
         error_capthick = 1.0
         figure_size = (10.5, DENSE_GROUPED_FIGURE_HEIGHT)
         y_headroom = 1.2
@@ -206,22 +218,29 @@ def plot_grouped_bars(
         },
     )
 
+    ax.margins(x=0.01)
+
     add_bar_labels(
         ax,
         decimals=1,
         fontsize=label_fontsize,
     )
 
-    ax.set_ylabel(ylabel)
-    ax.set_xlabel(xlabel)
-    ax.legend(title=legend_title)
+    ax.set_ylabel(ylabel, fontsize=axis_label_fontsize)
+    ax.set_xlabel("")
+    ax.legend(
+        title=legend_title,
+        fontsize=legend_fontsize,
+        title_fontsize=legend_title_fontsize,
+        loc=loc,
+    )
     plt.xticks(rotation=20, ha="right", fontsize=11)
 
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax * y_headroom)
 
     plt.tight_layout()
-    plt.savefig(OUT_DIR / output_name)
+    plt.savefig(OUT_DIR / output_name, bbox_inches="tight", pad_inches=0.02)
     plt.close()
 
     if MAKE_LOG_GRAPHS:
@@ -240,9 +259,10 @@ def plot_grouped_bars(
         )
 
         ax.set_ylabel(f"{ylabel}, log scale")
-        ax.set_xlabel(xlabel)
+        ax.set_xlabel("")
         ax.legend(title=legend_title)
-        plt.xticks(rotation=20, ha="right", fontsize=13)
+        plt.xticks(rotation=20, ha="right", fontsize=x_tick_fontsize)
+        ax.tick_params(axis="y", labelsize=y_tick_fontsize)
         plt.tight_layout()
         plt.savefig(OUT_DIR / log_name)
         plt.close()
@@ -296,7 +316,7 @@ def plot_best_slowdown(all_tc: pd.DataFrame):
     )
 
     ax.set_ylabel("Slowdown vs JVM Clojure")
-    ax.set_xlabel("Benchmark")
+    ax.set_xlabel("")
     plt.xticks(rotation=20, ha="right", fontsize=13)
 
     ymin, ymax = ax.get_ylim()
@@ -328,9 +348,10 @@ plot_grouped_bars(
     group_column="int-cache-range",
     group_order=cache_order,
     ylabel="Average time [ms]",
-    xlabel="Benchmark",
     legend_title="Integer cache",
     output_name="benchmark-integer-cache-effect.pdf",
+    legend_fontsize=16,
+    legend_title_fontsize=17,
 )
 
 # ------------------------------------------------------------
@@ -355,7 +376,6 @@ plot_grouped_bars(
     group_column="opt-level",
     group_order=opt_order,
     ylabel="Average time [ms]",
-    xlabel="Benchmark",
     legend_title="LLVM optimization level",
     output_name="benchmark-llvm-optimization-effect.pdf",
 )
@@ -382,13 +402,15 @@ plot_grouped_bars(
     group_column="direct-linking",
     group_order=direct_order,
     ylabel="Average time [ms]",
-    xlabel="Benchmark",
     legend_title="Direct linking",
     output_name="benchmark-direct-linking-effect.pdf",
     display_names={
         "false": "disabled",
         "true": "enabled",
     },
+    loc="upper left",
+    legend_fontsize=15,
+    legend_title_fontsize=16,
 )
 
 # ------------------------------------------------------------
