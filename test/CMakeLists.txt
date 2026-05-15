@@ -1,15 +1,15 @@
 find_program(BB_EXE bb REQUIRED)
 
-add_executable(test_parser
-        test_parser.cpp
+add_executable(test_reader
+        test_reader.cpp
 )
 
-target_link_libraries(test_parser
+target_link_libraries(test_reader
         PRIVATE tinyclj_lib
 )
 
-add_test(NAME test_parser
-        COMMAND test_parser
+add_test(NAME test_reader
+        COMMAND test_reader
 )
 
 add_test(NAME test_integration

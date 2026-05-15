@@ -9,7 +9,10 @@ OUT_DIR = Path("figures")
 OUT_DIR.mkdir(exist_ok=True)
 
 REMOVE_EMPTY_LOOP = False
-MAKE_LOG_GRAPHS = True
+MAKE_LOG_GRAPHS = False
+GROUPED_FIGURE_HEIGHT = 5.6
+DENSE_GROUPED_FIGURE_HEIGHT = 6.2
+BEST_SLOWDOWN_FIGURE_HEIGHT = 5.2
 
 
 def add_bar_labels(ax, suffix="", decimals=1, fontsize=7):
@@ -94,6 +97,27 @@ def discovered_order(df: pd.DataFrame, column: str, preferred=None):
     return values
 
 
+def approximate_label_width(label: str) -> float:
+    text = str(label)
+    width = 0.0
+
+    for ch in text:
+        if ch in "ilI.,;:!|":
+            width += 0.5
+        elif ch in "mwMW":
+            width += 1.4
+        elif ch.isspace():
+            width += 0.6
+        else:
+            width += 1.0
+
+    return width
+
+
+def sort_benchmarks_by_label_length(index):
+    return sorted(index, key=lambda value: (approximate_label_width(value), str(value)))
+
+
 def plot_grouped_bars(
         df: pd.DataFrame,
         group_column: str,
@@ -102,7 +126,13 @@ def plot_grouped_bars(
         xlabel: str,
         legend_title: str,
         output_name: str,
+        display_names=None,
 ):
+    if display_names is None:
+        display_names = {
+            "false": "off",
+            "true": "on",
+        }
     if df.empty:
         raise RuntimeError(f"No data for graph {output_name}")
 
@@ -134,27 +164,40 @@ def plot_grouped_bars(
     pivot_avg = pivot_avg[non_empty_columns]
     pivot_std = pivot_std[non_empty_columns]
 
+    # Reorder benchmarks by label length to improve readability.
+    # The left-most label can reserve less left padding, so shorter labels are placed there.
+    benchmark_order = sort_benchmarks_by_label_length(pivot_avg.index)
+    pivot_avg = pivot_avg.reindex(benchmark_order)
+    pivot_std = pivot_std.reindex(benchmark_order)
+
+    if display_names is not None:
+        pivot_avg = pivot_avg.rename(columns=display_names)
+        pivot_std = pivot_std.rename(columns=display_names)
+
     if pivot_avg.empty:
         raise RuntimeError(f"Pivot table for {output_name} is empty.")
 
     variant_count = len(pivot_avg.columns)
 
     if variant_count <= 2:
-        label_fontsize = 12
+        label_fontsize = 17
         error_capsize = 6
         error_linewidth = 1.4
         error_capthick = 1.4
-        figure_size = (8, 4.2)
+        figure_size = (8, GROUPED_FIGURE_HEIGHT)
+        y_headroom = 1.35
     else:
-        label_fontsize = 7
+        label_fontsize = 14
         error_capsize = 4
         error_linewidth = 1.0
         error_capthick = 1.0
-        figure_size = (9, 4.2)
+        figure_size = (10.5, DENSE_GROUPED_FIGURE_HEIGHT)
+        y_headroom = 1.2
 
     ax = pivot_avg.plot(
         kind="bar",
         figsize=figure_size,
+        width=0.9,
         yerr=pivot_std,
         capsize=error_capsize,
         error_kw={
@@ -165,7 +208,6 @@ def plot_grouped_bars(
 
     add_bar_labels(
         ax,
-        suffix=" ms",
         decimals=1,
         fontsize=label_fontsize,
     )
@@ -173,10 +215,10 @@ def plot_grouped_bars(
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
     ax.legend(title=legend_title)
-    plt.xticks(rotation=20, ha="right")
+    plt.xticks(rotation=20, ha="right", fontsize=11)
 
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax * 1.18)
+    ax.set_ylim(ymin, ymax * y_headroom)
 
     plt.tight_layout()
     plt.savefig(OUT_DIR / output_name)
@@ -200,7 +242,7 @@ def plot_grouped_bars(
         ax.set_ylabel(f"{ylabel}, log scale")
         ax.set_xlabel(xlabel)
         ax.legend(title=legend_title)
-        plt.xticks(rotation=20, ha="right")
+        plt.xticks(rotation=20, ha="right", fontsize=13)
         plt.tight_layout()
         plt.savefig(OUT_DIR / log_name)
         plt.close()
@@ -212,6 +254,14 @@ def plot_best_slowdown(all_tc: pd.DataFrame):
         .groupby("benchmark", as_index=False)
         .first()
     )
+
+    benchmark_order = sort_benchmarks_by_label_length(best["benchmark"])
+    best["benchmark"] = pd.Categorical(
+        best["benchmark"],
+        categories=benchmark_order,
+        ordered=True,
+    )
+    best = best.sort_values("benchmark")
 
     if REMOVE_EMPTY_LOOP:
         best = best[~best["benchmark"].str.contains("empty", case=False, na=False)]
@@ -247,7 +297,7 @@ def plot_best_slowdown(all_tc: pd.DataFrame):
 
     ax.set_ylabel("Slowdown vs JVM Clojure")
     ax.set_xlabel("Benchmark")
-    plt.xticks(rotation=20, ha="right")
+    plt.xticks(rotation=20, ha="right", fontsize=13)
 
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax * 1.18)
@@ -335,6 +385,10 @@ plot_grouped_bars(
     xlabel="Benchmark",
     legend_title="Direct linking",
     output_name="benchmark-direct-linking-effect.pdf",
+    display_names={
+        "false": "disabled",
+        "true": "enabled",
+    },
 )
 
 # ------------------------------------------------------------

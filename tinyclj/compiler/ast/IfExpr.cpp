@@ -2,6 +2,7 @@
 #include "IfExpr.h"
 #include "compiler/SemanticAnalyzer.h"
 #include "types/TCBoolean.h"
+#include "types/TCInteger.h"
 #include "types/TCList.h"
 
 IfExpr::IfExpr(AExpr condExpr,
@@ -65,18 +66,18 @@ const Object *IfExpr::eval() const {
 
 AExpr IfExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *form) {
     form = tc_list_next(form); // consume 'if
-    // TODO: Check the list length instead == 2 instead of checking after each subexpression is parsed
-    if (form == nullptr) {
-        throw std::runtime_error("if requires a condition expression");
+
+    tc_int_t num_args = static_cast<TCInteger *>(tc_list_length(form)->m_Data)->m_Value;
+    if (num_args < 2 || num_args > 3) {
+        throw std::runtime_error("if requires 2 or 3 arguments");
     }
 
     auto condExpr = SemanticAnalyzer::analyze(ExpressionMode::EXPR, ctx, tc_list_first(form));
     form = tc_list_next(form);
-    if (form == nullptr) {
-        throw std::runtime_error("if requires a then expression");
-    }
+
     auto thenExpr = SemanticAnalyzer::analyze(mode, ctx, tc_list_first(form));
     form = tc_list_next(form);
+
     AExpr elseExpr = SemanticAnalyzer::analyze(mode, ctx, tc_list_first(form));
     return std::make_unique<IfExpr>(std::move(condExpr),
                                     std::move(thenExpr),

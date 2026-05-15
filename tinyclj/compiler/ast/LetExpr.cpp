@@ -113,6 +113,11 @@ AExpr LetExpr::parse(ExpressionMode mode, AnalyzerContext &ctx, const Object *fo
     std::vector<std::pair<std::shared_ptr<LocalVarExpr>, AExpr>> parsed_bindings;
     for (bindings = tc_list_seq(bindings); bindings;) {
         const Object *binding_sym = tc_list_first(bindings);
+
+        if (binding_sym == nullptr || binding_sym->m_Type != ObjectType::SYMBOL) {
+            throw std::runtime_error("let binding name must be a symbol");
+        }
+
         std::string binding_name = tc_symbol_valueX(binding_sym);
         bindings = tc_list_next(bindings);
         const Object *binding_val = tc_list_first(bindings);
